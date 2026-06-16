@@ -1,0 +1,130 @@
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PRODUCTS, ONBOARDING_STEPS, EDITORIAL_STRIPS, getProducts } from '@/data/products';
+import { useBoardStore } from '@/store/useBoardStore';
+import { ProductCard } from '@/components/ProductCard';
+import { SaveSheet } from '@/components/SaveSheet';
+import { Product } from '@/types';
+import { Colors, Radius } from '@/lib/theme';
+
+const CATEGORIES = [
+  { id: 'all', label: 'All' },
+  ...ONBOARDING_STEPS[2].options.map(o => ({ id: o.id, label: o.label })),
+];
+
+export default function FeedScreen() {
+  const insets = useSafeAreaInsets();
+  const { isProductSaved, fetchBoards } = useBoardStore();
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { products } = getProducts({ category: activeCategory });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchBoards();
+    setRefreshing(false);
+  }, []);
+
+  // Split into two columns for masonry
+  const leftCol  = products.filter((_, i) => i % 2 === 0);
+  const rightCol = products.filter((_, i) => i % 2 === 1);
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      {/* Sticky header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>For You</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {CATEGORIES.map(cat => (
+            <Pressable
+              key={cat.id}
+              style={[styles.chip, activeCategory === cat.id && styles.chipActive]}
+              onPress={() => setActiveCategory(cat.id)}
+            >
+              <Text style={[styles.chipText, activeCategory === cat.id && styles.chipTextActive]}>
+                {cat.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* Editorial strips */}
+        {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
+          const items = PRODUCTS.filter(strip.filter).slice(0, 8);
+          if (!items.length) return null;
+          return (
+            <View key={strip.title} style={styles.strip}>
+              <View style={styles.stripHeader}>
+                <Text style={styles.stripTitle}>{strip.title}</Text>
+                <Text style={styles.seeAll}>See all</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
+                {items.map(p => (
+                  <Pressable key={p.id} style={styles.stripCard} onPress={() => router.push(`/product/${p.id}`)}>
+                    <Image source={{ uri: p.image }} style={styles.stripImg} contentFit="cover" />
+                    <View style={styles.stripInfo}>
+                      <Text style={styles.stripBrand}>{p.brand}</Text>
+                      <Text style={styles.stripName} numberOfLines={1}>{p.name}</Text>
+                      <Text style={styles.stripPrice}>${p.price}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })}
+
+        {/* Two-column masonry grid */}
+        <View style={styles.grid}>
+          <View style={styles.col}>
+            {leftCol.map(p => (
+              <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />
+            ))}
+          </View>
+          <View style={styles.col}>
+            {rightCol.map(p => (
+              <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: Colors.bg },
+  header: { backgroundColor: Colors.bg, zIndex: 10 },
+  title:  { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
+  chips:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  chip:   { paddingHorizontal: 15, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
+  chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
+  chipText:   { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  chipTextActive: { color: Colors.accentLime },
+  strip:       { marginBottom: 4 },
+  stripHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16, paddingBottom: 10, paddingTop: 6 },
+  stripTitle:  { fontSize: 16, fontWeight: '800', color: Colors.text, letterSpacing: -0.3 },
+  seeAll:      { fontSize: 12.5, fontWeight: '600', color: Colors.accent },
+  stripScroll: { paddingHorizontal: 16, gap: 10, paddingBottom: 16 },
+  stripCard:   { width: 140, borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface },
+  stripImg:    { width: 140, height: 186, backgroundColor: Colors.stoneSoft },
+  stripInfo:   { padding: 9 },
+  stripBrand:  { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7, color: Colors.textMuted, marginBottom: 2 },
+  stripName:   { fontSize: 12.5, fontWeight: '600', color: Colors.text, marginBottom: 4 },
+  stripPrice:  { fontSize: 12, fontWeight: '600', color: Colors.accentBlue },
+  grid: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 8 },
+  col:  { flex: 1 },
+});
