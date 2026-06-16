@@ -8,18 +8,17 @@ export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session) fetchProfile();
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
+      if (event === 'SIGNED_IN') {
         fetchProfile();
         router.replace('/(tabs)/feed');
-      } else {
+      } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/sign-in');
+      } else if (event === 'INITIAL_SESSION') {
+        // loading=false is set by setSession above; index.tsx handles initial routing
+        if (session) fetchProfile();
       }
     });
 
@@ -29,6 +28,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="product/[id]" options={{ presentation: 'card' }} />
