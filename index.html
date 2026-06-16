@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Discovery Feed POC</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ONBOARDING -->
+    <section id="onboarding" class="screen active">
+      <div class="onboarding-progress" id="onboarding-progress"></div>
+      <div class="onboarding-header" id="onboarding-header">
+        <h2></h2>
+        <p></p>
+      </div>
+      <div class="tile-grid" id="onboarding-tiles"></div>
+      <div class="onboarding-footer">
+        <button class="btn-primary" id="onboarding-continue">Continue</button>
+        <button class="btn-text" id="onboarding-skip">Skip for now</button>
+      </div>
+    </section>
+
+    <!-- FEED -->
+    <section id="feed" class="screen">
+      <div class="feed-header">
+        <div class="top-bar">
+          <h1>For You</h1>
+        </div>
+        <div class="chip-row" id="feed-chips"></div>
+      </div>
+      <div id="editorial-strips"></div>
+      <div id="pull-indicator"><div class="pull-spinner"></div></div>
+      <div class="feed-list" id="feed-list"></div>
+    </section>
+
+    <!-- BOARDS HOME -->
+    <section id="boards" class="screen">
+      <div class="top-bar">
+        <h1>Boards</h1>
+      </div>
+      <div id="boards-content"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section id="profile" class="screen">
+      <div class="top-bar">
+        <h1>Profile</h1>
+      </div>
+      <div id="profile-content"></div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="search" class="screen">
+      <div class="search-header">
+        <div class="search-input-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="search" id="search-input" placeholder="Search products, brands…" autocomplete="off" />
+          <button class="search-clear" id="search-clear" aria-label="Clear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="search-results-wrap">
+        <div class="search-empty-state" id="search-empty">
+          <p>Start typing to discover products</p>
+        </div>
+        <div class="feed-list" id="search-results" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- PRODUCT DETAIL -->
+    <section id="product-detail" class="screen no-nav">
+      <div id="detail-content"></div>
+    </section>
+
+    <!-- BOARD DETAIL -->
+    <section id="board-detail" class="screen no-nav">
+      <div class="board-detail-header">
+        <div class="back-row">
+          <button class="icon-btn" id="board-detail-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        </div>
+        <h1 id="board-detail-name"></h1>
+        <p class="meta" id="board-detail-meta"></p>
+      </div>
+      <div class="board-grid" id="board-detail-grid"></div>
+    </section>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item" data-screen="feed">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span>Feed</span>
+      </button>
+      <button class="nav-item" data-screen="boards">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        <span>Boards</span>
+      </button>
+      <button class="nav-item" data-screen="search">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span>Search</span>
+      </button>
+      <button class="nav-item" data-screen="profile">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+    <!-- SAVE BOTTOM SHEET -->
+    <div class="sheet-backdrop" id="save-sheet-backdrop"></div>
+    <div class="bottom-sheet" id="save-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3>Save to board</h3>
+      </div>
+      <div class="sheet-body">
+        <div class="new-board-row">
+          <input type="text" id="new-board-input" placeholder="New board name" maxlength="40" />
+          <button id="new-board-create" disabled>Create</button>
+        </div>
+        <div id="board-options-list"></div>
+      </div>
+    </div>
+
+    <!-- ITEM ACTION SHEET -->
+    <div class="sheet-backdrop" id="action-sheet-backdrop"></div>
+    <div class="bottom-sheet" id="action-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="action-sheet-title">Item options</h3>
+      </div>
+      <div class="action-sheet-body">
+        <button class="action-item" id="action-set-cover">Set as board cover</button>
+        <button class="action-item destructive" id="action-remove">Remove from board</button>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+
+  <script src="data.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
