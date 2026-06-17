@@ -14,6 +14,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  EXPO_PUBLIC_SUPABASE_URL: https://xxyserlkigllpmtxzlsa.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eXNlcmxraWdsbHBtdHh6bHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjQ2NzEsImV4cCI6MjA5NzIwMDY3MX0.69xsoMopJi39sCbHmQZC3I-AeZiP-aKg9KQns4CS6uk
+
 jobs:
   deploy:
     environment:
@@ -22,9 +26,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+      - name: Export web build
+        working-directory: mobile
+        run: npx expo export -p web
+      - name: SPA fallback for client-side routes
+        working-directory: mobile
+        run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: mobile/dist
       - id: deployment
         uses: actions/deploy-pages@v4
