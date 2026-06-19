@@ -4,9 +4,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { Colors } from '@/lib/theme';
 
 export default function Index() {
-  const { session, loading } = useAuthStore();
+  const { session, loading, profile, profileLoading } = useAuthStore();
 
-  if (loading) {
+  if (loading || (session && profileLoading)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.bg }}>
         <ActivityIndicator color={Colors.accent} />
@@ -14,6 +14,7 @@ export default function Index() {
     );
   }
 
-  if (session) return <Redirect href="/(tabs)/feed" />;
-  return <Redirect href="/(auth)/sign-in" />;
+  if (!session) return <Redirect href="/(auth)/sign-in" />;
+  if (!profile?.onboarding_completed_at) return <Redirect href="/onboarding" />;
+  return <Redirect href="/(tabs)/feed" />;
 }

@@ -1,12 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PRODUCTS, ONBOARDING_STEPS, EDITORIAL_STRIPS, getProducts } from '@/data/products';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
 import { SaveSheet } from '@/components/SaveSheet';
+import { InboxIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius } from '@/lib/theme';
 
@@ -18,15 +20,18 @@ const CATEGORIES = [
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
+  const { unreadCount, fetchInbox } = useShareStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const { products } = getProducts({ category: activeCategory });
 
+  useEffect(() => { fetchInbox(); }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchBoards();
+    await Promise.all([fetchBoards(), fetchInbox()]);
     setRefreshing(false);
   }, []);
 
@@ -38,7 +43,17 @@ export default function FeedScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Sticky header */}
       <View style={styles.header}>
-        <Text style={styles.title}>For You</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>For You</Text>
+          <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
+            <InboxIcon size={22} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CATEGORIES.map(cat => (
             <Pressable
@@ -108,7 +123,14 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   header: { backgroundColor: Colors.bg, zIndex: 10 },
-  title:  { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
+  title:  { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
+  inboxBtn: { padding: 2 },
+  badge: {
+    position: 'absolute', top: -4, right: -6, minWidth: 17, height: 17, borderRadius: 8.5,
+    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+  },
+  badgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
   chips:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   chip:   { paddingHorizontal: 15, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },

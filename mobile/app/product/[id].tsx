@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PRODUCTS } from '@/data/products';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
-import { ChevronLeftIcon, BookmarkIcon } from '@/components/Icons';
+import { ShareSheet } from '@/components/ShareSheet';
+import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Product } from '@/types';
+import { getAffiliateUrl } from '@/lib/affiliate';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -16,7 +18,8 @@ export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
+  const [shareTarget, setShareTarget] = useState<Product | null>(null);
 
   const product = PRODUCTS.find(p => p.id === id);
   if (!product) return null;
@@ -32,9 +35,14 @@ export default function ProductDetail() {
           <Pressable style={[styles.backBtn, { top: insets.top + 12 }]} onPress={() => router.back()}>
             <ChevronLeftIcon />
           </Pressable>
-          <Pressable style={[styles.heroSaveBtn, { top: insets.top + 12 }]} onPress={() => setSaveTarget(product)}>
-            <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={20} />
-          </Pressable>
+          <View style={[styles.heroActions, { top: insets.top + 12 }]}>
+            <Pressable style={styles.heroIconBtn} onPress={() => setShareTarget(product)}>
+              <ShareIcon size={19} />
+            </Pressable>
+            <Pressable style={styles.heroIconBtn} onPress={() => setSaveTarget(product)}>
+              <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={20} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Body */}
@@ -52,7 +60,7 @@ export default function ProductDetail() {
 
       {/* Sticky CTA */}
       <View style={[styles.actions, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable style={styles.shopBtn} onPress={() => product.url && Linking.openURL(product.url)}>
+        <Pressable style={styles.shopBtn} onPress={() => Linking.openURL(getAffiliateUrl(product))}>
           <Text style={styles.shopBtnText}>Shop now</Text>
         </Pressable>
         <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => setSaveTarget(product)}>
@@ -61,6 +69,7 @@ export default function ProductDetail() {
       </View>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
+      <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
     </View>
   );
 }
@@ -70,7 +79,8 @@ const styles = StyleSheet.create({
   hero:       { width: '100%', aspectRatio: 3/4, backgroundColor: Colors.stoneSoft },
   heroImg:    { ...StyleSheet.absoluteFillObject },
   backBtn:    { position: 'absolute', left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
-  heroSaveBtn:{ position: 'absolute', right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
+  heroActions:{ position: 'absolute', right: 16, flexDirection: 'row', gap: 10 },
+  heroIconBtn:{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
   body:       { padding: 20 },
   brand:      { fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, color: Colors.textMuted, marginBottom: 6 },
   name:       { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.4, marginBottom: 10 },

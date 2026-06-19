@@ -1,30 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
-import { ChevronLeftIcon, DotsIcon } from '@/components/Icons';
+import { InviteSheet } from '@/components/InviteSheet';
+import { ChevronLeftIcon, DotsIcon, UserPlusIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
-import { BoardItem, Product } from '@/types';
+import { Board, BoardItem, Product } from '@/types';
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
-  const { boards, getBoardItems, setCover, removeFromBoard } = useBoardStore();
+  const { user } = useAuthStore();
+  const { fetchBoardById, getBoardItems, setCover, removeFromBoard } = useBoardStore();
+  const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [inviting,   setInviting]   = useState(false);
 
-  const board = boards.find(b => b.id === id);
-
-  useEffect(() => {
-    if (id) getBoardItems(id).then(setItems);
+  const load = useCallback(() => {
+    if (!id) return;
+    fetchBoardById(id).then(setBoard);
+    getBoardItems(id).then(setItems);
   }, [id]);
+
+  useEffect(load, [load]);
+  useFocusEffect(load);
 
   if (!board) return null;
 
   const total = items.reduce((n, i) => n + i.product_data.price, 0);
+  const collaborators = board.board_collaborators ?? [];
+  const canEdit = board.isOwner || collaborators.some(c => c.user_id === user?.id);
 
   function openItemMenu(item: BoardItem) {
     const options = ['Set as cover', 'Remove from board', 'Cancel'];
@@ -32,13 +42,13 @@ export default function BoardDetail() {
       ActionSheetIOS.showActionSheetWithOptions(
         { options, destructiveButtonIndex: 1, cancelButtonIndex: 2 },
         async btn => {
-          if (btn === 0) { await setCover(id!, item.product_id); }
+          if (btn === 0) { await setCover(id!, item.product_id); load(); }
           if (btn === 1) { await removeFromBoard(id!, item.product_id); setItems(prev => prev.filter(i => i.id !== item.id)); }
         },
       );
     } else {
       Alert.alert('Item options', undefined, [
-        { text: 'Set as cover', onPress: () => setCover(id!, item.product_id) },
+        { text: 'Set as cover', onPress: async () => { await setCover(id!, item.product_id); load(); } },
         { text: 'Remove from board', style: 'destructive', onPress: async () => { await removeFromBoard(id!, item.product_id); setItems(prev => prev.filter(i => i.id !== item.id)); } },
         { text: 'Cancel', style: 'cancel' },
       ]);
@@ -59,8 +69,14 @@ export default function BoardDetail() {
           <Text style={styles.name}>{board.name}</Text>
           <Text style={styles.meta}>
             {items.length} item{items.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total
+            {collaborators.length > 0 ? ` · Shared with ${collaborators.length}` : ''}
           </Text>
         </View>
+        {board.isOwner && (
+          <Pressable onPress={() => setInviting(true)} hitSlop={8}>
+            <UserPlusIcon size={21} />
+          </Pressable>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -76,9 +92,11 @@ export default function BoardDetail() {
                 {col.map(item => (
                   <Pressable key={item.id} style={styles.card} onPress={() => router.push(`/product/${item.product_id}`)}>
                     <Image source={{ uri: item.product_data.image }} style={styles.img} contentFit="cover" />
-                    <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6}>
-                      <DotsIcon size={16} />
-                    </Pressable>
+                    {canEdit && (
+                      <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6}>
+                        <DotsIcon size={16} />
+                      </Pressable>
+                    )}
                     <View style={styles.cardInfo}>
                       <Text style={styles.cardBrand}>{item.product_data.brand}</Text>
                       <Text style={styles.cardName} numberOfLines={2}>{item.product_data.name}</Text>
@@ -93,6 +111,7 @@ export default function BoardDetail() {
       </ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
+      <InviteSheet board={inviting ? board : null} onClose={() => { setInviting(false); load(); }} />
     </View>
   );
 }

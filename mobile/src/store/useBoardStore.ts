@@ -2,16 +2,21 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { Board, BoardItem, Product } from '@/types';
 
+const BOARD_SELECT = '*, board_items(product_id), board_collaborators(*, profiles(*))';
+
 interface BoardState {
   boards:         Board[];
   loading:        boolean;
   fetchBoards:    () => Promise<void>;
+  fetchBoardById: (boardId: string) => Promise<Board | null>;
   createBoard:    (name: string, product: Product) => Promise<Board | null>;
   addToBoard:     (boardId: string, product: Product) => Promise<void>;
   removeFromBoard:(boardId: string, productId: string) => Promise<void>;
   setCover:       (boardId: string, productId: string) => Promise<void>;
   isProductSaved: (productId: string) => boolean;
   getBoardItems:  (boardId: string) => Promise<BoardItem[]>;
+  inviteCollaborator: (boardId: string, userId: string) => Promise<void>;
+  removeCollaborator: (boardId: string, userId: string) => Promise<void>;
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -22,12 +27,31 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set({ loading: true });
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { set({ loading: false }); return; }
-    const { data } = await supabase
-      .from('boards')
-      .select('*, board_items(product_id)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    set({ boards: (data ?? []) as Board[], loading: false });
+
+    const [owned, collaborating] = await Promise.all([
+      supabase.from('boards').select(BOARD_SELECT).eq('user_id', user.id),
+      supabase
+        .from('board_collaborators')
+        .select(`boards(${BOARD_SELECT})`)
+        .eq('user_id', user.id),
+    ]);
+
+    const ownedBoards = ((owned.data ?? []) as Board[]).map(b => ({ ...b, isOwner: true }));
+    const sharedBoards = ((collaborating.data ?? []) as unknown as { boards: Board }[])
+      .map(r => r.boards)
+      .filter(Boolean)
+      .map(b => ({ ...b, isOwner: false }));
+
+    const boards = [...ownedBoards, ...sharedBoards]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    set({ boards, loading: false });
+  },
+
+  async fetchBoardById(boardId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data } = await supabase.from('boards').select(BOARD_SELECT).eq('id', boardId).single();
+    if (!data) return null;
+    return { ...(data as Board), isOwner: data.user_id === user?.id };
   },
 
   async createBoard(name, product) {
@@ -86,5 +110,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       .from('board_items').select('*').eq('board_id', boardId)
       .order('created_at', { ascending: false });
     return (data ?? []) as BoardItem[];
+  },
+
+  async inviteCollaborator(boardId, userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('board_collaborators').insert({
+      board_id: boardId, user_id: userId, invited_by: user.id,
+    });
+    await get().fetchBoards();
+  },
+
+  async removeCollaborator(boardId, userId) {
+    await supabase.from('board_collaborators').delete()
+      .eq('board_id', boardId).eq('user_id', userId);
+    await get().fetchBoards();
   },
 }));

@@ -67,6 +67,13 @@ export default function SignUp() {
             <Text style={styles.linkText}>Already have an account? <Text style={styles.linkAccent}>Sign in</Text></Text>
           </Pressable>
         </Link>
+
+        <Text style={styles.legalText}>
+          By creating an account, you agree to Trove's{' '}
+          <Link href="/terms"><Text style={styles.legalLink}>Terms of Service</Text></Link>
+          {' '}and{' '}
+          <Link href="/privacy-policy"><Text style={styles.legalLink}>Privacy Policy</Text></Link>.
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -91,4 +98,6 @@ const styles = StyleSheet.create({
   link:        { alignItems: 'center', paddingVertical: 8 },
   linkText:    { fontSize: 14, color: Colors.textMuted },
   linkAccent:  { color: Colors.accent, fontWeight: '600' },
+  legalText:   { fontSize: 12, color: Colors.textMuted, textAlign: 'center', lineHeight: 18, marginTop: 12, paddingHorizontal: 8 },
+  legalLink:   { color: Colors.text, fontWeight: '600' },
 });

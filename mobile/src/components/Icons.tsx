@@ -83,3 +83,33 @@ export function CheckIcon({ color = '#fff', size = 12 }: { color?: string; size?
     </Svg>
   );
 }
+
+export function ShareIcon({ color = '#0B0C1D', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M16 6l-4-4-4 4" />
+      <Path d="M12 2v13" />
+      <Path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+    </Svg>
+  );
+}
+
+export function InboxIcon({ color = '#0B0C1D', size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 12h4l2 4h6l2-4h4" />
+      <Path d="M5.45 5.11L3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6l-2.45-6.89A1.5 1.5 0 0 0 17.13 4H6.87a1.5 1.5 0 0 0-1.42 1.11z" />
+    </Svg>
+  );
+}
+
+export function UserPlusIcon({ color = '#0B0C1D', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="9" cy="8" r="4" />
+      <Path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6" />
+      <Path d="M19 8v6" />
+      <Path d="M16 11h6" />
+    </Svg>
+  );
+}

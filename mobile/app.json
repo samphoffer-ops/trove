@@ -27,7 +27,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "baseUrl": "/trove"
+      "baseUrl": "/"
     }
   }
 }

@@ -35,6 +35,7 @@ export default function BoardsScreen() {
 function BoardCard({ board }: { board: Board }) {
   const items = board.board_items ?? [];
   const coverProductId = board.cover_product_id ?? items[0]?.product_id;
+  const collaborators = board.board_collaborators ?? [];
 
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/board/${board.id}`)}>
@@ -47,6 +48,17 @@ function BoardCard({ board }: { board: Board }) {
           />
         ) : (
           <View style={styles.coverEmpty} />
+        )}
+        {collaborators.length > 0 && (
+          <View style={styles.avatarStack}>
+            {collaborators.slice(0, 3).map(c => (
+              <View key={c.id} style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {(c.profiles?.display_name ?? c.profiles?.username ?? '?')[0].toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
         )}
       </View>
       <View style={styles.info}>
@@ -65,6 +77,13 @@ const styles = StyleSheet.create({
   card:      { width: '47%', borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface, shadowColor: '#1E1C1A', shadowOffset: { width:0, height:1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
+  avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },
+  avatar: {
+    width: 24, height: 24, borderRadius: 12, marginLeft: -8,
+    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#fff',
+  },
+  avatarText: { fontSize: 10, fontWeight: '800', color: '#fff' },
   info:      { padding: 10 },
   name:      { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 2 },
   count:     { fontSize: 12, color: Colors.textMuted },

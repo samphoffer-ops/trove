@@ -12,8 +12,9 @@ export default function RootLayout() {
       setSession(session);
 
       if (event === 'SIGNED_IN') {
-        fetchProfile();
-        router.replace('/(tabs)/feed');
+        fetchProfile().then(profile => {
+          router.replace(profile?.onboarding_completed_at ? '/(tabs)/feed' : '/onboarding');
+        });
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/sign-in');
       } else if (event === 'INITIAL_SESSION') {
@@ -30,10 +31,14 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="product/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="board/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />
+        <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />
+        <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
+        <Stack.Screen name="terms"          options={{ presentation: 'card' }} />
       </Stack>
     </GestureHandlerRootView>
   );
