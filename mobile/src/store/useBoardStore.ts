@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { Board, BoardItem, Product } from '@/types';
 
-const BOARD_SELECT = '*, board_items(product_id), board_collaborators(*, profiles(*))';
+// board_collaborators has two FKs to profiles (invited_by, user_id) — the
+// embed must be disambiguated or PostgREST errors (PGRST201) on every query.
+const BOARD_SELECT = '*, board_items(product_id), board_collaborators(*, profiles!board_collaborators_user_id_fkey(*))';
 
 interface BoardState {
   boards:         Board[];
@@ -35,6 +37,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         .select(`boards(${BOARD_SELECT})`)
         .eq('user_id', user.id),
     ]);
+    if (owned.error) console.error('fetchBoards (owned):', owned.error);
+    if (collaborating.error) console.error('fetchBoards (collaborating):', collaborating.error);
 
     const ownedBoards = ((owned.data ?? []) as Board[]).map(b => ({ ...b, isOwner: true }));
     const sharedBoards = ((collaborating.data ?? []) as unknown as { boards: Board }[])

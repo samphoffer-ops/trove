@@ -55,7 +55,7 @@ export default function PrivacyPolicy() {
         },
         {
           heading: 'Contact us',
-          body: 'Questions about this policy or your data? Email us at privacy@hellotrove.app.',
+          body: 'Questions about this policy or your data? Email us at privacy@shoptrove.app.',
         },
       ]}
     />

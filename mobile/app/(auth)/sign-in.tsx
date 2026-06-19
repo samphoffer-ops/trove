@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingVi
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
+import { Logo } from '@/components/Logo';
 
 export default function SignIn() {
   const [email,    setEmail]    = useState('');
@@ -19,7 +20,7 @@ export default function SignIn() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
       <View style={styles.inner}>
-        <Text style={styles.logo}>trove</Text>
+        <Logo width={150} />
         <Text style={styles.sub}>Discover things worth keeping.</Text>
 
         <TextInput
@@ -59,8 +60,7 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   root:  { flex: 1, backgroundColor: Colors.bg },
   inner: { flex: 1, paddingHorizontal: 28, justifyContent: 'center', gap: 14 },
-  logo:  { fontSize: 42, fontWeight: '800', color: Colors.accent, letterSpacing: -1, marginBottom: 4 },
-  sub:   { fontSize: 16, color: Colors.textMuted, marginBottom: 20 },
+  sub:   { fontSize: 16, color: Colors.textMuted, marginTop: 10, marginBottom: 20 },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.sm,
     paddingHorizontal: 16, paddingVertical: 14,

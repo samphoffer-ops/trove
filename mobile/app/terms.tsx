@@ -52,7 +52,7 @@ export default function Terms() {
         },
         {
           heading: 'Contact us',
-          body: 'Questions about these terms? Email us at support@hellotrove.app.',
+          body: 'Questions about these terms? Email us at support@shoptrove.app.',
         },
       ]}
     />
