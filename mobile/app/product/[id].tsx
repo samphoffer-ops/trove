@@ -29,7 +29,7 @@ export default function ProductDetail() {
 
   if (!loaded) {
     return (
-      <WebFrame>
+      <WebFrame maxWidth={480}>
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={Colors.accent} />
       </View>
@@ -41,7 +41,7 @@ export default function ProductDetail() {
   const saved = isProductSaved(product.id);
 
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
     <View style={styles.root}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Hero image */}

@@ -3,7 +3,7 @@ import { WebFrame } from '@/components/WebFrame';
 
 export default function AuthLayout() {
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
       <Stack screenOptions={{ headerShown: false }} />
     </WebFrame>
   );

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { ProductCard } from '@/components/ProductCard';
+import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { Product } from '@/types';
 import { Colors, Radius } from '@/lib/theme';
@@ -20,9 +21,6 @@ export default function SearchScreen() {
 
   const { products } = getProducts({ query });
   const hasQuery = query.trim().length > 0;
-
-  const leftCol  = products.filter((_, i) => i % 2 === 0);
-  const rightCol = products.filter((_, i) => i % 2 === 1);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -50,14 +48,12 @@ export default function SearchScreen() {
         ) : products.length === 0 ? (
           <Text style={styles.hint}>No results for "{query}"</Text>
         ) : (
-          <View style={styles.grid}>
-            <View style={styles.col}>
-              {leftCol.map(p => <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />)}
-            </View>
-            <View style={styles.col}>
-              {rightCol.map(p => <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />)}
-            </View>
-          </View>
+          <MasonryGrid
+            items={products}
+            keyExtractor={p => p.id}
+            horizontalPadding={0}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+          />
         )}
       </ScrollView>
 
@@ -76,6 +72,4 @@ const styles = StyleSheet.create({
   input:   { flex: 1, paddingVertical: 14, fontSize: 15, color: Colors.text },
   content: { paddingHorizontal: 16, paddingBottom: 100 },
   hint:    { fontSize: 15, color: Colors.textMuted, textAlign: 'center', paddingTop: 60 },
-  grid:    { flexDirection: 'row', gap: 12 },
-  col:     { flex: 1 },
 });

@@ -180,7 +180,7 @@ Sample products from this brand:
 ${sample}
 
 Respond with ONLY a JSON object, no other text:
-{"verdict": "approve"|"reject"|"uncertain", "confidence": <0-100>, "matched_categories": [...], "matched_styles": [...], "reasoning": "<one or two sentences>"}`;
+{"brand_name": "<the brand's actual display name, properly spaced and capitalized — infer it from the domain and product copy, e.g. 'leftfieldnyc.com' -> 'Left Field NYC', not a literal transcription of the domain>", "verdict": "approve"|"reject"|"uncertain", "confidence": <0-100>, "matched_categories": [...], "matched_styles": [...], "reasoning": "<one or two sentences>"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -234,6 +234,24 @@ Deno.serve(async (req) => {
     if (body.action === 'summary') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       return new Response(JSON.stringify(await getSummary(admin)), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // One-off cleanup action for brands named before the judge started
+    // returning a proper brand_name: { "action": "rename", "renames": {
+    // "domain.com": "Correct Name" } }. Not part of the normal intake flow.
+    if (body.action === 'rename') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const renames: Record<string, string> = body.renames ?? {};
+      const results = [];
+      for (const [domain, name] of Object.entries(renames)) {
+        const { data: brand, error } = await admin.from('brands').update({ name }).eq('domain', domain).select().single();
+        if (brand) {
+          // products.brand is denormalized at scrape time, not a live join — has to be fixed separately.
+          await admin.from('products').update({ brand: name }).eq('brand_id', brand.id);
+        }
+        results.push({ domain, name, ok: !error, error: error?.message });
+      }
+      return new Response(JSON.stringify({ results }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
     const { domains } = body;
@@ -307,7 +325,7 @@ Deno.serve(async (req) => {
       }
 
       const judgment = await judgeBrand(anthropicKey, domain, products);
-      const brandName = domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
+      const brandName = judgment.brand_name || domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
         .replace(/\b\w/g, c => c.toUpperCase());
 
       const { data: brandRow } = await admin.from('brands').upsert({

@@ -50,7 +50,7 @@ export default function UserProfile() {
   const isOwnProfile = user?.id === id;
 
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={8}><ChevronLeftIcon /></Pressable>

@@ -60,7 +60,7 @@ export default function BoardDetail() {
   const rightCol = items.filter((_, i) => i % 2 === 1);
 
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>

@@ -29,7 +29,7 @@ export default function Inbox() {
   }
 
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={8}>

@@ -45,7 +45,7 @@ export default function Onboarding() {
   }
 
   return (
-    <WebFrame>
+    <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
       <View style={styles.topBar}>
         {stepIndex > 0 ? (

@@ -8,6 +8,7 @@ import { useProductsStore, getProducts } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
+import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InboxIcon } from '@/components/Icons';
 import { Product } from '@/types';
@@ -36,10 +37,6 @@ export default function FeedScreen() {
     await Promise.all([fetchBoards(), fetchInbox()]);
     setRefreshing(false);
   }, []);
-
-  // Split into two columns for masonry
-  const leftCol  = products.filter((_, i) => i % 2 === 0);
-  const rightCol = products.filter((_, i) => i % 2 === 1);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -102,19 +99,11 @@ export default function FeedScreen() {
           );
         })}
 
-        {/* Two-column masonry grid */}
-        <View style={styles.grid}>
-          <View style={styles.col}>
-            {leftCol.map(p => (
-              <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />
-            ))}
-          </View>
-          <View style={styles.col}>
-            {rightCol.map(p => (
-              <ProductCard key={p.id} product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />
-            ))}
-          </View>
-        </View>
+        <MasonryGrid
+          items={products}
+          keyExtractor={p => p.id}
+          renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+        />
       </ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
@@ -149,6 +138,4 @@ const styles = StyleSheet.create({
   stripBrand:  { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7, color: Colors.textMuted, marginBottom: 2 },
   stripName:   { fontSize: 12.5, fontWeight: '600', color: Colors.text, marginBottom: 4 },
   stripPrice:  { fontSize: 12, fontWeight: '600', color: Colors.accentBlue },
-  grid: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingTop: 8 },
-  col:  { flex: 1 },
 });
