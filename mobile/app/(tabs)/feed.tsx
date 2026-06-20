@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,8 @@ const CATEGORIES = [
   ...ONBOARDING_STEPS[2].options.map(o => ({ id: o.id, label: o.label })),
 ];
 
+const PAGE_SIZE = 30;
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
@@ -27,10 +29,19 @@ export default function FeedScreen() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const { products } = getProducts({ category: activeCategory });
+  const { products, hasMore } = getProducts({ category: activeCategory, perPage: visibleCount });
 
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeCategory]);
   useEffect(() => { fetchInbox(); fetchProducts(); }, []);
+
+  function handleScroll(e: any) {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
+      setVisibleCount(c => c + PAGE_SIZE);
+    }
+  }
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -72,6 +83,8 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
         contentContainerStyle={{ paddingBottom: 100 }}
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
       >
         {/* Editorial strips */}
         {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
@@ -104,6 +117,7 @@ export default function FeedScreen() {
           keyExtractor={p => p.id}
           renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
         />
+        {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
       </ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />

@@ -202,6 +202,26 @@ Respond with ONLY a JSON object, no other text:
   return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
 }
 
+// Cheap per-product category classification — no extra LLM call. Falls back
+// to the brand's own judge-assigned matched_categories[0] when no keyword
+// hits, since a brand-level category is still far better than NULL (which
+// silently excludes a product from every category filter in the app).
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  shoes:       ['shoe', 'sneaker', 'boot', 'sandal', 'loafer', 'slipper', 'heel', 'flat', 'moccasin', 'clog', 'espadrille'],
+  bags:        ['bag', 'tote', 'backpack', 'pouch', 'wallet', 'clutch', 'satchel', 'duffel'],
+  accessories: ['sunglass', 'eyewear', 'glasses', 'hat', 'cap', 'beanie', 'scarf', 'belt', 'jewelry', 'necklace', 'earring', 'bracelet', 'ring', 'watch', 'sock', 'tie'],
+  home:        ['mug', 'candle', 'vase', 'pillow', 'blanket', 'throw', 'plate', 'bowl', 'rug', 'sheet', 'towel', 'ceramic', 'glassware', 'tray'],
+  beauty:      ['serum', 'cream', 'lotion', 'fragrance', 'perfume', 'cologne', 'skincare', 'cleanser', 'lip', 'balm', 'oil', 'shampoo', 'soap'],
+};
+
+function classifyCategory(productName: string, fallback: string | null): string {
+  const lower = productName.toLowerCase();
+  for (const [category, words] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (words.some(w => lower.includes(w))) return category;
+  }
+  return fallback ?? 'clothing';
+}
+
 // Self-check action: { "action": "summary" } returns recent brand decisions
 // (with Sam's actual status, not just the judge's verdict) so judging
 // patterns can be reviewed and the RUBRIC corrected without needing a
@@ -289,6 +309,7 @@ Deno.serve(async (req) => {
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
                 image: p.image, ratio: p.ratio, url: p.url, description: p.description,
+                category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
                 source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
               });
             }

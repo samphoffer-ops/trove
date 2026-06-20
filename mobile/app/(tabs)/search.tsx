@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
@@ -10,17 +10,28 @@ import { Product } from '@/types';
 import { Colors, Radius } from '@/lib/theme';
 import { SearchIcon, CloseIcon } from '@/components/Icons';
 
+const PAGE_SIZE = 30;
+
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
   const { fetchProducts } = useProductsStore();
   const [query,      setQuery]      = useState('');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [query]);
 
-  const { products } = getProducts({ query });
+  const { products, hasMore } = getProducts({ query, perPage: visibleCount });
   const hasQuery = query.trim().length > 0;
+
+  function handleScroll(e: any) {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
+      setVisibleCount(c => c + PAGE_SIZE);
+    }
+  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -42,18 +53,21 @@ export default function SearchScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={200}>
         {!hasQuery ? (
           <Text style={styles.hint}>Start typing to discover products</Text>
         ) : products.length === 0 ? (
           <Text style={styles.hint}>No results for "{query}"</Text>
         ) : (
-          <MasonryGrid
-            items={products}
-            keyExtractor={p => p.id}
-            horizontalPadding={0}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
-          />
+          <>
+            <MasonryGrid
+              items={products}
+              keyExtractor={p => p.id}
+              horizontalPadding={0}
+              renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+            />
+            {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
+          </>
         )}
       </ScrollView>
 
