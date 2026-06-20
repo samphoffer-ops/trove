@@ -9,6 +9,41 @@ interface ProductsState {
   fetchProducts: () => Promise<void>;
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Auto-scraped products land in `created_at` order one brand's whole catalog
+// at a time, so an unshuffled feed shows 20 items from the same brand in a
+// row before moving to the next. Round-robin across brands instead — one
+// item per brand per pass, both the brand order and each brand's own item
+// order randomized — so the feed actually feels mixed rather than grouped.
+function interleaveByBrand(products: Product[]): Product[] {
+  const groups = new Map<string, Product[]>();
+  for (const p of products) {
+    const key = p.brand_id ?? p.brand;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  for (const group of groups.values()) shuffle(group);
+  const brandKeys = shuffle([...groups.keys()]);
+
+  const result: Product[] = [];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const key of brandKeys) {
+      const next = groups.get(key)!.shift();
+      if (next) { result.push(next); added = true; }
+    }
+  }
+  return result;
+}
+
 // Catalog now lives in Supabase (`products` table) instead of a static array —
 // fetched once into memory here, same as the old static PRODUCTS array, so
 // getProducts()/getProductById() below can stay synchronous and every
@@ -31,7 +66,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       set({ loading: false });
       return;
     }
-    set({ products: (data ?? []) as Product[], loading: false, loaded: true });
+    set({ products: interleaveByBrand((data ?? []) as Product[]), loading: false, loaded: true });
   },
 }));
 
