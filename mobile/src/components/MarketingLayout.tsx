@@ -29,7 +29,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
           {!narrow && (
             <View style={styles.navLinks}>
               {NAV_LINKS.map(link => (
-                <Link key={link.href} href={link.href} style={[styles.navLink, pathname === link.href && styles.navLinkActive]}>
+                <Link key={link.href} href={link.href} style={pathname === link.href ? styles.navLinkActiveCombined : styles.navLink}>
                   {link.label}
                 </Link>
               ))}
@@ -49,7 +49,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
         {narrow && (
           <View style={[styles.navLinksNarrow, { maxWidth: MAX_WIDTH }]}>
             {NAV_LINKS.map(link => (
-              <Link key={link.href} href={link.href} style={[styles.navLink, pathname === link.href && styles.navLinkActive]}>
+              <Link key={link.href} href={link.href} style={pathname === link.href ? styles.navLinkActiveCombined : styles.navLink}>
                 {link.label}
               </Link>
             ))}
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
   navLinks: { flexDirection: 'row', gap: 28 },
   navLinksNarrow: { flexDirection: 'row', gap: 20, flexWrap: 'wrap', width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 14 },
   navLink: { fontSize: 14.5, fontWeight: '600', color: Colors.textMuted, textDecorationLine: 'none' } as any,
-  navLinkActive: { color: Colors.text },
+  navLinkActiveCombined: { fontSize: 14.5, fontWeight: '600', color: Colors.text, textDecorationLine: 'none' } as any,
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   loginLink: { fontSize: 14.5, fontWeight: '600', color: Colors.text, textDecorationLine: 'none' } as any,
-  signUpBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
-  signUpBtnText: { color: '#fff', fontSize: 14.5, fontWeight: '700' },
+  signUpBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
+  signUpBtnText: { color: Colors.text, fontSize: 14.5, fontWeight: '700' },
   scrollContent: { flexGrow: 1, alignItems: 'center' },
   content:  { width: '100%', alignSelf: 'center', paddingHorizontal: 24 },
   footer:   { width: '100%', alignItems: 'center', borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 80 },

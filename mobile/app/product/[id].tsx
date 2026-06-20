@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PRODUCTS } from '@/data/products';
+import { useProductsStore, getProductById } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
@@ -18,10 +18,21 @@ export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
+  const { loaded, fetchProducts } = useProductsStore();
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
 
-  const product = PRODUCTS.find(p => p.id === id);
+  useEffect(() => { fetchProducts(); }, []);
+
+  const product = getProductById(id!);
+
+  if (!loaded) {
+    return (
+      <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={Colors.accent} />
+      </View>
+    );
+  }
   if (!product) return null;
 
   const saved = isProductSaved(product.id);
@@ -90,8 +101,8 @@ const styles = StyleSheet.create({
   tag:        { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.stoneSoft },
   tagText:    { fontSize: 12, fontWeight: '600', color: Colors.textMuted, textTransform: 'capitalize' },
   actions:    { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16, backgroundColor: 'rgba(253,252,249,0.95)', borderTopWidth: 1, borderTopColor: Colors.border },
-  shopBtn:    { flex: 1, backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
-  shopBtnText:{ color: '#fff', fontSize: 15, fontWeight: '700' },
+  shopBtn:    { flex: 1, backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
+  shopBtnText:{ color: Colors.text, fontSize: 15, fontWeight: '700' },
   saveBtn:    { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   saveBtnActive: { borderColor: Colors.accent },
 });

@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
   textArea: { minHeight: 90, textAlignVertical: 'top' },
-  submitBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  submitBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center', paddingHorizontal: 12 },
+  submitBtnText: { color: Colors.text, fontSize: 15, fontWeight: '700', textAlign: 'center', paddingHorizontal: 12 },
   successBox: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: 24 },
   successText: { fontSize: 16, fontWeight: '600', color: Colors.text },
 });

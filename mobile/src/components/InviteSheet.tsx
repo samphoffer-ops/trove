@@ -75,7 +75,7 @@ export function InviteSheet({ board, onClose }: Props) {
                       <Text style={styles.username}>@{friend.username}</Text>
                     </View>
                     <View style={[styles.check, isCollaborator && styles.checkActive]}>
-                      {isCollaborator && <CheckIcon />}
+                      {isCollaborator && <CheckIcon color={Colors.text} />}
                     </View>
                   </Pressable>
                 );
@@ -123,5 +123,5 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  checkActive: { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
 });

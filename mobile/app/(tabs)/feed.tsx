@@ -3,7 +3,8 @@ import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PRODUCTS, ONBOARDING_STEPS, EDITORIAL_STRIPS, getProducts } from '@/data/products';
+import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
+import { useProductsStore, getProducts } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
@@ -13,7 +14,7 @@ import { Product } from '@/types';
 import { Colors, Radius } from '@/lib/theme';
 
 const CATEGORIES = [
-  { id: 'all', label: 'All' },
+  { id: 'all', label: 'all' },
   ...ONBOARDING_STEPS[2].options.map(o => ({ id: o.id, label: o.label })),
 ];
 
@@ -21,13 +22,14 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
+  const { products: allProducts, fetchProducts } = useProductsStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const { products } = getProducts({ category: activeCategory });
 
-  useEffect(() => { fetchInbox(); }, []);
+  useEffect(() => { fetchInbox(); fetchProducts(); }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -44,7 +46,7 @@ export default function FeedScreen() {
       {/* Sticky header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>For You</Text>
+          <Text style={styles.title}>for you</Text>
           <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
             <InboxIcon size={22} />
             {unreadCount > 0 && (
@@ -76,13 +78,13 @@ export default function FeedScreen() {
       >
         {/* Editorial strips */}
         {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
-          const items = PRODUCTS.filter(strip.filter).slice(0, 8);
+          const items = allProducts.filter(strip.filter).slice(0, 8);
           if (!items.length) return null;
           return (
             <View key={strip.title} style={styles.strip}>
               <View style={styles.stripHeader}>
                 <Text style={styles.stripTitle}>{strip.title}</Text>
-                <Text style={styles.seeAll}>See all</Text>
+                <Text style={styles.seeAll}>see all</Text>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
                 {items.map(p => (

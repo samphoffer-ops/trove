@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProducts } from '@/data/products';
+import { getProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { ProductCard } from '@/components/ProductCard';
 import { SaveSheet } from '@/components/SaveSheet';
@@ -12,8 +12,11 @@ import { SearchIcon, CloseIcon } from '@/components/Icons';
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
+  const { fetchProducts } = useProductsStore();
   const [query,      setQuery]      = useState('');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+
+  useEffect(() => { fetchProducts(); }, []);
 
   const { products } = getProducts({ query });
   const hasQuery = query.trim().length > 0;

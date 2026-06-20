@@ -99,7 +99,7 @@ export function SaveSheet({ product, onClose }: Props) {
                       <Text style={styles.boardCount}>{(board.board_items ?? []).length} items</Text>
                     </View>
                     <View style={[styles.check, isSaved && styles.checkActive]}>
-                      {isSaved && <CheckIcon />}
+                      {isSaved && <CheckIcon color={Colors.text} />}
                     </View>
                   </Pressable>
                 );
@@ -142,11 +142,11 @@ const styles = StyleSheet.create({
     fontSize: 14, color: Colors.text, backgroundColor: Colors.bg,
   },
   createBtn: {
-    backgroundColor: Colors.accent, borderRadius: Radius.sm,
+    backgroundColor: Colors.accentLime, borderRadius: Radius.sm,
     paddingHorizontal: 16, justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.35 },
-  createBtnText:     { color: '#fff', fontWeight: '700', fontSize: 14 },
+  createBtnText:     { color: Colors.text, fontWeight: '700', fontSize: 14 },
   list:   { paddingHorizontal: 20 },
   empty:  { color: Colors.textMuted, fontSize: 14, paddingVertical: 16 },
   boardRow: {
@@ -165,5 +165,5 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  checkActive: { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
 });

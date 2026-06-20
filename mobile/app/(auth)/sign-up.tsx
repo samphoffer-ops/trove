@@ -90,11 +90,11 @@ const styles = StyleSheet.create({
     fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
   btn: {
-    backgroundColor: Colors.accent, borderRadius: Radius.full,
+    backgroundColor: Colors.accentLime, borderRadius: Radius.full,
     paddingVertical: 16, alignItems: 'center', marginTop: 6,
   },
   btnDisabled: { opacity: 0.5 },
-  btnText:     { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnText:     { color: Colors.text, fontSize: 16, fontWeight: '700' },
   link:        { alignItems: 'center', paddingVertical: 8 },
   linkText:    { fontSize: 14, color: Colors.textMuted },
   linkAccent:  { color: Colors.accent, fontWeight: '600' },

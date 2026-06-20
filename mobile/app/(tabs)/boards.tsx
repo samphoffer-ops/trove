@@ -15,7 +15,7 @@ export default function BoardsScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <Text style={styles.title}>Boards</Text>
+      <Text style={styles.title}>boards</Text>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {boards.length === 0 ? (
           <View style={styles.empty}>

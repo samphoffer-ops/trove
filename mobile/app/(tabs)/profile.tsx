@@ -65,7 +65,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.title}>profile</Text>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Avatar + name */}

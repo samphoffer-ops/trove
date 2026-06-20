@@ -24,6 +24,6 @@ const styles = StyleSheet.create({
   section: { paddingTop: 64, paddingBottom: 80, gap: 18, maxWidth: 520 },
   headline: { fontSize: 36, fontWeight: '800', color: Colors.text, letterSpacing: -0.6 },
   body: { fontSize: 16.5, color: Colors.textMuted, lineHeight: 26 },
-  emailBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 24, paddingVertical: 15, alignSelf: 'flex-start', marginTop: 8 },
-  emailBtnText: { color: '#fff', fontSize: 15.5, fontWeight: '700' },
+  emailBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 24, paddingVertical: 15, alignSelf: 'flex-start', marginTop: 8 },
+  emailBtnText: { color: Colors.text, fontSize: 15.5, fontWeight: '700' },
 });

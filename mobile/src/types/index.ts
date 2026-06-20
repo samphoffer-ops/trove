@@ -21,6 +21,27 @@ export interface Product {
   category?: string;
   styles?: string[];
   description?: string;
+  // Catalog/ingestion metadata — present on rows from the `products` table,
+  // absent on nothing now that the static array has moved into Supabase.
+  brand_id?: string;
+  source?: 'manual' | 'auto_scrape';
+  status?: 'active' | 'stale' | 'removed';
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  domain: string;
+  status: 'pending_review' | 'approved' | 'rejected';
+  platform?: 'shopify' | 'ld_json';
+  judge_confidence?: number;
+  judge_reasoning?: string;
+  matched_categories?: string[];
+  matched_styles?: string[];
+  approved_by?: string;
+  approved_at?: string;
+  rejected_until?: string;
+  created_at: string;
 }
 
 export interface Board {

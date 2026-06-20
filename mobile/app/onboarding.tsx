@@ -59,7 +59,7 @@ export default function Onboarding() {
           ))}
         </View>
         <Pressable onPress={skipAll} hitSlop={8}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>skip</Text>
         </Pressable>
       </View>
 
@@ -82,7 +82,7 @@ export default function Onboarding() {
               <View style={[styles.tileOverlay, active && styles.tileOverlayActive]} />
               {active && (
                 <View style={styles.checkBadge}>
-                  <CheckIcon />
+                  <CheckIcon color={Colors.text} />
                 </View>
               )}
               <View style={styles.tileLabelWrap}>
@@ -99,7 +99,7 @@ export default function Onboarding() {
           onPress={advance}
           disabled={selected.length === 0 || submitting}
         >
-          <Text style={styles.continueText}>{isLastStep ? 'Start exploring' : 'Continue'}</Text>
+          <Text style={styles.continueText}>{isLastStep ? 'start exploring' : 'continue'}</Text>
         </Pressable>
       </View>
     </View>
@@ -122,15 +122,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.stoneSoft, marginBottom: 12, justifyContent: 'flex-end',
   },
   tileOverlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,12,29,0.18)' },
-  tileOverlayActive: { backgroundColor: 'rgba(255,74,28,0.32)' },
+  tileOverlayActive: { backgroundColor: 'rgba(232,243,83,0.4)' },
   checkBadge: {
     position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
-    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
   },
   tileLabelWrap: { padding: 10 },
   tileLabel:     { fontSize: 14, fontWeight: '700', color: '#fff' },
   footer:  { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border },
-  continueBtn:        { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
+  continueBtn:        { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
   continueBtnDisabled:{ opacity: 0.35 },
-  continueText:       { color: '#fff', fontSize: 16, fontWeight: '700' },
+  continueText:       { color: Colors.text, fontSize: 16, fontWeight: '700' },
 });

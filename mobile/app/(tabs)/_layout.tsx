@@ -22,28 +22,28 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="feed"
         options={{
-          title: 'Feed',
+          title: 'feed',
           tabBarIcon: ({ color }) => <GridIcon color={color} />,
         }}
       />
       <Tabs.Screen
         name="boards"
         options={{
-          title: 'Boards',
+          title: 'boards',
           tabBarIcon: ({ color }) => <BoardsIcon color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          title: 'search',
           tabBarIcon: ({ color }) => <SearchIcon color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'profile',
           tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
       />
@@ -78,6 +78,5 @@ const styles = StyleSheet.create({
     fontSize:   10.5,
     fontWeight: '600',
     marginTop:  -2,
-    marginBottom: 6,
   },
 });

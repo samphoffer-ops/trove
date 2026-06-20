@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { Platform, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
@@ -6,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { Colors, Radius } from '@/lib/theme';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { PhoneMockup } from '@/components/PhoneMockup';
-import { PRODUCTS } from '@/data/products';
+import { useProductsStore } from '@/store/useProductsStore';
 
 const SNAPSHOT = [
   { label: 'Discover', body: 'A feed that earns your trust.' },
@@ -17,7 +18,9 @@ const SNAPSHOT = [
 const FEATURED_BRANDS = ['Every Other Thursday', 'Gardenheir', 'Chamula', 'Orée New York', 'Nécessaire'];
 
 function MarketingHome() {
-  const showcase = PRODUCTS.slice(0, 12);
+  const { products, fetchProducts } = useProductsStore();
+  useEffect(() => { fetchProducts(); }, []);
+  const showcase = products.slice(0, 12);
 
   return (
     <MarketingLayout>
@@ -79,7 +82,7 @@ function MarketingHome() {
       <View style={styles.bottomCta}>
         <Text style={styles.bottomCtaHeadline}>Your next favorite thing is already out there.</Text>
         <Link href="/(auth)/sign-up" asChild>
-          <Pressable style={styles.heroCta}>
+          <Pressable style={styles.heroCtaCentered}>
             <Text style={styles.heroCtaText}>Start discovering</Text>
           </Pressable>
         </Link>
@@ -120,8 +123,9 @@ const styles = StyleSheet.create({
   tagline:  { fontSize: 14, fontWeight: '700', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
   headline: { fontSize: 44, fontWeight: '800', color: Colors.text, letterSpacing: -1, lineHeight: 50 },
   sub:      { fontSize: 17, color: Colors.textMuted, lineHeight: 26, maxWidth: 460 },
-  heroCta:  { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'flex-start', marginTop: 8 },
-  heroCtaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  heroCta:  { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'flex-start', marginTop: 8 },
+  heroCtaCentered: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'center', marginTop: 8 },
+  heroCtaText: { color: Colors.text, fontSize: 16, fontWeight: '700' },
   heroVisual: { flex: 1, minWidth: 240, alignItems: 'center' },
 
   snapshotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingVertical: 40 },

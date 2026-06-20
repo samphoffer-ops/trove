@@ -79,7 +79,7 @@ export function ShareSheet({ product, onClose }: Props) {
                       <Text style={styles.username}>@{friend.username}</Text>
                     </View>
                     <View style={[styles.check, isPicked && styles.checkActive]}>
-                      {isPicked && <CheckIcon />}
+                      {isPicked && <CheckIcon color={Colors.text} />}
                     </View>
                   </Pressable>
                 );
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  checkActive: { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
   footer:    { padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
-  sendBtn:   { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
+  sendBtn:   { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
-  sendBtnText:     { color: '#fff', fontSize: 15, fontWeight: '700' },
+  sendBtnText:     { color: Colors.text, fontSize: 15, fontWeight: '700' },
 });
