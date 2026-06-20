@@ -20,9 +20,31 @@ fits Trove's bar if it is: curated, intentional, authentic, effortless — a
 quality DTC/independent brand, explicitly NOT Amazon-style mass-market or a
 dropshipper, fits one or more of [fashion, home, beauty], fits one or more of
 these styles: [minimalist, maximalist, streetwear, vintage, coastal,
-cottagecore, industrial, boho]. Reject any brand whose catalog is primarily
-children's/kids' clothing or baby products, even if the brand also makes
-adult items — Trove is not a kids' shopping app.`;
+cottagecore, industrial, boho].
+
+Reject any brand whose catalog is primarily children's/kids' clothing or baby
+products, even if the brand also makes adult items — Trove is not a kids'
+shopping app.
+
+Reject golf apparel / golf-lifestyle brands as a category — even when framed
+as "streetwear" or "lifestyle," this has been confirmed an explicit miss for
+Trove's taste, not a style worth surfacing more of. A brand that merely has a
+founder or cultural tie to golf is fine; a brand whose core identity and
+catalog IS golf apparel is not.
+
+Reject brands that read as mainstream/mass-retail home goods (the kind of
+brand you'd recognize from a big-box store aisle), even if the product
+photography or copy uses "playful," "design-forward," or similar language —
+prioritize genuinely small/independent over recognizable mass retail.
+
+Reject unfocused "general store" brands selling across many unrelated
+categories (e.g. stationery + wallets + kids' clothes in one catalog) with no
+single coherent point of view — Trove brands should have a clear identity,
+not be a curated multi-brand marketplace themselves.
+
+Be skeptical of brands whose catalog is narrowly tied to a single occasion or
+life event (e.g. wedding-specific decor) rather than everyday/ongoing use —
+lean toward rejecting unless the craft/quality bar is exceptional.`;
 
 const MAX_DOMAINS_PER_RUN = 15;
 const REQUEST_DELAY_MS = 1500;
@@ -170,9 +192,41 @@ Respond with ONLY a JSON object, no other text:
   return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
 }
 
+// Self-check action: { "action": "summary" } returns recent brand decisions
+// (with Sam's actual status, not just the judge's verdict) so judging
+// patterns can be reviewed and the RUBRIC corrected without needing a
+// dashboard screenshot each time. Uses the service-role key internally, so
+// this bypasses RLS the same way writes already do — it's reachable with
+// just the anon key, same as the rest of this function.
+async function getSummary(admin: ReturnType<typeof createClient>) {
+  const { data } = await admin
+    .from('brands')
+    .select('name, domain, status, judge_confidence, judge_reasoning, matched_categories, matched_styles, created_at')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  const rows = data ?? [];
+  return {
+    total: rows.length,
+    by_status: {
+      approved: rows.filter(r => r.status === 'approved').length,
+      rejected: rows.filter(r => r.status === 'rejected').length,
+      pending_review: rows.filter(r => r.status === 'pending_review').length,
+    },
+    rejected: rows.filter(r => r.status === 'rejected'),
+    pending: rows.filter(r => r.status === 'pending_review'),
+  };
+}
+
 Deno.serve(async (req) => {
   try {
-    const { domains } = await req.json();
+    const body = await req.json();
+
+    if (body.action === 'summary') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      return new Response(JSON.stringify(await getSummary(admin)), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
       return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
     }
