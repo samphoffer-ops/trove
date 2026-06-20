@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useShareStore } from '@/store/useShareStore';
 import { fetchFollowing } from '@/lib/social';
 import { Colors, Radius } from '@/lib/theme';
-import { CheckIcon } from './Icons';
+import { CheckIcon, CloseIcon } from './Icons';
 
 interface Props {
   product: Product | null;
@@ -61,7 +61,12 @@ export function ShareSheet({ product, onClose }: Props) {
       <View style={styles.sheetWrap}>
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Share with a friend</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Share with a friend</Text>
+            <Pressable onPress={close} hitSlop={10} style={styles.closeBtn}>
+              <CloseIcon color={Colors.textMuted} size={16} />
+            </Pressable>
+          </View>
 
           <ScrollView style={styles.list}>
             {friends.length === 0 ? (
@@ -121,10 +126,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
-  title: {
-    fontSize: 17, fontWeight: '700', color: Colors.text,
+  titleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  title: { fontSize: 17, fontWeight: '700', color: Colors.text },
+  closeBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   list:  { paddingHorizontal: 20 },
   empty: { color: Colors.textMuted, fontSize: 14, lineHeight: 21, paddingVertical: 20 },

@@ -12,6 +12,7 @@ import { Colors, Radius } from '@/lib/theme';
 import { Product } from '@/types';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { WebFrame } from '@/components/WebFrame';
+import { goBack } from '@/lib/navigation';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -47,7 +48,7 @@ export default function ProductDetail() {
         {/* Hero image */}
         <View style={styles.hero}>
           <Image source={{ uri: product.image }} style={styles.heroImg} contentFit="cover" />
-          <Pressable style={[styles.backBtn, { top: insets.top + 12 }]} onPress={() => router.back()}>
+          <Pressable style={[styles.backBtn, { top: insets.top + 12 }]} onPress={() => goBack('/(tabs)/feed')}>
             <ChevronLeftIcon />
           </Pressable>
           <View style={[styles.heroActions, { top: insets.top + 12 }]}>

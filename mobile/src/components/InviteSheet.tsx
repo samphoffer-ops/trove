@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { fetchFollowing } from '@/lib/social';
 import { Colors, Radius } from '@/lib/theme';
-import { CheckIcon } from './Icons';
+import { CheckIcon, CloseIcon } from './Icons';
 
 interface Props {
   board:   Board | null;
@@ -57,7 +57,12 @@ export function InviteSheet({ board, onClose }: Props) {
       <View style={styles.sheetWrap}>
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Invite to "{board.name}"</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>Invite to "{board.name}"</Text>
+            <Pressable onPress={close} hitSlop={10} style={styles.closeBtn}>
+              <CloseIcon color={Colors.textMuted} size={16} />
+            </Pressable>
+          </View>
 
           <ScrollView style={styles.list}>
             {friends.length === 0 ? (
@@ -103,10 +108,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
-  title: {
-    fontSize: 17, fontWeight: '700', color: Colors.text,
+  titleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  title: { fontSize: 17, fontWeight: '700', color: Colors.text, flexShrink: 1, marginRight: 12 },
+  closeBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   list:  { paddingHorizontal: 20 },
   empty: { color: Colors.textMuted, fontSize: 14, lineHeight: 21, paddingVertical: 20 },

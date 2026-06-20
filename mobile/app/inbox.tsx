@@ -8,6 +8,7 @@ import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Share } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
+import { goBack } from '@/lib/navigation';
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -32,7 +33,7 @@ export default function Inbox() {
     <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={8}>
           <ChevronLeftIcon />
         </Pressable>
         <Text style={styles.topBarTitle}>Shared with you</Text>

@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import { Product } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius } from '@/lib/theme';
-import { CheckIcon } from './Icons';
+import { CheckIcon, CloseIcon } from './Icons';
 
 interface Props {
   product:  Product | null;
@@ -36,8 +36,14 @@ export function SaveSheet({ product, onClose }: Props) {
     if (!product) return;
     const board = boards.find(b => b.id === boardId)!;
     const saved = (board.board_items ?? []).some(i => i.product_id === product.id);
-    if (saved) await removeFromBoard(boardId, product.id);
-    else       await addToBoard(boardId, product);
+    if (saved) {
+      await removeFromBoard(boardId, product.id);
+    } else {
+      await addToBoard(boardId, product);
+      // Brief pause so the checkmark fill is visible before the sheet dismisses —
+      // tapping a board is a complete "save" action, not a multi-select staging area.
+      setTimeout(close, 400);
+    }
   }
 
   async function handleCreate() {
@@ -57,7 +63,12 @@ export function SaveSheet({ product, onClose }: Props) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap}>
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Save to board</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Save to board</Text>
+            <Pressable onPress={close} hitSlop={10} style={styles.closeBtn}>
+              <CloseIcon color={Colors.textMuted} size={16} />
+            </Pressable>
+          </View>
 
           <View style={styles.newRow}>
             <TextInput
@@ -127,10 +138,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     alignSelf: 'center', marginTop: 12, marginBottom: 4,
   },
-  title: {
-    fontSize: 17, fontWeight: '700', color: Colors.text,
+  titleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  title: { fontSize: 17, fontWeight: '700', color: Colors.text },
+  closeBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   newRow: {
     flexDirection: 'row', gap: 8,

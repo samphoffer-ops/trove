@@ -9,6 +9,7 @@ import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Profile, Board } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
+import { goBack } from '@/lib/navigation';
 
 export default function UserProfile() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -53,7 +54,7 @@ export default function UserProfile() {
     <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={8}><ChevronLeftIcon /></Pressable>
+        <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={8}><ChevronLeftIcon /></Pressable>
         <Text style={styles.topBarTitle}>@{profile.username}</Text>
         <View style={{ width: 24 }} />
       </View>

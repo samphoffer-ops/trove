@@ -11,6 +11,7 @@ import { ChevronLeftIcon, DotsIcon, UserPlusIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
+import { goBack } from '@/lib/navigation';
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -64,7 +65,7 @@ export default function BoardDetail() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
+        <Pressable onPress={() => goBack('/(tabs)/boards')} hitSlop={8}>
           <ChevronLeftIcon />
         </Pressable>
         <View style={{ flex: 1, marginLeft: 8 }}>
