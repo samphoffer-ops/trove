@@ -15,11 +15,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // yet. Call this function with a `domains` array; something else (Sam, or a
 // future discovery step) decides what goes in that array.
 
-const RUBRIC = `Trove is a curated shopping discovery app. A brand fits Trove's bar if it is:
-curated, intentional, authentic, effortless — quality DTC/independent brand,
-explicitly NOT Amazon-style mass-market or a dropshipper, fits one or more of
-[fashion, home, beauty], fits one or more of these styles: [minimalist,
-maximalist, streetwear, vintage, coastal, cottagecore, industrial, boho].`;
+const RUBRIC = `Trove is a curated shopping discovery app for adults in their 20s-30s. A brand
+fits Trove's bar if it is: curated, intentional, authentic, effortless — a
+quality DTC/independent brand, explicitly NOT Amazon-style mass-market or a
+dropshipper, fits one or more of [fashion, home, beauty], fits one or more of
+these styles: [minimalist, maximalist, streetwear, vintage, coastal,
+cottagecore, industrial, boho]. Reject any brand whose catalog is primarily
+children's/kids' clothing or baby products, even if the brand also makes
+adult items — Trove is not a kids' shopping app.`;
 
 const MAX_DOMAINS_PER_RUN = 15;
 const REQUEST_DELAY_MS = 1500;
