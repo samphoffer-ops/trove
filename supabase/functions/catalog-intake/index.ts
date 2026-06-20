@@ -42,6 +42,16 @@ categories (e.g. stationery + wallets + kids' clothes in one catalog) with no
 single coherent point of view — Trove brands should have a clear identity,
 not be a curated multi-brand marketplace themselves.
 
+Reject beauty/skincare brands whose branding or positioning (clinical,
+dermatological, anti-aging-forward) skews toward an older demographic than
+Trove's 20s-30s audience — confirmed miss: a clean-beauty brand scored high
+on craft/quality but was still wrong for being aimed at an older customer.
+
+Reject menswear/womenswear brands whose core register is corporate-formal or
+"stuffy" (e.g. dress shirts and tailoring built for office wear) — Trove
+skews toward effortless/casual even within "elevated" positioning, not
+buttoned-up formalwear.
+
 Be skeptical of brands whose catalog is narrowly tied to a single occasion or
 life event (e.g. wedding-specific decor) rather than everyday/ongoing use —
 lean toward rejecting unless the craft/quality bar is exceptional.`;
@@ -243,7 +253,14 @@ Deno.serve(async (req) => {
       await sleep(REQUEST_DELAY_MS);
 
       // Skip brands already evaluated (respecting rejected_until cooldown).
-      const { data: existing } = await admin.from('brands').select('*').eq('domain', domain).maybeSingle();
+      const { data: existing, error: lookupError } = await admin.from('brands').select('*').eq('domain', domain).maybeSingle();
+      if (lookupError) {
+        // Never treat a failed lookup as "brand not found" — that path re-judges
+        // and overwrites via onConflict:'domain', which would silently revert an
+        // already-approved/rejected brand back to pending_review on a transient blip.
+        results.push({ domain, action: 'skipped_lookup_error', error: lookupError.message });
+        continue;
+      }
       if (existing) {
         if (existing.status === 'approved') {
           // Re-scrape products for an already-approved brand — no LLM call, no new review.

@@ -10,6 +10,7 @@ import { InviteSheet } from '@/components/InviteSheet';
 import { ChevronLeftIcon, DotsIcon, UserPlusIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
+import { WebFrame } from '@/components/WebFrame';
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -59,6 +60,7 @@ export default function BoardDetail() {
   const rightCol = items.filter((_, i) => i % 2 === 1);
 
   return (
+    <WebFrame>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
@@ -113,6 +115,7 @@ export default function BoardDetail() {
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <InviteSheet board={inviting ? board : null} onClose={() => { setInviting(false); load(); }} />
     </View>
+    </WebFrame>
   );
 }
 

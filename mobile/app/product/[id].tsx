@@ -11,6 +11,7 @@ import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Product } from '@/types';
 import { getAffiliateUrl } from '@/lib/affiliate';
+import { WebFrame } from '@/components/WebFrame';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -28,9 +29,11 @@ export default function ProductDetail() {
 
   if (!loaded) {
     return (
+      <WebFrame>
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={Colors.accent} />
       </View>
+      </WebFrame>
     );
   }
   if (!product) return null;
@@ -38,6 +41,7 @@ export default function ProductDetail() {
   const saved = isProductSaved(product.id);
 
   return (
+    <WebFrame>
     <View style={styles.root}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Hero image */}
@@ -82,6 +86,7 @@ export default function ProductDetail() {
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
     </View>
+    </WebFrame>
   );
 }
 

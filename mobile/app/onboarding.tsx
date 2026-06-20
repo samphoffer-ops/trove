@@ -7,6 +7,7 @@ import { ONBOARDING_STEPS } from '@/data/products';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors, Radius } from '@/lib/theme';
 import { ChevronLeftIcon, CheckIcon } from '@/components/Icons';
+import { WebFrame } from '@/components/WebFrame';
 
 type Selections = { brands: string[]; styles: string[]; categories: string[] };
 
@@ -44,6 +45,7 @@ export default function Onboarding() {
   }
 
   return (
+    <WebFrame>
     <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
       <View style={styles.topBar}>
         {stepIndex > 0 ? (
@@ -103,6 +105,7 @@ export default function Onboarding() {
         </Pressable>
       </View>
     </View>
+    </WebFrame>
   );
 }
 

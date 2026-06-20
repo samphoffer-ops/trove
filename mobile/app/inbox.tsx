@@ -7,6 +7,7 @@ import { useShareStore } from '@/store/useShareStore';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Share } from '@/types';
+import { WebFrame } from '@/components/WebFrame';
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -28,6 +29,7 @@ export default function Inbox() {
   }
 
   return (
+    <WebFrame>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -63,6 +65,7 @@ export default function Inbox() {
         )}
       </ScrollView>
     </View>
+    </WebFrame>
   );
 }
 

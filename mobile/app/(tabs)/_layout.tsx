@@ -3,9 +3,11 @@ import { StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Colors } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
+import { WebFrame } from '@/components/WebFrame';
 
 export default function TabsLayout() {
   return (
+    <WebFrame>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -48,6 +50,7 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </WebFrame>
   );
 }
 

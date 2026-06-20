@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Profile, Board } from '@/types';
+import { WebFrame } from '@/components/WebFrame';
 
 export default function UserProfile() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -49,6 +50,7 @@ export default function UserProfile() {
   const isOwnProfile = user?.id === id;
 
   return (
+    <WebFrame>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={8}><ChevronLeftIcon /></Pressable>
@@ -95,6 +97,7 @@ export default function UserProfile() {
         </View>
       </ScrollView>
     </View>
+    </WebFrame>
   );
 }
 
