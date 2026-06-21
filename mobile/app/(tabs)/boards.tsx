@@ -34,15 +34,16 @@ export default function BoardsScreen() {
 
 function BoardCard({ board }: { board: Board }) {
   const items = board.board_items ?? [];
-  const coverProductId = board.cover_product_id ?? items[0]?.product_id;
+  const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
+  const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
   const collaborators = board.board_collaborators ?? [];
 
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/board/${board.id}`)}>
       <View style={styles.cover}>
-        {coverProductId ? (
+        {coverImage ? (
           <Image
-            source={{ uri: `https://loremflickr.com/400/400/${coverProductId}` }}
+            source={{ uri: coverImage }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
           />

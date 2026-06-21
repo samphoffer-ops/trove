@@ -10,3 +10,15 @@ export async function fetchFollowing(userId: string): Promise<Profile[]> {
     .map(r => r.following)
     .filter(Boolean);
 }
+
+export async function searchProfiles(query: string, excludeUserId?: string): Promise<Profile[]> {
+  if (!query.trim()) return [];
+  let req = supabase
+    .from('profiles')
+    .select('*')
+    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .limit(8);
+  if (excludeUserId) req = req.neq('id', excludeUserId);
+  const { data } = await req;
+  return (data ?? []) as Profile[];
+}

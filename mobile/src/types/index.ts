@@ -7,6 +7,7 @@ export interface Profile {
   taste_brands: string[];
   taste_styles: string[];
   taste_categories: string[];
+  shop_for: string[];
   onboarding_completed_at: string | null;
 }
 
@@ -49,10 +50,11 @@ export interface Board {
   user_id: string;
   name: string;
   cover_product_id: string | null;
+  cover_image_url: string | null;
   is_public: boolean;
   created_at: string;
   profiles?: Profile;
-  board_items?: { product_id: string }[];
+  board_items?: { product_id: string; product_data?: Product }[];
   board_collaborators?: BoardCollaborator[];
   isOwner?: boolean;
 }

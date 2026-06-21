@@ -8,22 +8,24 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
 import { ActionSheet } from '@/components/ActionSheet';
-import { ChevronLeftIcon, DotsIcon, UserPlusIcon } from '@/components/Icons';
+import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
+import { pickAndUploadImage } from '@/lib/uploadImage';
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const { fetchBoardById, getBoardItems, setCover, removeFromBoard } = useBoardStore();
+  const { fetchBoardById, getBoardItems, setCover, setCoverImage, removeFromBoard } = useBoardStore();
   const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [inviting,   setInviting]   = useState(false);
   const [menuItem,   setMenuItem]   = useState<BoardItem | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -39,6 +41,15 @@ export default function BoardDetail() {
   const total = items.reduce((n, i) => n + i.product_data.price, 0);
   const collaborators = board.board_collaborators ?? [];
   const canEdit = board.isOwner || collaborators.some(c => c.user_id === user?.id);
+
+  async function changeCoverImage() {
+    if (!board) return;
+    setUploadingCover(true);
+    const url = await pickAndUploadImage('board-covers', board.id, 'cover');
+    if (url) await setCoverImage(board.id, url);
+    setUploadingCover(false);
+    load();
+  }
 
   function openItemMenu(item: BoardItem) {
     if (Platform.OS === 'ios') {
@@ -56,27 +67,40 @@ export default function BoardDetail() {
 
   const leftCol  = items.filter((_, i) => i % 2 === 0);
   const rightCol = items.filter((_, i) => i % 2 === 1);
+  const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
+  const coverImage = board.cover_image_url ?? coverItem?.product_data.image;
 
   return (
     <WebFrame maxWidth={480}>
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => goBack('/(tabs)/boards')} hitSlop={8}>
-          <ChevronLeftIcon />
-        </Pressable>
-        <View style={{ flex: 1, marginLeft: 8 }}>
+    <View style={[styles.root]}>
+      {/* Cover */}
+      <View style={[styles.cover, { paddingTop: insets.top }]}>
+        {coverImage && <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />}
+        <View style={styles.coverScrim} />
+        <View style={styles.coverTopRow}>
+          <Pressable style={styles.coverIconBtn} onPress={() => goBack('/(tabs)/boards')} hitSlop={8}>
+            <ChevronLeftIcon />
+          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {canEdit && (
+              <Pressable style={styles.coverIconBtn} onPress={changeCoverImage} disabled={uploadingCover} hitSlop={8}>
+                <CameraIcon size={18} />
+              </Pressable>
+            )}
+            {board.isOwner && (
+              <Pressable style={styles.coverIconBtn} onPress={() => setInviting(true)} hitSlop={8}>
+                <UserPlusIcon size={19} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+        <View style={styles.coverBottom}>
           <Text style={styles.name}>{board.name}</Text>
           <Text style={styles.meta}>
             {items.length} item{items.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total
             {collaborators.length > 0 ? ` · Shared with ${collaborators.length}` : ''}
           </Text>
         </View>
-        {board.isOwner && (
-          <Pressable onPress={() => setInviting(true)} hitSlop={8}>
-            <UserPlusIcon size={21} />
-          </Pressable>
-        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -130,9 +154,13 @@ export default function BoardDetail() {
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: Colors.bg },
-  header:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  name:       { fontSize: 20, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
-  meta:       { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+  cover:      { width: '100%', aspectRatio: 16/9, backgroundColor: Colors.stoneSoft, justifyContent: 'space-between' },
+  coverScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,12,29,0.28)' },
+  coverTopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
+  coverIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
+  coverBottom: { paddingHorizontal: 20, paddingBottom: 16 },
+  name:       { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  meta:       { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   content:    { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 100 },
   grid:       { flexDirection: 'row', gap: 12 },
   col:        { flex: 1 },

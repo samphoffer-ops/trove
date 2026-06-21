@@ -1,20 +1,32 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
+import { pickAndUploadImage } from '@/lib/uploadImage';
+import { CameraIcon } from '@/components/Icons';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { profile, signOut, deleteAccount } = useAuthStore();
+  const { profile, signOut, deleteAccount, updateProfile } = useAuthStore();
   const { boards } = useBoardStore();
   const [followerCount,  setFollowerCount]  = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function changeAvatar() {
+    if (!profile) return;
+    setUploadingAvatar(true);
+    const url = await pickAndUploadImage('avatars', profile.id, 'avatar');
+    if (url) await updateProfile({ avatar_url: url });
+    setUploadingAvatar(false);
+  }
 
   useEffect(() => {
     if (!profile) return;
@@ -60,11 +72,21 @@ export default function ProfileScreen() {
 
         {/* Avatar + name */}
         <View style={styles.hero}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(profile?.display_name ?? profile?.username ?? '?')[0].toUpperCase()}</Text>
-          </View>
+          <Pressable style={styles.avatar} onPress={changeAvatar} disabled={uploadingAvatar}>
+            {profile?.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{(profile?.display_name ?? profile?.username ?? '?')[0].toUpperCase()}</Text>
+            )}
+            <View style={styles.avatarCameraBadge}>
+              <CameraIcon color={Colors.text} size={13} />
+            </View>
+          </Pressable>
           <Text style={styles.displayName}>{profile?.display_name ?? profile?.username}</Text>
           <Text style={styles.username}>@{profile?.username}</Text>
+          <Pressable style={styles.editProfileBtn} onPress={() => router.push('/edit-profile')}>
+            <Text style={styles.editProfileText}>Edit profile</Text>
+          </Pressable>
         </View>
 
         {/* Stats */}
@@ -109,10 +131,17 @@ const styles = StyleSheet.create({
   title:       { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   content:     { paddingHorizontal: 20, paddingBottom: 100 },
   hero:        { alignItems: 'center', paddingVertical: 24 },
-  avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden', position: 'relative' },
   avatarText:  { fontSize: 28, fontWeight: '800', color: '#fff' },
+  avatarCameraBadge: {
+    position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: 12,
+    backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: Colors.bg,
+  },
   displayName: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   username:    { fontSize: 14, color: Colors.textMuted },
+  editProfileBtn: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
+  editProfileText: { fontSize: 13, fontWeight: '600', color: Colors.text },
   statsRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 20, backgroundColor: Colors.surface, borderRadius: Radius.md },
   stat:        { alignItems: 'center' },
   statValue:   { fontSize: 24, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },

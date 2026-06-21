@@ -4,7 +4,7 @@ import { Board, BoardItem, Product } from '@/types';
 
 // board_collaborators has two FKs to profiles (invited_by, user_id) — the
 // embed must be disambiguated or PostgREST errors (PGRST201) on every query.
-const BOARD_SELECT = '*, board_items(product_id), board_collaborators(*, profiles!board_collaborators_user_id_fkey(*))';
+const BOARD_SELECT = '*, board_items(product_id, product_data), board_collaborators(*, profiles!board_collaborators_user_id_fkey(*))';
 
 interface BoardState {
   boards:         Board[];
@@ -15,6 +15,7 @@ interface BoardState {
   addToBoard:     (boardId: string, product: Product) => Promise<void>;
   removeFromBoard:(boardId: string, productId: string) => Promise<void>;
   setCover:       (boardId: string, productId: string) => Promise<void>;
+  setCoverImage:  (boardId: string, imageUrl: string) => Promise<void>;
   isProductSaved: (productId: string) => boolean;
   getBoardItems:  (boardId: string) => Promise<BoardItem[]>;
   inviteCollaborator: (boardId: string, userId: string) => Promise<void>;
@@ -100,6 +101,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   async setCover(boardId, productId) {
     await supabase.from('boards').update({ cover_product_id: productId }).eq('id', boardId);
+    await get().fetchBoards();
+  },
+
+  async setCoverImage(boardId, imageUrl) {
+    await supabase.from('boards').update({ cover_image_url: imageUrl }).eq('id', boardId);
     await get().fetchBoards();
   },
 

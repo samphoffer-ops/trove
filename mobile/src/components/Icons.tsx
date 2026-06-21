@@ -113,3 +113,12 @@ export function UserPlusIcon({ color = '#0B0C1D', size = 20 }: { color?: string;
     </Svg>
   );
 }
+
+export function CameraIcon({ color = '#0B0C1D', size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
+      <Circle cx="12" cy="13" r="3.5" />
+    </Svg>
+  );
+}

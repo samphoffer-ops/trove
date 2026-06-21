@@ -62,7 +62,11 @@ export default function UserProfile() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(profile.display_name ?? profile.username)[0].toUpperCase()}</Text>
+            {profile.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{(profile.display_name ?? profile.username)[0].toUpperCase()}</Text>
+            )}
           </View>
           <Text style={styles.displayName}>{profile.display_name ?? profile.username}</Text>
           <Text style={styles.username}>@{profile.username}</Text>
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
   topBarTitle:{ fontSize: 16, fontWeight: '600', color: Colors.text },
   content:    { paddingHorizontal: 20, paddingBottom: 100 },
   hero:       { alignItems: 'center', paddingVertical: 24 },
-  avatar:     { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  avatar:     { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
   avatarText: { fontSize: 28, fontWeight: '800', color: '#fff' },
   displayName:{ fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 4 },
   username:   { fontSize: 14, color: Colors.textMuted, marginBottom: 4 },

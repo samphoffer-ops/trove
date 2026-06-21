@@ -12,6 +12,7 @@ interface AuthState {
   setSession:     (s: Session | null) => void;
   fetchProfile:   () => Promise<Profile | null>;
   completeOnboarding: (selections: { brands: string[]; styles: string[]; categories: string[] }) => Promise<void>;
+  updateProfile:  (fields: Partial<Profile>) => Promise<{ error?: string }>;
   signOut:        () => Promise<void>;
   deleteAccount:  () => Promise<{ error?: string }>;
 }
@@ -61,6 +62,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .select()
       .single();
     if (data) set({ profile: data as Profile });
+  },
+
+  async updateProfile(fields) {
+    const { user } = get();
+    if (!user) return { error: 'Not signed in' };
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(fields)
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    set({ profile: data as Profile });
+    return {};
   },
 
   async signOut() {
