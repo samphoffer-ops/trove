@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
+import { notify, confirmAction } from '@/lib/alerts';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -26,40 +27,29 @@ export default function ProfileScreen() {
   const totalSaved = boards.reduce((n, b) => n + (b.board_items?.length ?? 0), 0);
 
   function confirmSignOut() {
-    Alert.alert('Sign out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: signOut },
-    ]);
+    confirmAction('Sign out', 'Are you sure?', 'Sign out', signOut);
   }
 
   function confirmDeleteAccount() {
-    Alert.alert(
+    confirmAction(
       'Delete account',
       'This permanently deletes your profile, boards, saved items, and social connections. This can\'t be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', style: 'destructive', onPress: confirmDeleteAccountFinal },
-      ],
+      'Continue',
+      confirmDeleteAccountFinal,
     );
   }
 
   function confirmDeleteAccountFinal() {
-    Alert.alert(
+    confirmAction(
       'Are you absolutely sure?',
       'There is no way to recover your account after this.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete my account',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            const { error } = await deleteAccount();
-            setDeleting(false);
-            if (error) Alert.alert('Couldn\'t delete account', error);
-          },
-        },
-      ],
+      'Delete my account',
+      async () => {
+        setDeleting(true);
+        const { error } = await deleteAccount();
+        setDeleting(false);
+        if (error) notify('Couldn\'t delete account', error);
+      },
     );
   }
 

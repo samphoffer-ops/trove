@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
+import { ActionSheet } from '@/components/ActionSheet';
 import { ChevronLeftIcon, DotsIcon, UserPlusIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
@@ -22,6 +23,7 @@ export default function BoardDetail() {
   const [items,      setItems]      = useState<BoardItem[]>([]);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [inviting,   setInviting]   = useState(false);
+  const [menuItem,   setMenuItem]   = useState<BoardItem | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -39,21 +41,16 @@ export default function BoardDetail() {
   const canEdit = board.isOwner || collaborators.some(c => c.user_id === user?.id);
 
   function openItemMenu(item: BoardItem) {
-    const options = ['Set as cover', 'Remove from board', 'Cancel'];
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options, destructiveButtonIndex: 1, cancelButtonIndex: 2 },
+        { options: ['Set as cover', 'Remove from board', 'Cancel'], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
         async btn => {
           if (btn === 0) { await setCover(id!, item.product_id); load(); }
           if (btn === 1) { await removeFromBoard(id!, item.product_id); setItems(prev => prev.filter(i => i.id !== item.id)); }
         },
       );
     } else {
-      Alert.alert('Item options', undefined, [
-        { text: 'Set as cover', onPress: async () => { await setCover(id!, item.product_id); load(); } },
-        { text: 'Remove from board', style: 'destructive', onPress: async () => { await removeFromBoard(id!, item.product_id); setItems(prev => prev.filter(i => i.id !== item.id)); } },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      setMenuItem(item);
     }
   }
 
@@ -115,6 +112,17 @@ export default function BoardDetail() {
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <InviteSheet board={inviting ? board : null} onClose={() => { setInviting(false); load(); }} />
+      <ActionSheet
+        visible={!!menuItem}
+        onCancel={() => setMenuItem(null)}
+        options={[
+          { label: 'Set as cover', onPress: async () => { await setCover(id!, menuItem!.product_id); load(); } },
+          { label: 'Remove from board', destructive: true, onPress: async () => {
+            await removeFromBoard(id!, menuItem!.product_id);
+            setItems(prev => prev.filter(i => i.id !== menuItem!.id));
+          } },
+        ]}
+      />
     </View>
     </WebFrame>
   );

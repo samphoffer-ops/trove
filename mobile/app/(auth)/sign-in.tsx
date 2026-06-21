@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
+import { notify } from '@/lib/alerts';
 
 export default function SignIn() {
   const [email,    setEmail]    = useState('');
@@ -13,7 +14,7 @@ export default function SignIn() {
   async function signIn() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) Alert.alert('Sign in failed', error.message);
+    if (error) notify('Sign in failed', error.message);
     setLoading(false);
   }
 

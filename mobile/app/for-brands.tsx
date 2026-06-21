@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { PhoneMockup } from '@/components/PhoneMockup';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
+import { notify } from '@/lib/alerts';
 
 const PITCH = [
   'A quality-curated feed — Trove only surfaces brands that match the bar, not the highest bidder.',
@@ -22,7 +23,7 @@ export default function ForBrands() {
 
   async function submit() {
     if (!brandName.trim() || !website.trim() || !email.trim()) {
-      Alert.alert('A few fields are missing', 'Brand name, website, and contact email are required.');
+      notify('A few fields are missing', 'Brand name, website, and contact email are required.');
       return;
     }
     setSubmitting(true);
@@ -34,7 +35,7 @@ export default function ForBrands() {
       description: description.trim() || null,
     });
     setSubmitting(false);
-    if (error) { Alert.alert('Something went wrong', 'Please try again in a moment.'); return; }
+    if (error) { notify('Something went wrong', 'Please try again in a moment.'); return; }
     setSubmitted(true);
   }
 

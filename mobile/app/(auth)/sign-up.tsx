@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
+import { notify } from '@/lib/alerts';
 
 export default function SignUp() {
   const [username, setUsername] = useState('');
@@ -12,15 +13,15 @@ export default function SignUp() {
   const [loading,  setLoading]  = useState(false);
 
   async function signUp() {
-    if (!username.trim()) { Alert.alert('Pick a username'); return; }
+    if (!username.trim()) { notify('Pick a username'); return; }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { username: username.trim().toLowerCase(), display_name: username.trim() } },
     });
-    if (error) Alert.alert('Sign up failed', error.message);
-    else Alert.alert('Check your email', 'Click the confirmation link to activate your account.');
+    if (error) notify('Sign up failed', error.message);
+    else notify('Check your email', 'Click the confirmation link to activate your account.');
     setLoading(false);
   }
 
