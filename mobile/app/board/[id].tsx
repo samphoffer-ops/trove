@@ -14,6 +14,7 @@ import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
+import { notify } from '@/lib/alerts';
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
@@ -45,8 +46,9 @@ export default function BoardDetail() {
   async function changeCoverImage() {
     if (!board) return;
     setUploadingCover(true);
-    const url = await pickAndUploadImage('board-covers', board.id, 'cover');
-    if (url) await setCoverImage(board.id, url);
+    const { url, error } = await pickAndUploadImage('board-covers', board.id, 'cover');
+    if (error) notify('Couldn\'t update cover', error);
+    else if (url) await setCoverImage(board.id, url);
     setUploadingCover(false);
     load();
   }

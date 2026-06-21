@@ -23,8 +23,12 @@ export default function ProfileScreen() {
   async function changeAvatar() {
     if (!profile) return;
     setUploadingAvatar(true);
-    const url = await pickAndUploadImage('avatars', profile.id, 'avatar');
-    if (url) await updateProfile({ avatar_url: url });
+    const { url, error } = await pickAndUploadImage('avatars', profile.id, 'avatar');
+    if (error) notify('Couldn\'t update photo', error);
+    else if (url) {
+      const { error: saveError } = await updateProfile({ avatar_url: url });
+      if (saveError) notify('Couldn\'t save photo', saveError);
+    }
     setUploadingAvatar(false);
   }
 
@@ -72,12 +76,14 @@ export default function ProfileScreen() {
 
         {/* Avatar + name */}
         <View style={styles.hero}>
-          <Pressable style={styles.avatar} onPress={changeAvatar} disabled={uploadingAvatar}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            ) : (
-              <Text style={styles.avatarText}>{(profile?.display_name ?? profile?.username ?? '?')[0].toUpperCase()}</Text>
-            )}
+          <Pressable style={styles.avatarWrap} onPress={changeAvatar} disabled={uploadingAvatar}>
+            <View style={styles.avatar}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              ) : (
+                <Text style={styles.avatarText}>{(profile?.display_name ?? profile?.username ?? '?')[0].toUpperCase()}</Text>
+              )}
+            </View>
             <View style={styles.avatarCameraBadge}>
               <CameraIcon color={Colors.text} size={13} />
             </View>
@@ -131,10 +137,11 @@ const styles = StyleSheet.create({
   title:       { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   content:     { paddingHorizontal: 20, paddingBottom: 100 },
   hero:        { alignItems: 'center', paddingVertical: 24 },
-  avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden', position: 'relative' },
+  avatarWrap:  { width: 72, height: 72, marginBottom: 12, position: 'relative' },
+  avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarText:  { fontSize: 28, fontWeight: '800', color: '#fff' },
   avatarCameraBadge: {
-    position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: 12,
+    position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 13,
     backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.bg,
   },
