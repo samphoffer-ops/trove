@@ -180,7 +180,7 @@ Sample products from this brand:
 ${sample}
 
 Respond with ONLY a JSON object, no other text:
-{"brand_name": "<the brand's actual display name, properly spaced and capitalized — infer it from the domain and product copy, e.g. 'leftfieldnyc.com' -> 'Left Field NYC', not a literal transcription of the domain>", "verdict": "approve"|"reject"|"uncertain", "confidence": <0-100>, "matched_categories": [...], "matched_styles": [...], "reasoning": "<one or two sentences>"}`;
+{"brand_name": "<the brand's actual display name, properly spaced and capitalized — infer it from the domain and product copy, e.g. 'leftfieldnyc.com' -> 'Left Field NYC', not a literal transcription of the domain>", "verdict": "approve"|"reject"|"uncertain", "confidence": <0-100>, "matched_categories": [...], "matched_styles": [...], "audience": "mens"|"womens"|"unisex", "reasoning": "<one or two sentences>"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -200,6 +200,25 @@ Respond with ONLY a JSON object, no other text:
   const text = data.content?.[0]?.text ?? '{}';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+}
+
+// Semantic embedding for a product (brand + name + description) — lets
+// ranking compare products by what they actually are, not just shared
+// category/style tags. voyage-4-lite, 1024 dimensions — must match the
+// `vector(1024)` column in migration 010 exactly, or inserts fail.
+async function generateEmbedding(voyageKey: string, text: string): Promise<number[] | null> {
+  try {
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${voyageKey}` },
+      body: JSON.stringify({ input: text, model: 'voyage-4-lite', input_type: 'document' }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.data?.[0]?.embedding ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Cheap per-product category classification — no extra LLM call. Falls back
@@ -329,6 +348,92 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ updated, removed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // One-off backfill: embeds every product that doesn't have one yet —
+    // everything scraped before VOYAGE_API_KEY existed, or scraped while it
+    // was temporarily unset. No re-scraping needed, just embeds the text
+    // already stored on each row.
+    if (body.action === 'backfill_embeddings') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const voyageKey = Deno.env.get('VOYAGE_API_KEY');
+      if (!voyageKey) {
+        return new Response(JSON.stringify({ error: 'VOYAGE_API_KEY secret not configured' }), { status: 500 });
+      }
+      let embedded = 0;
+      let failed = 0;
+      const pageSize = 200;
+      while (true) {
+        const { data: rows } = await admin
+          .from('products').select('id, brand, name, description')
+          .is('embedding', null)
+          .range(0, pageSize - 1);
+        if (!rows || rows.length === 0) break;
+        for (const row of rows) {
+          const embedding = await generateEmbedding(voyageKey, `${row.brand} ${row.name} ${row.description ?? ''}`.trim());
+          if (embedding) {
+            await admin.from('products').update({ embedding: JSON.stringify(embedding) }).eq('id', row.id);
+            embedded++;
+          } else {
+            failed++;
+            // Stop retrying this exact row forever on a hard failure — mark it
+            // attempted by giving it a zero vector isn't right either, so just
+            // count it and move on; next backfill run will retry it naturally
+            // since embedding is still null.
+          }
+        }
+        if (rows.length < pageSize) break;
+        if (failed > 20) break; // bail out if Voyage is broadly failing, not just one bad row
+      }
+      return new Response(JSON.stringify({ embedded, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // One-off backfill: classifies audience for every approved brand that
+    // predates the audience field, using only what's already stored (name +
+    // judge_reasoning + matched_categories/styles) — no re-scraping.
+    if (body.action === 'backfill_audience') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const anthropicKeyLocal = Deno.env.get('ANTHROPIC_API_KEY');
+      if (!anthropicKeyLocal) {
+        return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
+      }
+      const { data: brands } = await admin
+        .from('brands').select('id, name, judge_reasoning, matched_categories, matched_styles')
+        .eq('status', 'approved')
+        .is('audience', null);
+
+      let updated = 0;
+      let failed = 0;
+      for (const brand of brands ?? []) {
+        const prompt = `Brand: ${brand.name}
+Categories: ${(brand.matched_categories ?? []).join(', ')}
+Styles: ${(brand.matched_styles ?? []).join(', ')}
+Notes: ${brand.judge_reasoning ?? 'none'}
+
+Based on this brand's name and product focus, classify its primary customer audience.
+Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"unisex"}`;
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-api-key': anthropicKeyLocal, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 50, messages: [{ role: 'user', content: prompt }] }),
+          });
+          const data = await res.json();
+          const text = data.content?.[0]?.text ?? '{}';
+          const match = text.match(/\{[\s\S]*\}/);
+          const audience = match ? JSON.parse(match[0]).audience : null;
+          if (audience) {
+            await admin.from('brands').update({ audience }).eq('id', brand.id);
+            updated++;
+          } else {
+            failed++;
+          }
+        } catch {
+          failed++;
+        }
+        await sleep(300);
+      }
+      return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
       return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
@@ -338,6 +443,10 @@ Deno.serve(async (req) => {
     if (!anthropicKey) {
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
     }
+    // Embeddings degrade gracefully, not a hard requirement — if VOYAGE_API_KEY
+    // isn't set yet, products still scrape/refresh fine, just without a vector
+    // (ranking's cold-start path already handles "no embedding" correctly).
+    const voyageKey = Deno.env.get('VOYAGE_API_KEY');
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const results: Record<string, unknown>[] = [];
@@ -362,10 +471,14 @@ Deno.serve(async (req) => {
             for (const p of products) {
               if (isExcludedProduct(p.name)) continue;
               const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
+              const embedding = voyageKey
+                ? await generateEmbedding(voyageKey, `${existing.name} ${p.name} ${p.description ?? ''}`.trim())
+                : null;
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
                 image: p.image, ratio: p.ratio, url: p.url, description: p.description,
                 category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
+                ...(embedding ? { embedding: JSON.stringify(embedding) } : {}),
                 source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
               });
             }
@@ -414,6 +527,7 @@ Deno.serve(async (req) => {
         judge_reasoning: judgment.reasoning ?? null,
         matched_categories: judgment.matched_categories ?? [],
         matched_styles: judgment.matched_styles ?? [],
+        audience: judgment.audience ?? null,
       }, { onConflict: 'domain' }).select().single();
 
       results.push({ domain, action: 'queued_for_review', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });

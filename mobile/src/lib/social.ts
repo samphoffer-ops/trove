@@ -22,3 +22,24 @@ export async function searchProfiles(query: string, excludeUserId?: string): Pro
   const { data } = await req;
   return (data ?? []) as Profile[];
 }
+
+export async function isBrandFollowed(userId: string, brandId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('brand_follows').select('id')
+    .eq('user_id', userId).eq('brand_id', brandId).maybeSingle();
+  return !!data;
+}
+
+export async function fetchBrandFollowerCount(brandId: string): Promise<number> {
+  const { count } = await supabase
+    .from('brand_follows').select('id', { count: 'exact' }).eq('brand_id', brandId);
+  return count ?? 0;
+}
+
+export async function followBrand(userId: string, brandId: string): Promise<void> {
+  await supabase.from('brand_follows').insert({ user_id: userId, brand_id: brandId });
+}
+
+export async function unfollowBrand(userId: string, brandId: string): Promise<void> {
+  await supabase.from('brand_follows').delete().eq('user_id', userId).eq('brand_id', brandId);
+}

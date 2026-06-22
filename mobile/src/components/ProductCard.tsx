@@ -27,7 +27,16 @@ export function ProductCard({ product, saved, onSave, onNotInterested }: Props) 
         </Pressable>
       </View>
       <View style={styles.info}>
-        <Text style={styles.brand}>{product.brand}</Text>
+        {product.brand_id ? (
+          <Pressable
+            onPress={(e) => { e.stopPropagation(); router.push(`/brand/${product.brand_id}`); }}
+            hitSlop={4}
+          >
+            <Text style={styles.brand}>{product.brand}</Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.brand}>{product.brand}</Text>
+        )}
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.price}>${product.price.toFixed(2)}</Text>
       </View>

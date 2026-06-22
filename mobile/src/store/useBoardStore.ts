@@ -4,7 +4,7 @@ import { Board, BoardItem, Product } from '@/types';
 
 // board_collaborators has two FKs to profiles (invited_by, user_id) — the
 // embed must be disambiguated or PostgREST errors (PGRST201) on every query.
-const BOARD_SELECT = '*, board_items(product_id, product_data), board_collaborators(*, profiles!board_collaborators_user_id_fkey(*))';
+const BOARD_SELECT = '*, board_items(product_id, product_data, purchased_at), board_collaborators(*, profiles!board_collaborators_user_id_fkey(*))';
 
 interface BoardState {
   boards:         Board[];
@@ -16,6 +16,8 @@ interface BoardState {
   removeFromBoard:(boardId: string, productId: string) => Promise<void>;
   setCover:       (boardId: string, productId: string) => Promise<void>;
   setCoverImage:  (boardId: string, imageUrl: string) => Promise<void>;
+  markPurchased:   (boardId: string, productId: string) => Promise<void>;
+  unmarkPurchased: (boardId: string, productId: string) => Promise<void>;
   isProductSaved: (productId: string) => boolean;
   getBoardItems:  (boardId: string) => Promise<BoardItem[]>;
   inviteCollaborator: (boardId: string, userId: string) => Promise<void>;
@@ -106,6 +108,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   async setCoverImage(boardId, imageUrl) {
     await supabase.from('boards').update({ cover_image_url: imageUrl }).eq('id', boardId);
+    await get().fetchBoards();
+  },
+
+  async markPurchased(boardId, productId) {
+    await supabase.from('board_items').update({ purchased_at: new Date().toISOString() })
+      .eq('board_id', boardId).eq('product_id', productId);
+    await get().fetchBoards();
+  },
+
+  async unmarkPurchased(boardId, productId) {
+    await supabase.from('board_items').update({ purchased_at: null })
+      .eq('board_id', boardId).eq('product_id', productId);
     await get().fetchBoards();
   },
 

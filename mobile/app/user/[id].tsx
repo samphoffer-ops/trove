@@ -24,7 +24,7 @@ export default function UserProfile() {
     if (!id) return;
     supabase.from('profiles').select('*').eq('id', id).single()
       .then(({ data }) => data && setProfile(data as Profile));
-    supabase.from('boards').select('*, board_items(product_id)').eq('user_id', id).eq('is_public', true)
+    supabase.from('boards').select('*, board_items(product_id, product_data)').eq('user_id', id).eq('is_public', true)
       .then(({ data }) => setBoards((data ?? []) as Board[]));
     supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', id)
       .then(({ count }) => setFollowerCount(count ?? 0));
@@ -85,11 +85,13 @@ export default function UserProfile() {
         <View style={styles.boardGrid}>
           {boards.map(board => {
             const items = board.board_items ?? [];
+            const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
+            const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
             return (
               <Pressable key={board.id} style={styles.boardCard} onPress={() => router.push(`/board/${board.id}`)}>
                 <View style={styles.boardCover}>
-                  {board.cover_product_id && (
-                    <Image source={{ uri: `https://loremflickr.com/400/400/${board.cover_product_id}` }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  {coverImage && (
+                    <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />
                   )}
                 </View>
                 <View style={styles.boardInfo}>

@@ -8,7 +8,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
 import { ActionSheet } from '@/components/ActionSheet';
-import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon } from '@/components/Icons';
+import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon, CheckIcon } from '@/components/Icons';
 import { Colors, Radius } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
@@ -20,7 +20,7 @@ export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const { fetchBoardById, getBoardItems, setCover, setCoverImage, removeFromBoard } = useBoardStore();
+  const { fetchBoardById, getBoardItems, setCoverImage, removeFromBoard, markPurchased, unmarkPurchased } = useBoardStore();
   const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
@@ -54,11 +54,16 @@ export default function BoardDetail() {
   }
 
   function openItemMenu(item: BoardItem) {
+    const purchasedLabel = item.purchased_at ? 'Unmark as purchased' : 'Mark as purchased';
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Set as cover', 'Remove from board', 'Cancel'], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
+        { options: [purchasedLabel, 'Remove from board', 'Cancel'], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
         async btn => {
-          if (btn === 0) { await setCover(id!, item.product_id); load(); }
+          if (btn === 0) {
+            if (item.purchased_at) await unmarkPurchased(id!, item.product_id);
+            else await markPurchased(id!, item.product_id);
+            load();
+          }
           if (btn === 1) { await removeFromBoard(id!, item.product_id); setItems(prev => prev.filter(i => i.id !== item.id)); }
         },
       );
@@ -118,6 +123,11 @@ export default function BoardDetail() {
                 {col.map(item => (
                   <Pressable key={item.id} style={styles.card} onPress={() => router.push(`/product/${item.product_id}`)}>
                     <Image source={{ uri: item.product_data.image }} style={styles.img} contentFit="cover" />
+                    {item.purchased_at && (
+                      <View style={styles.purchasedBadge}>
+                        <CheckIcon color={Colors.text} size={11} />
+                      </View>
+                    )}
                     {canEdit && (
                       <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6}>
                         <DotsIcon size={16} />
@@ -142,7 +152,11 @@ export default function BoardDetail() {
         visible={!!menuItem}
         onCancel={() => setMenuItem(null)}
         options={[
-          { label: 'Set as cover', onPress: async () => { await setCover(id!, menuItem!.product_id); load(); } },
+          { label: menuItem?.purchased_at ? 'Unmark as purchased' : 'Mark as purchased', onPress: async () => {
+            if (menuItem!.purchased_at) await unmarkPurchased(id!, menuItem!.product_id);
+            else await markPurchased(id!, menuItem!.product_id);
+            load();
+          } },
           { label: 'Remove from board', destructive: true, onPress: async () => {
             await removeFromBoard(id!, menuItem!.product_id);
             setItems(prev => prev.filter(i => i.id !== menuItem!.id));
@@ -169,6 +183,7 @@ const styles = StyleSheet.create({
   card:       { borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: 12, position: 'relative' },
   img:        { width: '100%', aspectRatio: 4/5, backgroundColor: Colors.stoneSoft },
   menuBtn:    { position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  purchasedBadge: { position: 'absolute', bottom: 8, left: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center' },
   cardInfo:   { padding: 10 },
   cardBrand:  { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7, color: Colors.textMuted, marginBottom: 2 },
   cardName:   { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 4, lineHeight: 17 },

@@ -39,6 +39,7 @@ export interface Brand {
   judge_reasoning?: string;
   matched_categories?: string[];
   matched_styles?: string[];
+  audience?: 'mens' | 'womens' | 'unisex';
   approved_by?: string;
   approved_at?: string;
   rejected_until?: string;
@@ -54,7 +55,7 @@ export interface Board {
   is_public: boolean;
   created_at: string;
   profiles?: Profile;
-  board_items?: { product_id: string; product_data?: Product }[];
+  board_items?: { product_id: string; product_data?: Product; purchased_at?: string | null }[];
   board_collaborators?: BoardCollaborator[];
   isOwner?: boolean;
 }
@@ -64,6 +65,7 @@ export interface BoardItem {
   board_id: string;
   product_id: string;
   product_data: Product;
+  purchased_at: string | null;
   created_at: string;
 }
 

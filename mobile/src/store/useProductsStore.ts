@@ -60,8 +60,19 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     if (get().loaded || get().loading) return;
     set({ loading: true });
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Logged-out (the marketing homepage's showcase) has no taste signals to
+    // rank against — same plain shuffle as always. Signed-in users get the
+    // ranked feed via the rank_products_for_user RPC (see migration 010):
+    // semantic similarity to their own behavioral taste vector, plus small
+    // onboarding/shop_for/not-interested adjustments, drawn via weighted
+    // sampling so nothing is ever fully excluded. PostgREST can't run
+    // pgvector's similarity operators directly, which is why this has to be
+    // a Postgres function called via .rpc() rather than a plain .select().
     const [productsRes, notInterestedRes] = await Promise.all([
-      supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+      user
+        ? supabase.rpc('rank_products_for_user', { p_user_id: user.id })
+        : supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
       user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
     ]);
     if (productsRes.error) {
@@ -70,12 +81,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       return;
     }
     const notInterestedIds = new Set((notInterestedRes.data ?? []).map(r => r.product_id));
-    set({
-      products: interleaveByBrand((productsRes.data ?? []) as Product[]),
-      notInterestedIds,
-      loading: false,
-      loaded: true,
-    });
+    const products = user
+      ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
+      : interleaveByBrand((productsRes.data ?? []) as Product[]);
+    set({ products, notInterestedIds, loading: false, loaded: true });
   },
 
   // Hides the product from the feed immediately (this session and every

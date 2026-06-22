@@ -5,6 +5,8 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProductsStore, getProductById } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { supabase } from '@/lib/supabase';
 import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
@@ -20,6 +22,7 @@ export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
+  const { user } = useAuthStore();
   const { loaded, fetchProducts } = useProductsStore();
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
@@ -27,6 +30,16 @@ export default function ProductDetail() {
   useEffect(() => { fetchProducts(); }, []);
 
   const product = getProductById(id!);
+
+  // Weakest, passive taste signal — one row per user per product (not per
+  // visit), via upsert so reopening the same item never duplicates/inflates it.
+  useEffect(() => {
+    if (!user || !product) return;
+    supabase.from('product_views').upsert(
+      { user_id: user.id, product_id: product.id },
+      { onConflict: 'user_id,product_id', ignoreDuplicates: true },
+    );
+  }, [user, product?.id]);
 
   if (!loaded) {
     return (
@@ -63,7 +76,13 @@ export default function ProductDetail() {
 
         {/* Body */}
         <View style={styles.body}>
-          <Text style={styles.brand}>{product.brand}</Text>
+          {product.brand_id ? (
+            <Pressable onPress={() => router.push(`/brand/${product.brand_id}`)}>
+              <Text style={styles.brand}>{product.brand}</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.brand}>{product.brand}</Text>
+          )}
           <Text style={styles.name}>{product.name}</Text>
           <Text style={styles.price}>${product.price.toFixed(2)}</Text>
           <Text style={styles.desc}>{product.description ?? PLACEHOLDER_DESC}</Text>
