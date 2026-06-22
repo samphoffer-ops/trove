@@ -222,6 +222,22 @@ function classifyCategory(productName: string, fallback: string | null): string 
   return fallback ?? 'clothing';
 }
 
+// Excludes two kinds of scraped "products" that aren't real catalog items:
+// checkout add-ons that show up in products.json alongside real merchandise
+// (shipping protection, warranties, gift wrap — found via Rikumo's "Free
+// returns + package protection" at $1), and literal books, which don't fit
+// a fashion/home/beauty catalog regardless of which brand happens to sell
+// them (found via Tanner Goods and Orée New York both carrying books).
+const EXCLUDED_PRODUCT_PATTERNS = [
+  /package protection/i, /shipping protection/i, /extended warranty/i,
+  /gift wrap/i, /\bdonation\b/i,
+  /\bbook\b/i,
+];
+
+function isExcludedProduct(productName: string): boolean {
+  return EXCLUDED_PRODUCT_PATTERNS.some(p => p.test(productName));
+}
+
 // Self-check action: { "action": "summary" } returns recent brand decisions
 // (with Sam's actual status, not just the judge's verdict) so judging
 // patterns can be reviewed and the RUBRIC corrected without needing a
@@ -274,6 +290,45 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ results }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // One-off backfill for products inserted before classifyCategory existed,
+    // or whose row was never touched by a later refresh (each refresh only
+    // re-fetches the brand's current top ~20 items, so older accumulated
+    // rows outside that window keep whatever category they were inserted
+    // with — including null, from before this function set one at all).
+    if (body.action === 'backfill_categories') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const { data: brands } = await admin.from('brands').select('id, matched_categories');
+      const brandCategory = new Map<string, string | null>((brands ?? []).map((b: any) => [b.id, b.matched_categories?.[0] ?? null]));
+
+      let updated = 0;
+      let removed = 0;
+      const pageSize = 500;
+      // Each row processed below either gets a non-null category or gets
+      // deleted, so it drops out of this same `is('category', null)` filter
+      // on the next loop — re-querying range(0, pageSize-1) every time (no
+      // incrementing offset) is what makes this converge instead of
+      // skipping rows as the filtered set shrinks underneath an offset.
+      while (true) {
+        const { data: rows } = await admin
+          .from('products').select('id, name, brand_id, category')
+          .is('category', null)
+          .range(0, pageSize - 1);
+        if (!rows || rows.length === 0) break;
+        for (const row of rows) {
+          if (isExcludedProduct(row.name)) {
+            await admin.from('products').delete().eq('id', row.id);
+            removed++;
+            continue;
+          }
+          const category = classifyCategory(row.name, brandCategory.get(row.brand_id as string) ?? null);
+          await admin.from('products').update({ category }).eq('id', row.id);
+          updated++;
+        }
+        if (rows.length < pageSize) break;
+      }
+      return new Response(JSON.stringify({ updated, removed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
       return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
@@ -305,6 +360,7 @@ Deno.serve(async (req) => {
           const products = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
           if (products) {
             for (const p of products) {
+              if (isExcludedProduct(p.name)) continue;
               const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,

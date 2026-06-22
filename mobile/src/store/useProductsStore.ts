@@ -4,9 +4,11 @@ import { Product } from '@/types';
 
 interface ProductsState {
   products: Product[];
+  notInterestedIds: Set<string>;
   loading: boolean;
   loaded: boolean;
   fetchProducts: () => Promise<void>;
+  markNotInterested: (product: Product) => Promise<void>;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -50,29 +52,49 @@ function interleaveByBrand(products: Product[]): Product[] {
 // existing call site keeps working with minimal changes.
 export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
+  notInterestedIds: new Set(),
   loading: false,
   loaded: false,
 
   async fetchProducts() {
     if (get().loaded || get().loading) return;
     set({ loading: true });
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('fetchProducts:', error);
+    const { data: { user } } = await supabase.auth.getUser();
+    const [productsRes, notInterestedRes] = await Promise.all([
+      supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
+      user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
+    ]);
+    if (productsRes.error) {
+      console.error('fetchProducts:', productsRes.error);
       set({ loading: false });
       return;
     }
-    set({ products: interleaveByBrand((data ?? []) as Product[]), loading: false, loaded: true });
+    const notInterestedIds = new Set((notInterestedRes.data ?? []).map(r => r.product_id));
+    set({
+      products: interleaveByBrand((productsRes.data ?? []) as Product[]),
+      notInterestedIds,
+      loading: false,
+      loaded: true,
+    });
+  },
+
+  // Hides the product from the feed immediately (this session and every
+  // future one) and records brand/category alongside it — meant as a
+  // negative signal for ranking later, not just a dismissal log.
+  async markNotInterested(product) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    set(state => ({ notInterestedIds: new Set(state.notInterestedIds).add(product.id) }));
+    await supabase.from('not_interested').upsert({
+      user_id: user.id, product_id: product.id, brand: product.brand, category: product.category ?? null,
+    });
   },
 }));
 
 export function getProducts({ category = 'all', query = '', page = 1, perPage = 30 } = {}) {
-  const { products } = useProductsStore.getState();
-  let list = category === 'all' ? products : products.filter(p => p.category === category);
+  const { products, notInterestedIds } = useProductsStore.getState();
+  let list = products.filter(p => !notInterestedIds.has(p.id));
+  list = category === 'all' ? list : list.filter(p => p.category === category);
   if (query) {
     const q = query.toLowerCase();
     list = list.filter(p =>

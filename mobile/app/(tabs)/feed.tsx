@@ -25,7 +25,7 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
-  const { products: allProducts, fetchProducts } = useProductsStore();
+  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,7 +115,7 @@ export default function FeedScreen() {
         <MasonryGrid
           items={products}
           keyExtractor={p => p.id}
-          renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+          renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
         />
         {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
       </ScrollView>

@@ -3,19 +3,25 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Product } from '@/types';
 import { Colors, Radius } from '@/lib/theme';
-import { BookmarkIcon } from './Icons';
+import { BookmarkIcon, CloseIcon } from './Icons';
 
 interface Props {
   product: Product;
   saved:   boolean;
   onSave:  (product: Product) => void;
+  onNotInterested?: (product: Product) => void;
 }
 
-export function ProductCard({ product, saved, onSave }: Props) {
+export function ProductCard({ product, saved, onSave, onNotInterested }: Props) {
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/product/${product.id}`)}>
       <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
         <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        {onNotInterested && (
+          <Pressable style={styles.dismissBtn} onPress={() => onNotInterested(product)} hitSlop={8}>
+            <CloseIcon color={Colors.text} size={12} />
+          </Pressable>
+        )}
         <Pressable style={styles.saveBtn} onPress={() => onSave(product)} hitSlop={8}>
           <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={16} />
         </Pressable>
@@ -52,6 +58,17 @@ const styles = StyleSheet.create({
     width:           32,
     height:          32,
     borderRadius:    16,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  dismissBtn: {
+    position:        'absolute',
+    top:             8,
+    left:            8,
+    width:           26,
+    height:          26,
+    borderRadius:    13,
     backgroundColor: 'rgba(255,255,255,0.88)',
     alignItems:      'center',
     justifyContent:  'center',

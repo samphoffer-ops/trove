@@ -20,7 +20,7 @@ const PAGE_SIZE = 30;
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
-  const { fetchProducts } = useProductsStore();
+  const { fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
   const { user } = useAuthStore();
   const [query,      setQuery]      = useState('');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
@@ -123,7 +123,7 @@ export default function SearchScreen() {
                   items={products}
                   keyExtractor={p => p.id}
                   horizontalPadding={0}
-                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
                 />
                 {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
               </>
