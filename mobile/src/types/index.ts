@@ -21,6 +21,7 @@ export interface Product {
   url: string;
   category?: string;
   styles?: string[];
+  search_keywords?: string[];
   description?: string;
   // Catalog/ingestion metadata — present on rows from the `products` table,
   // absent on nothing now that the static array has moved into Supabase.

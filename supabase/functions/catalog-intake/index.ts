@@ -202,22 +202,64 @@ Respond with ONLY a JSON object, no other text:
   return JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
 }
 
-// Semantic embedding for a product (brand + name + description) — lets
+// Semantic embeddings for products (brand + name + description) — lets
 // ranking compare products by what they actually are, not just shared
 // category/style tags. voyage-4-lite, 1024 dimensions — must match the
 // `vector(1024)` column in migration 010 exactly, or inserts fail.
-async function generateEmbedding(voyageKey: string, text: string): Promise<number[] | null> {
+//
+// Batched (one call covers up to ~20 products) rather than one call per
+// product — Voyage's free tier rate limit is low enough that the original
+// one-request-per-product version got ~98% rate-limited on its first real
+// run (3 of 200 succeeded). Voyage's API accepts `input` as an array, so
+// this is a real fix, not a band-aid delay — fewer requests outright,
+// not just slower ones.
+async function generateEmbeddings(voyageKey: string, texts: string[]): Promise<(number[] | null)[]> {
   try {
     const res = await fetch('https://api.voyageai.com/v1/embeddings', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${voyageKey}` },
-      body: JSON.stringify({ input: text, model: 'voyage-4-lite', input_type: 'document' }),
+      body: JSON.stringify({ input: texts, model: 'voyage-4-lite', input_type: 'document' }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return texts.map(() => null);
     const data = await res.json();
-    return data.data?.[0]?.embedding ?? null;
+    const embeddings: (number[] | null)[] = texts.map(() => null);
+    for (const item of data.data ?? []) {
+      if (typeof item.index === 'number') embeddings[item.index] = item.embedding ?? null;
+    }
+    return embeddings;
   } catch {
-    return null;
+    return texts.map(() => null);
+  }
+}
+
+// Search keywords a shopper might actually type — distinct from category/
+// style, and deliberately an LLM call rather than a keyword dictionary:
+// product copy frequently never uses the obvious term at all (a swimwear
+// brand's products described only by cut/seam details, never "swim"), so
+// this needs to infer intent from brand + name + description, not match
+// literal substrings.
+async function generateSearchKeywords(anthropicKey: string, brand: string, name: string, description: string): Promise<string[]> {
+  const prompt = `Brand: ${brand}
+Product: ${name}
+Description: ${description.slice(0, 200) || 'none'}
+
+List 3-6 generic search terms a shopper might type to find this product — the
+kind of words for the item TYPE, not the brand or styling details (e.g. for a
+bikini top: "swim", "swimwear", "bikini"; for a chore coat: "jacket", "coat",
+"outerwear"). Respond with ONLY a JSON array of lowercase strings, no other text.`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const text = data.content?.[0]?.text ?? '[]';
+    const match = text.match(/\[[\s\S]*\]/);
+    return match ? JSON.parse(match[0]) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -361,27 +403,33 @@ Deno.serve(async (req) => {
       let embedded = 0;
       let failed = 0;
       const pageSize = 200;
+      const batchSize = 20;
       while (true) {
         const { data: rows } = await admin
           .from('products').select('id, brand, name, description')
           .is('embedding', null)
           .range(0, pageSize - 1);
         if (!rows || rows.length === 0) break;
-        for (const row of rows) {
-          const embedding = await generateEmbedding(voyageKey, `${row.brand} ${row.name} ${row.description ?? ''}`.trim());
-          if (embedding) {
-            await admin.from('products').update({ embedding: JSON.stringify(embedding) }).eq('id', row.id);
-            embedded++;
-          } else {
-            failed++;
-            // Stop retrying this exact row forever on a hard failure — mark it
-            // attempted by giving it a zero vector isn't right either, so just
-            // count it and move on; next backfill run will retry it naturally
-            // since embedding is still null.
+        for (let i = 0; i < rows.length; i += batchSize) {
+          const batch = rows.slice(i, i + batchSize);
+          const embeddings = await generateEmbeddings(voyageKey, batch.map(r => `${r.brand} ${r.name} ${r.description ?? ''}`.trim()));
+          for (let j = 0; j < batch.length; j++) {
+            const embedding = embeddings[j];
+            if (embedding) {
+              await admin.from('products').update({ embedding: JSON.stringify(embedding) }).eq('id', batch[j].id);
+              embedded++;
+            } else {
+              failed++;
+              // Stop retrying this exact row forever on a hard failure — mark it
+              // attempted by giving it a zero vector isn't right either, so just
+              // count it and move on; next backfill run will retry it naturally
+              // since embedding is still null.
+            }
           }
+          await sleep(500); // pace between batched Voyage calls, not just between rows
         }
         if (rows.length < pageSize) break;
-        if (failed > 20) break; // bail out if Voyage is broadly failing, not just one bad row
+        if (failed > 40) break; // bail out if Voyage is broadly failing, not just one bad row
       }
       return new Response(JSON.stringify({ embedded, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
@@ -434,6 +482,38 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // One-off backfill: generates search keywords for every product that
+    // predates this field. No re-scraping — uses what's already stored.
+    if (body.action === 'backfill_search_keywords') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const anthropicKeyLocal = Deno.env.get('ANTHROPIC_API_KEY');
+      if (!anthropicKeyLocal) {
+        return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
+      }
+      let updated = 0;
+      let failed = 0;
+      const pageSize = 200;
+      while (true) {
+        const { data: rows } = await admin
+          .from('products').select('id, brand, name, description')
+          .eq('search_keywords', '{}')
+          .range(0, pageSize - 1);
+        if (!rows || rows.length === 0) break;
+        for (const row of rows) {
+          const keywords = await generateSearchKeywords(anthropicKeyLocal, row.brand, row.name, row.description ?? '');
+          if (keywords.length > 0) {
+            await admin.from('products').update({ search_keywords: keywords }).eq('id', row.id);
+            updated++;
+          } else {
+            failed++;
+          }
+        }
+        if (rows.length < pageSize) break;
+        if (failed > 30) break;
+      }
+      return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
       return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
@@ -466,24 +546,30 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       if (existing) {
         if (existing.status === 'approved') {
           // Re-scrape products for an already-approved brand — no LLM call, no new review.
-          const products = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
-          if (products) {
-            for (const p of products) {
-              if (isExcludedProduct(p.name)) continue;
+          const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
+          const products = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
+          if (products.length > 0) {
+            // One batched Voyage call for the whole brand's products, not one
+            // call per product — see generateEmbeddings' comment for why.
+            const embeddings = voyageKey
+              ? await generateEmbeddings(voyageKey, products.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
+              : products.map(() => null);
+            for (let i = 0; i < products.length; i++) {
+              const p = products[i];
               const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
-              const embedding = voyageKey
-                ? await generateEmbedding(voyageKey, `${existing.name} ${p.name} ${p.description ?? ''}`.trim())
-                : null;
+              const embedding = embeddings[i];
+              const searchKeywords = await generateSearchKeywords(anthropicKey, existing.name, p.name, p.description ?? '');
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
                 image: p.image, ratio: p.ratio, url: p.url, description: p.description,
                 category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
+                search_keywords: searchKeywords,
                 ...(embedding ? { embedding: JSON.stringify(embedding) } : {}),
                 source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
               });
             }
           }
-          results.push({ domain, action: 'refreshed_products', count: products?.length ?? 0 });
+          results.push({ domain, action: 'refreshed_products', count: products.length });
           continue;
         }
         if (existing.status === 'rejected' && existing.rejected_until && new Date(existing.rejected_until) > new Date()) {

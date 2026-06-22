@@ -29,6 +29,17 @@ create index if not exists products_embedding_idx on public.products
 alter table public.brands add column if not exists audience text
   check (audience in ('mens', 'womens', 'unisex'));
 
+-- Search keywords — fixes search returning nothing for generic item-type
+-- terms ("swim", "bikini", "board short") when a brand's actual product
+-- copy never uses that word (confirmed: a swimwear brand's products are
+-- named things like "Nico Tie Top in Belle" with copy about seam details,
+-- never the word "swim" — no amount of searching existing fields finds
+-- that). Generated per product by an LLM call (cheap, Haiku) that can
+-- infer "this is swimwear" from naming/brand context the way a fixed
+-- keyword dictionary can't.
+alter table public.products add column if not exists search_keywords text[] not null default '{}';
+create index if not exists products_search_keywords_idx on public.products using gin(search_keywords);
+
 -- "Mark as purchased" — a state change of a save, not an independent event
 -- (nothing here is purchased without being saved to a board first).
 alter table public.board_items add column if not exists purchased_at timestamptz;
@@ -177,7 +188,7 @@ begin
   select scored.id, scored.brand_id, scored.brand, scored.name, scored.price, scored.image, scored.ratio,
          scored.url, scored.category, scored.styles, scored.description, scored.source, scored.external_handle,
          scored.status, scored.first_seen_at, scored.last_seen_at, scored.price_history, scored.removed_at,
-         scored.created_at, scored.embedding
+         scored.created_at, scored.embedding, scored.search_keywords
   from scored
   order by -ln(random()) / greatest(exp(scored.combined_score / 4.0), 0.001) asc
   limit p_limit;

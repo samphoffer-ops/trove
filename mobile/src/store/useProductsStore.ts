@@ -107,7 +107,9 @@ export function getProducts({ category = 'all', query = '', page = 1, perPage = 
   if (query) {
     const q = query.toLowerCase();
     list = list.filter(p =>
-      p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q),
+      p.name.toLowerCase().includes(q)
+      || p.brand.toLowerCase().includes(q)
+      || (p.search_keywords ?? []).some(k => k.includes(q)),
     );
   }
   const start = (page - 1) * perPage;
