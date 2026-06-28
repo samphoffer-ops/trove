@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board } from '@/types';
 
 export default function BoardsScreen() {
@@ -72,10 +72,10 @@ function BoardCard({ board }: { board: Board }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  title:     { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  title:     { ...Typography.display, color: Colors.text, paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
   content:   { paddingHorizontal: 16, paddingBottom: 100 },
-  grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  card:      { width: '47%', borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface, shadowColor: '#1E1C1A', shadowOffset: { width:0, height:1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
+  grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
+  card:      { width: '47%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
   avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },
@@ -84,11 +84,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: '#fff',
   },
-  avatarText: { fontSize: 10, fontWeight: '800', color: '#fff' },
-  info:      { padding: 10 },
-  name:      { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 2 },
-  count:     { fontSize: 12, color: Colors.textMuted },
+  avatarText: { ...Typography.label, color: '#fff' },
+  info:      { padding: Spacing[3] },
+  name:      { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
+  count:     { ...Typography.caption, color: Colors.textMuted },
   empty:     { flex: 1, alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle:{ fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-  emptyBody: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21 },
+  emptyTitle:{ ...Typography.headline, color: Colors.text, marginBottom: Spacing[3] },
+  emptyBody: { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
 });

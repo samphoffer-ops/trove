@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { MarketingLayout } from '@/components/MarketingLayout';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography } from '@/lib/theme';
 
 const CONTACT_EMAIL = 'hello@shoptrove.app';
 
@@ -22,8 +22,8 @@ export default function Contact() {
 
 const styles = StyleSheet.create({
   section: { paddingTop: 64, paddingBottom: 80, gap: 18, maxWidth: 520 },
-  headline: { fontSize: 36, fontWeight: '800', color: Colors.text, letterSpacing: -0.6 },
-  body: { fontSize: 16.5, color: Colors.textMuted, lineHeight: 26 },
+  headline: { fontFamily: Typography.display.fontFamily, fontSize: 36, color: Colors.text, letterSpacing: -0.6 },
+  body: { ...Typography.body, fontSize: 16.5, color: Colors.textMuted, lineHeight: 26 },
   emailBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 24, paddingVertical: 15, alignSelf: 'flex-start', marginTop: 8 },
-  emailBtnText: { color: Colors.text, fontSize: 15.5, fontWeight: '700' },
+  emailBtnText: { ...Typography.headline, fontSize: 15.5, color: Colors.text },
 });

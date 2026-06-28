@@ -1,6 +1,6 @@
 import { View, StyleSheet, ImageSourcePropType } from 'react-native';
 import { Image } from 'expo-image';
-import { Colors } from '@/lib/theme';
+import { Colors, Shadows } from '@/lib/theme';
 
 interface Props {
   source?: ImageSourcePropType;
@@ -36,11 +36,7 @@ export function PhoneMockup({ source, width = 280 }: Props) {
 const styles = StyleSheet.create({
   frame: {
     backgroundColor: '#0B0C1D',
-    shadowColor: '#0B0C1D',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.18,
-    shadowRadius: 40,
-    elevation: 12,
+    ...Shadows.phone,
   },
   screen: { flex: 1, overflow: 'hidden', backgroundColor: Colors.stoneSoft },
   placeholder: { backgroundColor: Colors.stoneSoft },

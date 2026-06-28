@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { isBrandFollowed, fetchBrandFollowerCount, followBrand, unfollowBrand } from '@/lib/social';
 import { ChevronLeftIcon } from '@/components/Icons';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Brand, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -96,14 +96,14 @@ export default function BrandProfile() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
   topBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
-  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: Colors.text, textAlign: 'center' },
-  hero:        { alignItems: 'center', paddingVertical: 20, paddingHorizontal: 20 },
-  brandName:   { fontSize: 22, fontWeight: '700', color: Colors.text, marginBottom: 4, textAlign: 'center' },
-  website:     { fontSize: 13.5, color: Colors.accentBlue, marginBottom: 6 },
-  followerText:{ fontSize: 13, color: Colors.textMuted, marginBottom: 16 },
+  topBarTitle: { flex: 1, ...Typography.cardTitle, fontSize: 16, color: Colors.text, textAlign: 'center' },
+  hero:        { alignItems: 'center', paddingVertical: Spacing[5], paddingHorizontal: 20 },
+  brandName:   { ...Typography.display, color: Colors.text, marginBottom: Spacing[1], textAlign: 'center' },
+  website:     { ...Typography.cardTitle, fontSize: 13.5, color: Colors.accentBlue, marginBottom: Spacing[2] },
+  followerText:{ ...Typography.caption, fontSize: 13, color: Colors.textMuted, marginBottom: Spacing[4] },
   followBtn:   { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center' },
   followBtnActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  followBtnText:   { fontSize: 15, fontWeight: '600', color: Colors.text },
+  followBtnText:   { ...Typography.headline, fontSize: 15, color: Colors.text },
   followBtnTextActive: { color: Colors.accentLime },
-  empty:       { fontSize: 14, color: Colors.textMuted, textAlign: 'center', paddingTop: 40 },
+  empty:       { ...Typography.body, color: Colors.textMuted, textAlign: 'center', paddingTop: 40 },
 });

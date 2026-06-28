@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Colors } from '@/lib/theme';
+import { Colors, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
   label: {
+    ...Typography.caption,
     fontSize:   10.5,
-    fontWeight: '600',
     marginTop:  -2,
   },
 });

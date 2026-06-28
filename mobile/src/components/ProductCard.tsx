@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Product } from '@/types';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { BookmarkIcon, CloseIcon } from './Icons';
 
 interface Props {
@@ -46,15 +46,11 @@ export function ProductCard({ product, saved, onSave, onNotInterested }: Props) 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius:    Radius.md,
+    borderRadius:    Radius.card,
     overflow:        'hidden',
     backgroundColor: Colors.surface,
-    marginBottom:    12,
-    shadowColor:     '#1E1C1A',
-    shadowOffset:    { width: 0, height: 1 },
-    shadowOpacity:   0.04,
-    shadowRadius:    3,
-    elevation:       1,
+    marginBottom:    Spacing[4],
+    ...Shadows.card,
   },
   media: {
     width:           '100%',
@@ -83,26 +79,20 @@ const styles = StyleSheet.create({
     justifyContent:  'center',
   },
   info: {
-    padding: 11,
+    padding: Spacing[4],
   },
   brand: {
-    fontSize:      10.5,
-    fontWeight:    '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    color:         Colors.textMuted,
-    marginBottom:  3,
+    ...Typography.label,
+    color:        Colors.textMuted,
+    marginBottom: Spacing[1],
   },
   name: {
-    fontSize:     13.5,
-    fontWeight:   '600',
+    ...Typography.cardTitle,
     color:        Colors.text,
-    marginBottom: 5,
-    lineHeight:   18,
+    marginBottom: Spacing[1],
   },
   price: {
-    fontSize:   13,
-    fontWeight: '600',
-    color:      Colors.accentBlue,
+    ...Typography.cardTitle,
+    color: Colors.accentBlue,
   },
 });

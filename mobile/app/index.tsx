@@ -4,7 +4,7 @@ import { Platform, View, Text, Pressable, StyleSheet, ActivityIndicator } from '
 import { Link } from 'expo-router';
 import { Image } from 'expo-image';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { PhoneMockup } from '@/components/PhoneMockup';
 import { useProductsStore } from '@/store/useProductsStore';
@@ -96,8 +96,8 @@ export default function Index() {
 
   if (loading || (session && profileLoading)) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.bg }}>
-        <ActivityIndicator color={Colors.accent} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accent }}>
+        <ActivityIndicator color={Colors.bg} />
       </View>
     );
   }
@@ -120,33 +120,33 @@ const styles = StyleSheet.create({
     gap: 40, paddingTop: 56, paddingBottom: 64,
   },
   heroCopy: { flex: 1, minWidth: 320, gap: 16 },
-  tagline:  { fontSize: 14, fontWeight: '700', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
-  headline: { fontSize: 44, fontWeight: '800', color: Colors.text, letterSpacing: -1, lineHeight: 50 },
-  sub:      { fontSize: 17, color: Colors.textMuted, lineHeight: 26, maxWidth: 460 },
+  tagline:  { fontFamily: Typography.label.fontFamily, fontSize: 14, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
+  headline: { fontFamily: Typography.display.fontFamily, fontSize: 44, color: Colors.text, letterSpacing: -1, lineHeight: 50 },
+  sub:      { ...Typography.body, fontSize: 17, color: Colors.textMuted, lineHeight: 26, maxWidth: 460 },
   heroCta:  { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'flex-start', marginTop: 8 },
   heroCtaCentered: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'center', marginTop: 8 },
-  heroCtaText: { color: Colors.text, fontSize: 16, fontWeight: '700' },
+  heroCtaText: { ...Typography.headline, color: Colors.text },
   heroVisual: { flex: 1, minWidth: 240, alignItems: 'center' },
 
   snapshotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingVertical: 40 },
-  snapshotCard: { flex: 1, minWidth: 200, backgroundColor: Colors.surface, borderRadius: Radius.md, padding: 22, borderWidth: 1, borderColor: Colors.border },
-  snapshotLabel: { fontSize: 13, fontWeight: '800', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  snapshotBody: { fontSize: 16, fontWeight: '600', color: Colors.text, lineHeight: 22 },
-  seeHow: { fontSize: 14.5, fontWeight: '700', color: Colors.text, textDecorationLine: 'none' } as any,
+  snapshotCard: { flex: 1, minWidth: 200, backgroundColor: Colors.surface, borderRadius: Radius.card, padding: 22, borderWidth: 1, borderColor: Colors.border },
+  snapshotLabel: { fontFamily: Typography.label.fontFamily, fontSize: 13, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[3] },
+  snapshotBody: { fontFamily: Typography.headline.fontFamily, fontSize: 16, color: Colors.text, lineHeight: 22 },
+  seeHow: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
 
   brandStrip: { paddingVertical: 40, borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 16 },
-  brandStripLabel: { fontSize: 12.5, fontWeight: '700', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 18 },
+  brandStripLabel: { fontFamily: Typography.label.fontFamily, fontSize: 12.5, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[4] },
   brandStripRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 28 },
-  brandStripName: { fontSize: 17, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  brandStripName: { fontFamily: Typography.headline.fontFamily, fontSize: 17, color: Colors.text, letterSpacing: -0.2 },
 
   feedSection: { paddingTop: 64, paddingBottom: 32 },
-  feedHeadline: { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, marginBottom: 24 },
+  feedHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 28, color: Colors.text, letterSpacing: -0.5, marginBottom: Spacing[6] },
   feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   feedCard: { width: 160 },
-  feedImg:  { width: 160, height: 200, borderRadius: Radius.md, backgroundColor: Colors.stoneSoft, marginBottom: 8 },
-  feedBrand:{ fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: Colors.textMuted },
-  feedName: { fontSize: 13, fontWeight: '600', color: Colors.text, marginTop: 2 },
+  feedImg:  { width: 160, height: 200, borderRadius: Radius.card, backgroundColor: Colors.stoneSoft, marginBottom: Spacing[3] },
+  feedBrand:{ ...Typography.label, color: Colors.textMuted },
+  feedName: { ...Typography.cardTitle, color: Colors.text, marginTop: Spacing[1] },
 
   bottomCta: { alignItems: 'center', textAlign: 'center', paddingVertical: 72, gap: 20 } as any,
-  bottomCtaHeadline: { fontSize: 26, fontWeight: '800', color: Colors.text, textAlign: 'center', maxWidth: 480, letterSpacing: -0.4 },
+  bottomCtaHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 26, color: Colors.text, textAlign: 'center', maxWidth: 480, letterSpacing: -0.4 },
 });

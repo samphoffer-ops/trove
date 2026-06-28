@@ -7,7 +7,7 @@ import {
 import { Image } from 'expo-image';
 import { Product } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { CheckIcon, CloseIcon } from './Icons';
 
 interface Props {
@@ -143,39 +143,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.text },
+  title: { ...Typography.headline, color: Colors.text },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   newRow: {
-    flexDirection: 'row', gap: 8,
+    flexDirection: 'row', gap: Spacing[3],
     padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   input: {
     flex: 1, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.sm, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: Colors.text, backgroundColor: Colors.bg,
+    borderRadius: Radius.input, paddingHorizontal: 14, paddingVertical: 12,
+    ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.bg,
   },
   createBtn: {
-    backgroundColor: Colors.accentLime, borderRadius: Radius.sm,
+    backgroundColor: Colors.accentLime, borderRadius: Radius.input,
     paddingHorizontal: 16, justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.35 },
-  createBtnText:     { color: Colors.text, fontWeight: '700', fontSize: 14 },
+  createBtnText:     { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   list:   { paddingHorizontal: 20 },
-  empty:  { color: Colors.textMuted, fontSize: 14, paddingVertical: 16 },
+  empty:  { ...Typography.body, fontSize: 14, color: Colors.textMuted, paddingVertical: 16 },
   boardRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
   },
   boardCover: {
-    width: 48, height: 48, borderRadius: Radius.sm,
+    width: 48, height: 48, borderRadius: Radius.input,
     backgroundColor: Colors.stoneSoft, overflow: 'hidden',
   },
   boardCoverEmpty: { flex: 1, backgroundColor: Colors.stoneSoft },
   boardInfo:  { flex: 1 },
-  boardName:  { fontSize: 15, fontWeight: '600', color: Colors.text },
-  boardCount: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  boardName:  { ...Typography.cardTitle, fontSize: 15, color: Colors.text },
+  boardCount: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
   check: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: Colors.border,

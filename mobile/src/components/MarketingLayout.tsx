@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Link, usePathname } from 'expo-router';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Logo } from './Logo';
 
 const NAV_LINKS = [
@@ -92,20 +92,20 @@ const styles = StyleSheet.create({
   },
   navLinks: { flexDirection: 'row', gap: 28 },
   navLinksNarrow: { flexDirection: 'row', gap: 20, flexWrap: 'wrap', width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 14 },
-  navLink: { fontSize: 14.5, fontWeight: '600', color: Colors.textMuted, textDecorationLine: 'none' } as any,
-  navLinkActiveCombined: { fontSize: 14.5, fontWeight: '600', color: Colors.text, textDecorationLine: 'none' } as any,
+  navLink: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.textMuted, textDecorationLine: 'none' } as any,
+  navLinkActiveCombined: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
-  loginLink: { fontSize: 14.5, fontWeight: '600', color: Colors.text, textDecorationLine: 'none' } as any,
+  loginLink: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
   signUpBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
-  signUpBtnText: { color: Colors.text, fontSize: 14.5, fontWeight: '700' },
+  signUpBtnText: { ...Typography.headline, fontSize: 14.5, color: Colors.text },
   scrollContent: { flexGrow: 1, alignItems: 'center' },
   content:  { width: '100%', alignSelf: 'center', paddingHorizontal: 24 },
   footer:   { width: '100%', alignItems: 'center', borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 80 },
   footerInner: {
     width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 36,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: Spacing[4],
   },
   footerLinks: { flexDirection: 'row', gap: 20 },
-  footerLink: { fontSize: 13.5, fontWeight: '600', color: Colors.textMuted, textDecorationLine: 'none' } as any,
-  footerCopy: { fontSize: 12.5, color: Colors.textMuted },
+  footerLink: { ...Typography.cardTitle, fontSize: 13.5, color: Colors.textMuted, textDecorationLine: 'none' } as any,
+  footerCopy: { ...Typography.body, fontSize: 12.5, color: Colors.textMuted },
 });

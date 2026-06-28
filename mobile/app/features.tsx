@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { PhoneMockup } from '@/components/PhoneMockup';
-import { Colors } from '@/lib/theme';
+import { Colors, Typography } from '@/lib/theme';
 
 const SECTIONS = [
   {
@@ -49,15 +49,15 @@ export default function Features() {
 
 const styles = StyleSheet.create({
   intro: { paddingTop: 56, paddingBottom: 24 },
-  introHeadline: { fontSize: 36, fontWeight: '800', color: Colors.text, letterSpacing: -0.7, maxWidth: 600 },
+  introHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 36, color: Colors.text, letterSpacing: -0.7, maxWidth: 600 },
   row: {
     flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
     gap: 40, paddingVertical: 48, borderTopWidth: 1, borderTopColor: Colors.border,
   },
   rowReverse: { flexDirection: 'row-reverse' },
   copy: { flex: 1, minWidth: 300, gap: 14 },
-  eyebrow: { fontSize: 13, fontWeight: '800', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8 },
-  headline: { fontSize: 30, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, lineHeight: 36 },
-  body: { fontSize: 16, color: Colors.textMuted, lineHeight: 25, maxWidth: 440 },
+  eyebrow: { fontFamily: Typography.label.fontFamily, fontSize: 13, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8 },
+  headline: { fontFamily: Typography.display.fontFamily, fontSize: 30, color: Colors.text, letterSpacing: -0.5, lineHeight: 36 },
+  body: { ...Typography.body, fontSize: 16, color: Colors.textMuted, lineHeight: 25, maxWidth: 440 },
   visual: { flex: 1, minWidth: 220, alignItems: 'center' },
 });

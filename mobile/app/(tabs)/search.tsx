@@ -12,7 +12,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { Product, Profile } from '@/types';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { SearchIcon, CloseIcon } from '@/components/Icons';
 
 const PAGE_SIZE = 30;
@@ -144,18 +144,18 @@ const styles = StyleSheet.create({
     margin: 16, paddingHorizontal: 14,
     backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
   },
-  input:   { flex: 1, paddingVertical: 14, fontSize: 15, color: Colors.text },
+  input:   { flex: 1, paddingVertical: 14, ...Typography.body, color: Colors.text },
   content: { paddingHorizontal: 16, paddingBottom: 100 },
-  hint:    { fontSize: 15, color: Colors.textMuted, textAlign: 'center', paddingTop: 60 },
-  peopleSection: { marginBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: 8 },
-  personRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  hint:    { ...Typography.body, fontSize: 15, color: Colors.textMuted, textAlign: 'center', paddingTop: 60 },
+  peopleSection: { marginBottom: Spacing[4], borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: Spacing[3] },
+  personRow:   { flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3] },
   avatar:      { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText:  { fontSize: 16, fontWeight: '800', color: '#fff' },
+  avatarText:  { ...Typography.headline, color: '#fff' },
   personInfo:  { flex: 1 },
-  personName:  { fontSize: 14.5, fontWeight: '600', color: Colors.text },
-  personUsername: { fontSize: 12.5, color: Colors.textMuted, marginTop: 1 },
+  personName:  { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text },
+  personUsername: { ...Typography.caption, color: Colors.textMuted, marginTop: 1 },
   followBtn:   { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 },
   followBtnActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  followBtnText:   { fontSize: 13, fontWeight: '600', color: Colors.text },
+  followBtnText:   { ...Typography.cardTitle, color: Colors.text },
   followBtnTextActive: { color: Colors.accentLime },
 });

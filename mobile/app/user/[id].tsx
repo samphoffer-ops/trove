@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ChevronLeftIcon } from '@/components/Icons';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Profile, Board } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -111,23 +111,23 @@ export default function UserProfile() {
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: Colors.bg },
   topBar:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  topBarTitle:{ fontSize: 16, fontWeight: '600', color: Colors.text },
+  topBarTitle:{ ...Typography.cardTitle, fontSize: 16, color: Colors.text },
   content:    { paddingHorizontal: 20, paddingBottom: 100 },
-  hero:       { alignItems: 'center', paddingVertical: 24 },
-  avatar:     { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
-  avatarText: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  displayName:{ fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 4 },
-  username:   { fontSize: 14, color: Colors.textMuted, marginBottom: 4 },
-  followerText:{ fontSize: 13, color: Colors.textMuted },
-  followBtn:  { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingVertical: 12, alignItems: 'center', marginBottom: 28 },
+  hero:       { alignItems: 'center', paddingVertical: Spacing[6] },
+  avatar:     { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing[3], overflow: 'hidden' },
+  avatarText: { ...Typography.display, color: '#fff' },
+  displayName:{ ...Typography.headline, fontSize: 20, color: Colors.text, marginBottom: Spacing[1] },
+  username:   { ...Typography.body, color: Colors.textMuted, marginBottom: Spacing[1] },
+  followerText:{ ...Typography.caption, fontSize: 13, color: Colors.textMuted },
+  followBtn:  { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingVertical: 12, alignItems: 'center', marginBottom: Spacing[6] },
   followBtnActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  followBtnText:   { fontSize: 15, fontWeight: '600', color: Colors.text },
+  followBtnText:   { ...Typography.headline, fontSize: 15, color: Colors.text },
   followBtnTextActive: { color: Colors.accentLime },
-  sectionTitle:{ fontSize: 16, fontWeight: '800', color: Colors.text, marginBottom: 14 },
-  boardGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  boardCard:  { width: '47%', borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface },
+  sectionTitle:{ ...Typography.headline, color: Colors.text, marginBottom: Spacing[4] },
+  boardGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
+  boardCard:  { width: '47%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface },
   boardCover: { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
-  boardInfo:  { padding: 10 },
-  boardName:  { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 2 },
-  boardCount: { fontSize: 12, color: Colors.textMuted },
+  boardInfo:  { padding: Spacing[3] },
+  boardName:  { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
+  boardCount: { ...Typography.caption, color: Colors.textMuted },
 });

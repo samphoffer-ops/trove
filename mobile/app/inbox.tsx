@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShareStore } from '@/store/useShareStore';
 import { ChevronLeftIcon } from '@/components/Icons';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Share } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -73,20 +73,20 @@ export default function Inbox() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
   topBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  topBarTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
+  topBarTitle: { ...Typography.cardTitle, fontSize: 16, color: Colors.text },
   content:     { paddingHorizontal: 16, paddingBottom: 100 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, paddingHorizontal: 4,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing[4],
+    paddingVertical: Spacing[3], paddingHorizontal: 4,
   },
   unreadDot:   { position: 'absolute', left: -2, top: '50%', width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.accent },
-  thumb:       { width: 56, height: 56, borderRadius: Radius.sm, backgroundColor: Colors.stoneSoft },
+  thumb:       { width: 56, height: 56, borderRadius: Radius.input, backgroundColor: Colors.stoneSoft },
   info:        { flex: 1 },
-  sender:      { fontSize: 14, color: Colors.text },
+  sender:      { ...Typography.body, fontSize: 14, color: Colors.text },
   senderName:  { fontWeight: '700' },
-  productName: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
-  time:        { fontSize: 11.5, color: Colors.textMuted, marginTop: 4 },
+  productName: { ...Typography.cardTitle, color: Colors.textMuted, marginTop: Spacing[1] },
+  time:        { ...Typography.caption, fontSize: 11.5, color: Colors.textMuted, marginTop: Spacing[1] },
   empty:      { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-  emptyBody:  { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21 },
+  emptyTitle: { ...Typography.headline, color: Colors.text, marginBottom: Spacing[3] },
+  emptyBody:  { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
 });

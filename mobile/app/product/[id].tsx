@@ -3,14 +3,14 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Linking, ActivityIndicat
 import { useLocalSearchParams, router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useProductsStore, getProductById } from '@/store/useProductsStore';
+import { useProductsStore, getProductById, fetchSimilarProducts } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
 import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Product } from '@/types';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { WebFrame } from '@/components/WebFrame';
@@ -26,10 +26,18 @@ export default function ProductDetail() {
   const { loaded, fetchProducts } = useProductsStore();
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
+  const [similar, setSimilar] = useState<Product[]>([]);
 
   useEffect(() => { fetchProducts(); }, []);
 
   const product = getProductById(id!);
+
+  // Empty when the product has no embedding yet (still being backfilled) —
+  // the section below just doesn't render rather than showing nothing useful.
+  useEffect(() => {
+    if (!product) return;
+    fetchSimilarProducts(product.id).then(setSimilar);
+  }, [product?.id]);
 
   // Weakest, passive taste signal — one row per user per product (not per
   // visit), via upsert so reopening the same item never duplicates/inflates it.
@@ -91,6 +99,24 @@ export default function ProductDetail() {
             {product.category && <View style={styles.tag}><Text style={styles.tagText}>{product.category}</Text></View>}
           </View>
         </View>
+
+        {similar.length > 0 && (
+          <View style={styles.similarSection}>
+            <Text style={styles.similarTitle}>You might also like</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.similarScroll}>
+              {similar.map(p => (
+                <Pressable key={p.id} style={styles.similarCard} onPress={() => router.push(`/product/${p.id}`)}>
+                  <Image source={{ uri: p.image }} style={styles.similarImg} contentFit="cover" />
+                  <View style={styles.similarInfo}>
+                    <Text style={styles.similarBrand}>{p.brand}</Text>
+                    <Text style={styles.similarName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={styles.similarPrice}>${p.price}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
 
       {/* Sticky CTA */}
@@ -118,16 +144,25 @@ const styles = StyleSheet.create({
   heroActions:{ position: 'absolute', right: 16, flexDirection: 'row', gap: 10 },
   heroIconBtn:{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
   body:       { padding: 20 },
-  brand:      { fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, color: Colors.textMuted, marginBottom: 6 },
-  name:       { fontSize: 22, fontWeight: '700', color: Colors.text, letterSpacing: -0.4, marginBottom: 10 },
-  price:      { fontSize: 20, fontWeight: '700', color: Colors.accentBlue, marginBottom: 20 },
-  desc:       { fontSize: 14.5, lineHeight: 23, color: Colors.textMuted, marginBottom: 24 },
+  brand:      { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[2] },
+  name:       { ...Typography.display, color: Colors.text, marginBottom: Spacing[3] },
+  price:      { ...Typography.headline, fontSize: 20, color: Colors.accentBlue, marginBottom: Spacing[5] },
+  desc:       { ...Typography.body, fontSize: 14.5, lineHeight: 23, color: Colors.textMuted, marginBottom: Spacing[6] },
   tags:       { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   tag:        { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.stoneSoft },
-  tagText:    { fontSize: 12, fontWeight: '600', color: Colors.textMuted, textTransform: 'capitalize' },
+  tagText:    { ...Typography.caption, color: Colors.textMuted, textTransform: 'capitalize' },
+  similarSection: { marginTop: Spacing[6] },
+  similarTitle:   { ...Typography.headline, color: Colors.text, paddingHorizontal: 20, marginBottom: Spacing[3] },
+  similarScroll:  { paddingHorizontal: 20, gap: Spacing[3], paddingBottom: Spacing[3] },
+  similarCard:    { width: 140, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface },
+  similarImg:     { width: 140, height: 186, backgroundColor: Colors.stoneSoft },
+  similarInfo:    { padding: Spacing[3] },
+  similarBrand:   { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
+  similarName:    { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
+  similarPrice:   { ...Typography.cardTitle, color: Colors.accentBlue },
   actions:    { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16, backgroundColor: 'rgba(253,252,249,0.95)', borderTopWidth: 1, borderTopColor: Colors.border },
   shopBtn:    { flex: 1, backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
-  shopBtnText:{ color: Colors.text, fontSize: 15, fontWeight: '700' },
+  shopBtnText:{ ...Typography.cardTitle, fontSize: 15, color: Colors.text },
   saveBtn:    { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   saveBtnActive: { borderColor: Colors.accent },
 });

@@ -7,7 +7,7 @@ import { Product, Profile } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useShareStore } from '@/store/useShareStore';
 import { fetchFollowing } from '@/lib/social';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { CheckIcon, CloseIcon } from './Icons';
 
 interface Props {
@@ -131,21 +131,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.text },
+  title: { ...Typography.headline, color: Colors.text },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
   list:  { paddingHorizontal: 20 },
-  empty: { color: Colors.textMuted, fontSize: 14, lineHeight: 21, paddingVertical: 20 },
+  empty: { ...Typography.body, fontSize: 14, color: Colors.textMuted, paddingVertical: 20 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
   },
   avatar:     { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 17, fontWeight: '800', color: '#fff' },
+  avatarText: { ...Typography.headline, color: '#fff' },
   info:       { flex: 1 },
-  name:       { fontSize: 15, fontWeight: '600', color: Colors.text },
-  username:   { fontSize: 12.5, color: Colors.textMuted, marginTop: 1 },
+  name:       { ...Typography.cardTitle, fontSize: 15, color: Colors.text },
+  username:   { ...Typography.caption, color: Colors.textMuted, marginTop: 1 },
   check: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: Colors.border,
@@ -155,5 +155,5 @@ const styles = StyleSheet.create({
   footer:    { padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
   sendBtn:   { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
-  sendBtnText:     { color: Colors.text, fontSize: 15, fontWeight: '700' },
+  sendBtnText:     { ...Typography.headline, fontSize: 15, color: Colors.text },
 });

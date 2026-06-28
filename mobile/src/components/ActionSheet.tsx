@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, Animated, TouchableWithoutFeedback } from 'react-native';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography } from '@/lib/theme';
 
 interface ActionSheetOption {
   label: string;
@@ -61,8 +61,8 @@ const styles = StyleSheet.create({
   sheet:     { backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 20 },
   handle:    { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
   row:       { paddingVertical: 16, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: Colors.border, alignItems: 'center' },
-  label:     { fontSize: 16, fontWeight: '600', color: Colors.text },
+  label:     { ...Typography.headline, fontSize: 16, color: Colors.text },
   labelDestructive: { color: Colors.destructive },
   cancelRow: { paddingVertical: 16, paddingHorizontal: 20, marginTop: 8, alignItems: 'center' },
-  cancelLabel: { fontSize: 16, fontWeight: '600', color: Colors.textMuted },
+  cancelLabel: { ...Typography.headline, fontSize: 16, color: Colors.textMuted },
 });

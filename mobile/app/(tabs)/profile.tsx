@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { CameraIcon } from '@/components/Icons';
@@ -134,30 +134,30 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
-  title:       { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  title:       { ...Typography.display, color: Colors.text, paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
   content:     { paddingHorizontal: 20, paddingBottom: 100 },
-  hero:        { alignItems: 'center', paddingVertical: 24 },
-  avatarWrap:  { width: 72, height: 72, marginBottom: 12, position: 'relative' },
+  hero:        { alignItems: 'center', paddingVertical: Spacing[6] },
+  avatarWrap:  { width: 72, height: 72, marginBottom: Spacing[3], position: 'relative' },
   avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText:  { fontSize: 28, fontWeight: '800', color: '#fff' },
+  avatarText:  { ...Typography.display, color: '#fff' },
   avatarCameraBadge: {
     position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 13,
     backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.bg,
   },
-  displayName: { fontSize: 20, fontWeight: '700', color: Colors.text, marginBottom: 4 },
-  username:    { fontSize: 14, color: Colors.textMuted },
-  editProfileBtn: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
-  editProfileText: { fontSize: 13, fontWeight: '600', color: Colors.text },
-  statsRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 20, backgroundColor: Colors.surface, borderRadius: Radius.md },
+  displayName: { ...Typography.headline, fontSize: 20, color: Colors.text, marginBottom: Spacing[1] },
+  username:    { ...Typography.body, color: Colors.textMuted },
+  editProfileBtn: { marginTop: Spacing[3], paddingHorizontal: 16, paddingVertical: Spacing[3], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
+  editProfileText: { ...Typography.cardTitle, color: Colors.text },
+  statsRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing[5], backgroundColor: Colors.surface, borderRadius: Radius.card },
   stat:        { alignItems: 'center' },
-  statValue:   { fontSize: 24, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
-  statLabel:   { fontSize: 12, fontWeight: '600', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
-  divider:     { height: 1, backgroundColor: Colors.border, marginVertical: 28 },
-  linkRow:     { paddingVertical: 12 },
-  linkText:    { fontSize: 15, fontWeight: '500', color: Colors.text },
-  deleteBtn:   { paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  deleteText:  { fontSize: 13, fontWeight: '500', color: Colors.textMuted },
+  statValue:   { ...Typography.display, fontSize: 24, color: Colors.text },
+  statLabel:   { ...Typography.label, color: Colors.textMuted, marginTop: Spacing[1] },
+  divider:     { height: 1, backgroundColor: Colors.border, marginVertical: Spacing[6] },
+  linkRow:     { paddingVertical: Spacing[3] },
+  linkText:    { ...Typography.body, fontSize: 15, color: Colors.text },
+  deleteBtn:   { paddingVertical: 14, alignItems: 'center', marginTop: Spacing[1] },
+  deleteText:  { ...Typography.cardTitle, color: Colors.textMuted },
   signOutBtn:  { paddingVertical: 14, alignItems: 'center' },
-  signOutText: { fontSize: 15, fontWeight: '600', color: Colors.destructive },
+  signOutText: { ...Typography.body, fontSize: 15, fontWeight: '600', color: Colors.destructive },
 });

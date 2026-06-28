@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS } from '@/data/products';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { ChevronLeftIcon, CheckIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 
@@ -115,13 +115,13 @@ const styles = StyleSheet.create({
   dots:    { flexDirection: 'row', gap: 6 },
   dot:     { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.border },
   dotActive: { backgroundColor: Colors.accent, width: 18 },
-  skipText: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
-  title:    { fontSize: 24, fontWeight: '800', color: Colors.text, letterSpacing: -0.4, paddingHorizontal: 20, marginTop: 12 },
-  subtitle: { fontSize: 14.5, color: Colors.textMuted, paddingHorizontal: 20, marginTop: 4, marginBottom: 16 },
+  skipText: { ...Typography.cardTitle, color: Colors.textMuted },
+  title:    { ...Typography.display, fontSize: 24, color: Colors.text, paddingHorizontal: 20, marginTop: Spacing[3] },
+  subtitle: { ...Typography.body, fontSize: 14.5, color: Colors.textMuted, paddingHorizontal: 20, marginTop: Spacing[1], marginBottom: Spacing[4] },
   grid:     { paddingHorizontal: 16, paddingBottom: 16 },
   row:      { gap: 12 },
   tile:     {
-    flex: 1, aspectRatio: 1, borderRadius: Radius.md, overflow: 'hidden',
+    flex: 1, aspectRatio: 1, borderRadius: Radius.card, overflow: 'hidden',
     backgroundColor: Colors.stoneSoft, marginBottom: 12, justifyContent: 'flex-end',
   },
   tileOverlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,12,29,0.18)' },
@@ -130,10 +130,10 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12,
     backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
   },
-  tileLabelWrap: { padding: 10 },
-  tileLabel:     { fontSize: 14, fontWeight: '700', color: '#fff' },
+  tileLabelWrap: { padding: Spacing[3] },
+  tileLabel:     { ...Typography.headline, fontSize: 14, color: '#fff' },
   footer:  { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border },
   continueBtn:        { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
   continueBtnDisabled:{ opacity: 0.35 },
-  continueText:       { color: Colors.text, fontSize: 16, fontWeight: '700' },
+  continueText:       { ...Typography.headline, fontSize: 16, color: Colors.text },
 });

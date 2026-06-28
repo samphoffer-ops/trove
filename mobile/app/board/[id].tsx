@@ -9,7 +9,7 @@ import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
 import { ActionSheet } from '@/components/ActionSheet';
 import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon, CheckIcon } from '@/components/Icons';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -175,20 +175,20 @@ const styles = StyleSheet.create({
   coverTopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
   coverIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
   coverBottom: { paddingHorizontal: 20, paddingBottom: 16 },
-  name:       { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
-  meta:       { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
-  content:    { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 100 },
-  grid:       { flexDirection: 'row', gap: 12 },
+  name:       { ...Typography.display, color: '#fff' },
+  meta:       { ...Typography.body, color: 'rgba(255,255,255,0.85)', marginTop: Spacing[1] },
+  content:    { paddingHorizontal: 16, paddingVertical: Spacing[4], paddingBottom: 100 },
+  grid:       { flexDirection: 'row', gap: Spacing[4] },
   col:        { flex: 1 },
-  card:       { borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: 12, position: 'relative' },
+  card:       { borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: Spacing[4], position: 'relative', ...Shadows.card },
   img:        { width: '100%', aspectRatio: 4/5, backgroundColor: Colors.stoneSoft },
   menuBtn:    { position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   purchasedBadge: { position: 'absolute', bottom: 8, left: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center' },
-  cardInfo:   { padding: 10 },
-  cardBrand:  { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7, color: Colors.textMuted, marginBottom: 2 },
-  cardName:   { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 4, lineHeight: 17 },
-  cardPrice:  { fontSize: 13, fontWeight: '600', color: Colors.accentBlue },
+  cardInfo:   { padding: Spacing[3] },
+  cardBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
+  cardName:   { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
+  cardPrice:  { ...Typography.cardTitle, color: Colors.accentBlue },
   empty:      { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-  emptyBody:  { fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 21 },
+  emptyTitle: { ...Typography.headline, color: Colors.text, marginBottom: Spacing[3] },
+  emptyBody:  { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
 });

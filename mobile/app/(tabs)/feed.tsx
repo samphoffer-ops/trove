@@ -12,7 +12,7 @@ import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InboxIcon } from '@/components/Icons';
 import { Product } from '@/types';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 
 const CATEGORIES = [
   { id: 'all', label: 'all' },
@@ -129,27 +129,27 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   header: { backgroundColor: Colors.bg, zIndex: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
-  title:  { fontSize: 28, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
+  title:  { ...Typography.display, color: Colors.text },
   inboxBtn: { padding: 2 },
   badge: {
     position: 'absolute', top: -4, right: -6, minWidth: 17, height: 17, borderRadius: 8.5,
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
   },
-  badgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
-  chips:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  chip:   { paddingHorizontal: 15, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
+  badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
+  chips:  { paddingHorizontal: 16, paddingVertical: Spacing[3], gap: Spacing[3] },
+  chip:   { paddingHorizontal: 15, paddingVertical: Spacing[3], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  chipText:   { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  chipText:   { ...Typography.cardTitle, color: Colors.textMuted },
   chipTextActive: { color: Colors.accentLime },
-  strip:       { marginBottom: 4 },
-  stripHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16, paddingBottom: 10, paddingTop: 6 },
-  stripTitle:  { fontSize: 16, fontWeight: '800', color: Colors.text, letterSpacing: -0.3 },
-  seeAll:      { fontSize: 12.5, fontWeight: '600', color: Colors.accent },
-  stripScroll: { paddingHorizontal: 16, gap: 10, paddingBottom: 16 },
-  stripCard:   { width: 140, borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.surface },
+  strip:       { marginBottom: Spacing[1] },
+  stripHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16, paddingBottom: 10, paddingTop: Spacing[2] },
+  stripTitle:  { ...Typography.headline, color: Colors.text },
+  seeAll:      { ...Typography.caption, color: Colors.accent },
+  stripScroll: { paddingHorizontal: 16, gap: Spacing[3], paddingBottom: 16 },
+  stripCard:   { width: 140, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface },
   stripImg:    { width: 140, height: 186, backgroundColor: Colors.stoneSoft },
-  stripInfo:   { padding: 9 },
-  stripBrand:  { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.7, color: Colors.textMuted, marginBottom: 2 },
-  stripName:   { fontSize: 12.5, fontWeight: '600', color: Colors.text, marginBottom: 4 },
-  stripPrice:  { fontSize: 12, fontWeight: '600', color: Colors.accentBlue },
+  stripInfo:   { padding: Spacing[3] },
+  stripBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
+  stripName:   { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
+  stripPrice:  { ...Typography.cardTitle, color: Colors.accentBlue },
 });

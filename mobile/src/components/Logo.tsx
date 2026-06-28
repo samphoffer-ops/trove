@@ -17,14 +17,15 @@ const VIEW_H = 46.95;
 interface Props {
   width?: number;
   color?: string;
+  underlineColor?: string;
 }
 
-export function Logo({ width = 144, color = Colors.text }: Props) {
+export function Logo({ width = 144, color = Colors.text, underlineColor = Colors.accent }: Props) {
   const height = width * (VIEW_H / VIEW_W);
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
       {LETTER_PATHS.map((d, i) => <Path key={i} d={d} fill={color} />)}
-      <Rect y={45.7} width={VIEW_W} height={1.24} fill={Colors.accent} />
+      <Rect y={45.7} width={VIEW_W} height={1.24} fill={underlineColor} />
     </Svg>
   );
 }

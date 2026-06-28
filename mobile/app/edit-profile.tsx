@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Colors, Radius } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
@@ -105,27 +105,27 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.bg },
   topBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
-  topBarTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
+  topBarTitle: { ...Typography.cardTitle, fontSize: 16, color: Colors.text },
   content: { paddingHorizontal: 20, paddingBottom: 100 },
-  label:   { fontSize: 13, fontWeight: '700', color: Colors.text, marginTop: 20, marginBottom: 8, textTransform: 'lowercase' },
-  sublabel:{ fontSize: 12.5, color: Colors.textMuted, marginBottom: 10, marginTop: -4, lineHeight: 17 },
+  label:   { ...Typography.cardTitle, color: Colors.text, marginTop: Spacing[5], marginBottom: Spacing[3], textTransform: 'lowercase' },
+  sublabel:{ ...Typography.caption, fontSize: 12.5, color: Colors.textMuted, marginBottom: Spacing[3], marginTop: -4, lineHeight: 17 },
   input: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.sm,
-    paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
+    paddingHorizontal: 16, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
   handleInputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.sm, backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input, backgroundColor: Colors.surface,
     paddingLeft: 16,
   },
-  handlePrefix: { fontSize: 15, color: Colors.textMuted, fontWeight: '600' },
-  handleInput:  { flex: 1, paddingHorizontal: 4, paddingVertical: 13, fontSize: 15, color: Colors.text },
-  chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  handlePrefix: { ...Typography.cardTitle, fontSize: 15, color: Colors.textMuted },
+  handleInput:  { flex: 1, paddingHorizontal: 4, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text },
+  chipRow: { flexDirection: 'row', gap: Spacing[3], flexWrap: 'wrap' },
   chip:    { paddingHorizontal: 15, paddingVertical: 9, borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  chipText:   { fontSize: 13.5, fontWeight: '600', color: Colors.textMuted },
+  chipText:   { ...Typography.cardTitle, fontSize: 13.5, color: Colors.textMuted },
   chipTextActive: { color: Colors.accentLime },
-  saveBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 32 },
+  saveBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: Spacing[6] },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { color: Colors.text, fontSize: 16, fontWeight: '700' },
+  saveBtnText: { ...Typography.headline, fontSize: 16, color: Colors.text },
 });

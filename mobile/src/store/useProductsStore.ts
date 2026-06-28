@@ -119,3 +119,16 @@ export function getProducts({ category = 'all', query = '', page = 1, perPage = 
 export function getProductById(id: string): Product | undefined {
   return useProductsStore.getState().products.find(p => p.id === id);
 }
+
+// Same pgvector-via-RPC constraint as fetchProducts() above — similarity
+// has to be computed in Postgres (see migration 011). Returns [] (not an
+// error) when the seed product has no embedding yet, so callers can just
+// hide the section rather than handle a special "no embedding" case.
+export async function fetchSimilarProducts(productId: string): Promise<Product[]> {
+  const { data, error } = await supabase.rpc('similar_products', { p_product_id: productId });
+  if (error) {
+    console.error('fetchSimilarProducts:', error);
+    return [];
+  }
+  return (data ?? []) as Product[];
+}
