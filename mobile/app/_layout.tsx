@@ -4,11 +4,13 @@ import { Stack, router } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
+  Mulish_300Light_Italic,
   Mulish_400Regular,
   Mulish_500Medium,
   Mulish_600SemiBold,
   Mulish_700Bold,
   Mulish_800ExtraBold,
+  Mulish_900Black,
 } from '@expo-google-fonts/mulish';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -39,11 +41,13 @@ function injectWebFont() {
 export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
   const [fontsLoaded] = useFonts({
+    Mulish_300Light_Italic,
     Mulish_400Regular,
     Mulish_500Medium,
     Mulish_600SemiBold,
     Mulish_700Bold,
     Mulish_800ExtraBold,
+    Mulish_900Black,
   });
 
   useEffect(() => {
