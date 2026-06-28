@@ -73,13 +73,26 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Several brand sites silently hang instead of erroring (confirmed via direct
+// test: blundstoneusa.com and commonprojects.com never respond at all to a
+// plain products.json request, no timeout, no 403 — just nothing). Plain
+// `fetch()` has no timeout of its own, so one unresponsive site can eat the
+// function's entire ~150s execution budget by itself and take the whole
+// batch down with it (this is what WORKER_RESOURCE_LIMIT actually was, not
+// a memory problem). Every external fetch in this file goes through this
+// wrapper so a hung site fails fast instead.
+const FETCH_TIMEOUT_MS = 10000;
+function fetchWithTimeout(url: string, init: RequestInit = {}) {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+}
+
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 async function isDisallowed(domain: string): Promise<boolean> {
   try {
-    const res = await fetch(`https://${domain}/robots.txt`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const res = await fetchWithTimeout(`https://${domain}/robots.txt`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!res.ok) return false;
     const text = await res.text();
     const lines = text.split('\n').map(l => l.trim());
@@ -97,7 +110,7 @@ async function isDisallowed(domain: string): Promise<boolean> {
 
 async function probeShopify(domain: string): Promise<ScrapedProduct[] | null> {
   try {
-    const res = await fetch(`https://${domain}/products.json?limit=20`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const res = await fetchWithTimeout(`https://${domain}/products.json?limit=20`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!res.ok) return null;
     const data = await res.json();
     const products = data.products;
@@ -122,13 +135,13 @@ async function probeShopify(domain: string): Promise<ScrapedProduct[] | null> {
 
 async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
   try {
-    const sitemapRes = await fetch(`https://${domain}/sitemap.xml`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const sitemapRes = await fetchWithTimeout(`https://${domain}/sitemap.xml`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!sitemapRes.ok) return null;
     const sitemapText = await sitemapRes.text();
     const productSitemapMatch = sitemapText.match(/<loc>([^<]*product[^<]*sitemap[^<]*)<\/loc>/i);
     if (!productSitemapMatch) return null;
     await sleep(500);
-    const productSitemapRes = await fetch(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const productSitemapRes = await fetchWithTimeout(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!productSitemapRes.ok) return null;
     const productUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 10);
 
@@ -136,7 +149,7 @@ async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
     for (const url of productUrls) {
       await sleep(REQUEST_DELAY_MS);
       try {
-        const pageRes = await fetch(url, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+        const pageRes = await fetchWithTimeout(url, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
         if (!pageRes.ok) continue;
         const html = await pageRes.text();
         const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
@@ -182,7 +195,7 @@ ${sample}
 Respond with ONLY a JSON object, no other text:
 {"brand_name": "<the brand's actual display name, properly spaced and capitalized — infer it from the domain and product copy, e.g. 'leftfieldnyc.com' -> 'Left Field NYC', not a literal transcription of the domain>", "verdict": "approve"|"reject"|"uncertain", "confidence": <0-100>, "matched_categories": [...], "matched_styles": [...], "audience": "mens"|"womens"|"unisex", "reasoning": "<one or two sentences>"}`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -215,7 +228,7 @@ Respond with ONLY a JSON object, no other text:
 // not just slower ones.
 async function generateEmbeddings(voyageKey: string, texts: string[]): Promise<(number[] | null)[]> {
   try {
-    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    const res = await fetchWithTimeout('https://api.voyageai.com/v1/embeddings', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'Authorization': `Bearer ${voyageKey}` },
       body: JSON.stringify({ input: texts, model: 'voyage-4-lite', input_type: 'document' }),
@@ -248,7 +261,7 @@ kind of words for the item TYPE, not the brand or styling details (e.g. for a
 bikini top: "swim", "swimwear", "bikini"; for a chore coat: "jacket", "coat",
 "outerwear"). Respond with ONLY a JSON array of lowercase strings, no other text.`;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: prompt }] }),
@@ -459,7 +472,7 @@ Notes: ${brand.judge_reasoning ?? 'none'}
 Based on this brand's name and product focus, classify its primary customer audience.
 Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"unisex"}`;
         try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
+          const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: { 'content-type': 'application/json', 'x-api-key': anthropicKeyLocal, 'anthropic-version': '2023-06-01' },
             body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 50, messages: [{ role: 'user', content: prompt }] }),
