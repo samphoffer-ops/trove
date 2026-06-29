@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal, View, Animated, StyleSheet, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
+import { Modal, View, Animated, Platform, StyleSheet, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useProductModalStore } from '@/store/useProductModalStore';
 import { ProductDetailContent } from './ProductDetailContent';
@@ -14,7 +14,28 @@ import { Colors, Radius, Shadows, Animation } from '@/lib/theme';
 // Animates itself explicitly rather than relying on Modal's animationType —
 // every other sheet in this app (SaveSheet, ShareSheet, etc.) does the same,
 // since react-native-web doesn't reliably animate a plain Modal.
+//
+// The Modal itself, and the Animated.Views carrying the fade/scale, are
+// ALWAYS mounted from app start (never conditionally rendered) — only
+// ProductDetailContent mounts/unmounts with localId. Closing always
+// animated correctly because it runs on a node that's been alive and
+// "live" for a while; opening kept failing because the animated node was
+// freshly created on every open, and starting an animation against a node
+// in the same tick (or even one effect-cycle later) it was created raced
+// react-native-web's ref/style-attachment for that fresh node. Keeping the
+// shell permanently mounted makes every open run on an already-live node,
+// the same condition that's made closing reliable from the start.
 export function ProductModal() {
+  // Native never opens this modal (openProduct() only routes here on a wide
+  // web viewport — see lib/navigation.ts), but more importantly: keeping the
+  // Modal permanently `visible` below is a web-only trick (toggling display/
+  // pointerEvents instead of mount/unmount). A real native Modal ignores
+  // that and would sit on screen as an actual OS-level presentation —
+  // blocking the whole app — regardless of how "empty" its content is.
+  // Platform.OS is static for the app's lifetime, so this conditional
+  // return never changes across re-renders and is safe ahead of hooks.
+  if (Platform.OS !== 'web') return null;
+
   const { openProductId, close } = useProductModalStore();
   const { height: windowHeight } = useWindowDimensions();
   const [localId, setLocalId] = useState<string | null>(null);
@@ -22,58 +43,41 @@ export function ProductModal() {
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
 
-  // Resetting the Animated.Values and calling .start() in the same effect
-  // that sets localId raced the card's own mount — setLocalId's re-render
-  // hadn't committed yet, so the Animated.View receiving these values often
-  // didn't exist for the first chunk (sometimes all) of the animation's
-  // timeline, making the fade-in invisible while the fade-out (where the
-  // card already exists) worked fine. Splitting into two effects, with the
-  // animation keyed on localId itself, guarantees the card is already
-  // mounted — at the reset (opacity 0) values — before .start() runs.
   useEffect(() => {
     if (openProductId) setLocalId(openProductId);
-  }, [openProductId]);
-
-  useEffect(() => {
-    if (!localId) return;
     const wasOpen = wasOpenRef.current;
-    wasOpenRef.current = true;
-    if (!wasOpen) {
-      // Both on the same timing curve and duration, not a spring for scale —
-      // a spring settles well after a 250ms fade completes, so the card hit
-      // full opacity while still visibly growing, reading as "pops up, then
-      // keeps transitioning" instead of one motion finishing together.
+    wasOpenRef.current = !!openProductId;
+    if (openProductId && !wasOpen) {
       Animated.parallel([
-        Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: true }),
-        Animated.timing(scaleAnim, { toValue: 1, duration: Animation.standard, useNativeDriver: true }),
+        Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
       ]).start();
     }
-  }, [localId]);
+  }, [openProductId]);
 
   function handleClose() {
     Animated.parallel([
-      Animated.timing(fadeAnim,  { toValue: 0, duration: Animation.micro, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 0.96, duration: Animation.micro, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 0, duration: Animation.micro, useNativeDriver: false }),
+      Animated.timing(scaleAnim, { toValue: 0.96, duration: Animation.micro, useNativeDriver: false }),
     ]).start(() => {
       close();
       setLocalId(null);
-      wasOpenRef.current = false;
     });
   }
 
+  const open = !!openProductId || !!localId;
+
   return (
-    <Modal transparent visible={!!openProductId || !!localId} onRequestClose={handleClose} animationType="none">
+    <Modal transparent visible style={{ display: open ? 'flex' : 'none' } as any} onRequestClose={handleClose} animationType="none">
       <TouchableWithoutFeedback onPress={handleClose}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeAnim }]}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeAnim }]} pointerEvents={open ? 'auto' : 'none'}>
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
         </Animated.View>
       </TouchableWithoutFeedback>
-      <View style={styles.centerWrap} pointerEvents="box-none">
-        {localId && (
-          <Animated.View style={[styles.card, { maxHeight: windowHeight * 0.88, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-            <ProductDetailContent productId={localId} onClose={handleClose} />
-          </Animated.View>
-        )}
+      <View style={styles.centerWrap} pointerEvents={open ? 'box-none' : 'none'}>
+        <Animated.View style={[styles.card, { maxHeight: windowHeight * 0.88, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+          {localId && <ProductDetailContent productId={localId} onClose={handleClose} />}
+        </Animated.View>
       </View>
     </Modal>
   );
