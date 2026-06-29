@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform } from 'react-native';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,7 +12,7 @@ import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon, CheckIcon } from '
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack } from '@/lib/navigation';
+import { goBack, openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { notify } from '@/lib/alerts';
 
@@ -121,7 +121,7 @@ export default function BoardDetail() {
             {[leftCol, rightCol].map((col, ci) => (
               <View key={ci} style={styles.col}>
                 {col.map(item => (
-                  <Pressable key={item.id} style={styles.card} onPress={() => router.push(`/product/${item.product_id}`)}>
+                  <Pressable key={item.id} style={styles.card} onPress={() => openProduct(item.product_id)}>
                     <Image source={{ uri: item.product_data.image }} style={styles.img} contentFit="cover" />
                     {item.purchased_at && (
                       <View style={styles.purchasedBadge}>

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchFollowedBrands } from '@/lib/social';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
+import { openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { CameraIcon, GearIcon } from '@/components/Icons';
 import { BoardCard } from './boards';
@@ -122,7 +123,7 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Recently purchased</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.purchasedRow}>
               {recentlyPurchased.map(item => (
-                <Pressable key={item.product_id} style={styles.purchasedCard} onPress={() => router.push(`/product/${item.product_id}`)}>
+                <Pressable key={item.product_id} style={styles.purchasedCard} onPress={() => openProduct(item.product_id)}>
                   <Image source={{ uri: item.product_data?.image }} style={styles.purchasedImg} contentFit="cover" />
                   <Text style={styles.purchasedName} numberOfLines={1}>{item.product_data?.name}</Text>
                 </Pressable>

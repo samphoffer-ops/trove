@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShareStore } from '@/store/useShareStore';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Share } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack } from '@/lib/navigation';
+import { goBack, openProduct } from '@/lib/navigation';
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -26,7 +25,7 @@ export default function Inbox() {
 
   function openShare(share: Share) {
     markRead(share.id);
-    router.push(`/product/${share.product_id}`);
+    openProduct(share.product_id);
   }
 
   return (

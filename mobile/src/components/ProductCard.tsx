@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { openProduct } from '@/lib/navigation';
 import { BookmarkIcon, CloseIcon } from './Icons';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 
 export function ProductCard({ product, saved, onSave, onNotInterested }: Props) {
   return (
-    <Pressable style={styles.card} onPress={() => router.push(`/product/${product.id}`)}>
+    <Pressable style={styles.card} onPress={() => openProduct(product.id)}>
       <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
         <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
         {onNotInterested && (

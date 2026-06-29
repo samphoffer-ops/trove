@@ -13,6 +13,7 @@ import { SaveSheet } from '@/components/SaveSheet';
 import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { openProduct } from '@/lib/navigation';
 
 const CATEGORIES = [
   { id: 'all', label: 'all' },
@@ -117,7 +118,7 @@ export default function FeedScreen() {
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
                   {items.map(p => (
-                    <Pressable key={p.id} style={styles.stripCard} onPress={() => router.push(`/product/${p.id}`)}>
+                    <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
                       <Image source={{ uri: p.image }} style={styles.stripImg} contentFit="cover" />
                       <View style={styles.stripInfo}>
                         <Text style={styles.stripBrand}>{p.brand}</Text>

@@ -13,6 +13,7 @@ import {
   Mulish_900Black,
 } from '@expo-google-fonts/mulish';
 import { supabase } from '@/lib/supabase';
+import { ProductModal } from '@/components/ProductModal';
 import { useAuthStore } from '@/store/useAuthStore';
 
 // Body font is Mulish (brand spec). Headers want "Freight Display Pro Bold" —
@@ -97,6 +98,7 @@ export default function RootLayout() {
         <Stack.Screen name="for-brands" options={{ presentation: 'card' }} />
         <Stack.Screen name="contact"    options={{ presentation: 'card' }} />
       </Stack>
+      <ProductModal />
     </GestureHandlerRootView>
   );
 }
