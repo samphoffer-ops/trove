@@ -22,21 +22,29 @@ export function ProductModal() {
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
 
+  // Resetting the Animated.Values and calling .start() in the same effect
+  // that sets localId raced the card's own mount — setLocalId's re-render
+  // hadn't committed yet, so the Animated.View receiving these values often
+  // didn't exist for the first chunk (sometimes all) of the animation's
+  // timeline, making the fade-in invisible while the fade-out (where the
+  // card already exists) worked fine. Splitting into two effects, with the
+  // animation keyed on localId itself, guarantees the card is already
+  // mounted — at the reset (opacity 0) values — before .start() runs.
   useEffect(() => {
     if (openProductId) setLocalId(openProductId);
+  }, [openProductId]);
+
+  useEffect(() => {
+    if (!localId) return;
     const wasOpen = wasOpenRef.current;
-    wasOpenRef.current = !!openProductId;
-    if (openProductId && !wasOpen) {
-      // A genuine open (not a same-modal product swap via similar items) —
-      // reset to the start state first so this plays from the beginning.
-      fadeAnim.setValue(0);
-      scaleAnim.setValue(0.96);
+    wasOpenRef.current = true;
+    if (!wasOpen) {
       Animated.parallel([
         Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: true }),
         Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, ...Animation.spring }),
       ]).start();
     }
-  }, [openProductId]);
+  }, [localId]);
 
   function handleClose() {
     Animated.parallel([
@@ -45,6 +53,7 @@ export function ProductModal() {
     ]).start(() => {
       close();
       setLocalId(null);
+      wasOpenRef.current = false;
     });
   }
 
