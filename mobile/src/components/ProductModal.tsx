@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Modal, View, Animated, Platform, StyleSheet, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useProductModalStore } from '@/store/useProductModalStore';
@@ -15,76 +15,61 @@ import { Colors, Radius, Shadows, Animation } from '@/lib/theme';
 // every other sheet in this app (SaveSheet, ShareSheet, etc.) does the same,
 // since react-native-web doesn't reliably animate a plain Modal.
 //
-// The Modal itself, and the Animated.Views carrying the fade/scale, are
-// ALWAYS mounted from app start (never conditionally rendered) — only
-// ProductDetailContent mounts/unmounts with localId. Closing always
-// animated correctly because it runs on a node that's been alive and
-// "live" for a while; opening kept failing because the animated node was
-// freshly created on every open, and starting an animation against a node
-// in the same tick (or even one effect-cycle later) it was created raced
-// react-native-web's ref/style-attachment for that fresh node. Keeping the
-// shell permanently mounted makes every open run on an already-live node,
-// the same condition that's made closing reliable from the start.
+// IMPORTANT: the Modal (and everything inside it) genuinely mounts/unmounts
+// with `openProductId` — `return null` below when there's nothing open.
+// An earlier version tried keeping the Modal permanently `visible` and
+// hiding it via style only, to dodge an animation-timing race on a freshly
+// mounted node — that broke real interaction with the entire page behind
+// it (a Modal's overlay/portal layer isn't just a stylable child View; it
+// has its own presence regardless of what's rendered inside it). The race
+// is solved here a different way instead: a double requestAnimationFrame
+// defers starting the animation until after the freshly-mounted node has
+// actually committed/painted, without keeping anything around when closed.
 export function ProductModal() {
   // Native never opens this modal (openProduct() only routes here on a wide
-  // web viewport — see lib/navigation.ts), but more importantly: keeping the
-  // Modal permanently `visible` below is a web-only trick (toggling display/
-  // pointerEvents instead of mount/unmount). A real native Modal ignores
-  // that and would sit on screen as an actual OS-level presentation —
-  // blocking the whole app — regardless of how "empty" its content is.
-  // Platform.OS is static for the app's lifetime, so this conditional
-  // return never changes across re-renders and is safe ahead of hooks.
+  // web viewport — see lib/navigation.ts). Platform.OS is static for the
+  // app's lifetime, so this conditional return never changes across
+  // re-renders and is safe ahead of hooks.
   if (Platform.OS !== 'web') return null;
 
   const { openProductId, close } = useProductModalStore();
   const { height: windowHeight } = useWindowDimensions();
-  const [localId, setLocalId] = useState<string | null>(null);
-  const wasOpenRef = useRef(false);
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
 
   useEffect(() => {
-    if (openProductId) setLocalId(openProductId);
-    const wasOpen = wasOpenRef.current;
-    wasOpenRef.current = !!openProductId;
-    if (openProductId && !wasOpen) {
-      Animated.parallel([
-        Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
-        Animated.timing(scaleAnim, { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
-      ]).start();
-    }
+    if (!openProductId) return;
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.96);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: Animation.standard, useNativeDriver: false }),
+        ]).start();
+      });
+    });
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
   }, [openProductId]);
 
   function handleClose() {
     Animated.parallel([
       Animated.timing(fadeAnim,  { toValue: 0, duration: Animation.micro, useNativeDriver: false }),
       Animated.timing(scaleAnim, { toValue: 0.96, duration: Animation.micro, useNativeDriver: false }),
-    ]).start(() => {
-      close();
-      setLocalId(null);
-    });
+    ]).start(() => close());
   }
 
-  const open = !!openProductId || !!localId;
+  if (!openProductId) return null;
 
   return (
-    <Modal transparent visible style={{ display: open ? 'flex' : 'none' } as any} onRequestClose={handleClose} animationType="none">
-      {open && (
-        // Deliberately NOT wrapped in the fadeAnim-driven Animated.View —
-        // backdrop-filter blurs whatever's behind it in the page, but an
-        // ancestor with an animated (or any <1) opacity creates a new
-        // compositing layer that the blur samples instead, breaking the
-        // glass effect entirely (confirmed: this is exactly what made the
-        // blur vanish while the card's drop-shadow kept rendering fine,
-        // since the shadow has nothing to do with backdrop-filter). The
-        // card's own fade/scale below is unaffected and still animates.
-        <TouchableWithoutFeedback onPress={handleClose}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
-        </TouchableWithoutFeedback>
-      )}
-      <View style={styles.centerWrap} pointerEvents={open ? 'box-none' : 'none'}>
+    <Modal transparent visible onRequestClose={handleClose} animationType="none">
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
+      </TouchableWithoutFeedback>
+      <View style={styles.centerWrap} pointerEvents="box-none">
         <Animated.View style={[styles.card, { maxHeight: windowHeight * 0.88, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          {localId && <ProductDetailContent productId={localId} onClose={handleClose} />}
+          <ProductDetailContent productId={openProductId} onClose={handleClose} />
         </Animated.View>
       </View>
     </Modal>
