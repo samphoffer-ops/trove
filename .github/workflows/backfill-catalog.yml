@@ -1,0 +1,46 @@
+name: Backfill product embeddings and search keywords
+
+# Runs the two one-time-ish backfill actions on a schedule instead of
+# relying on someone being in an active session to call them manually —
+# every run before this one happened that way. Safe to run indefinitely
+# even after the historical backlog is cleared: both actions only touch
+# rows missing the field in question, so an empty backlog just returns
+# {embedded:0,failed:0} / {updated:0,failed:0} almost instantly. Leaving
+# it scheduled forever also catches any future product that slips through
+# without an embedding/keywords (e.g. a transient Voyage/Anthropic failure
+# during a normal catalog-intake scrape).
+#
+# Embeddings specifically: Voyage's free-tier rate limit needs real time to
+# recover, not just pacing within one call (confirmed — an immediate retry
+# right after one run got 0/200, where waiting and retrying later got
+# through more). Running every 20 minutes rather than tight-looping in one
+# job respects that.
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+env:
+  SUPABASE_URL: https://xxyserlkigllpmtxzlsa.supabase.co
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eXNlcmxraWdsbHBtdHh6bHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjQ2NzEsImV4cCI6MjA5NzIwMDY3MX0.69xsoMopJi39sCbHmQZC3I-AeZiP-aKg9KQns4CS6uk
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backfill embeddings
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"backfill_embeddings"}' --max-time 170
+          echo ""
+
+      - name: Backfill search keywords
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"backfill_search_keywords"}' --max-time 170
+          echo ""
