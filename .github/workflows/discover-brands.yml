@@ -1,0 +1,53 @@
+name: Discover and intake new brands
+
+# Weekly automated brand sourcing: finds new candidate brand domains (Exa
+# search via discover-brands), then feeds them through catalog-intake in
+# small batches. Every brand still lands as 'pending_review' — Sam approves
+# or rejects each one by hand in the Supabase Table Editor, same as a
+# manually-triggered run. This only automates *finding* candidates, not
+# approving them.
+#
+# Batches are kept small (5 domains, paced 20s apart) because catalog-intake
+# scrapes + judges sequentially and Supabase Edge Functions have a ~150s
+# execution ceiling — a single large batch can still exceed that even with
+# the per-fetch timeout fix, since 15 slow-but-not-hanging sites can still
+# add up. Small batches are how every manual run this session stayed reliable.
+
+on:
+  schedule:
+    - cron: '0 14 * * 1' # Mondays, 14:00 UTC
+  workflow_dispatch:
+
+env:
+  SUPABASE_URL: https://xxyserlkigllpmtxzlsa.supabase.co
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eXNlcmxraWdsbHBtdHh6bHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjQ2NzEsImV4cCI6MjA5NzIwMDY3MX0.69xsoMopJi39sCbHmQZC3I-AeZiP-aKg9KQns4CS6uk
+
+jobs:
+  discover-and-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discover candidate brand domains
+        id: discover
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/discover-brands" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" -d '{}' --max-time 120 -o discover.json
+          cat discover.json
+          echo "found=$(jq '.found_new // 0' discover.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Feed candidates into catalog-intake in small batches
+        if: steps.discover.outputs.found != '0'
+        run: |
+          domains=($(jq -r '.candidates[].domain' discover.json))
+          echo "Processing ${#domains[@]} candidate domains"
+          for ((i=0; i<${#domains[@]}; i+=5)); do
+            batch=("${domains[@]:i:5}")
+            json_batch=$(printf '%s\n' "${batch[@]}" | jq -R . | jq -s .)
+            echo "Batch: $json_batch"
+            curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+              -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"domains\": $json_batch}" --max-time 140
+            echo ""
+            sleep 20
+          done
