@@ -69,11 +69,19 @@ export function ProductModal() {
 
   return (
     <Modal transparent visible style={{ display: open ? 'flex' : 'none' } as any} onRequestClose={handleClose} animationType="none">
-      <TouchableWithoutFeedback onPress={handleClose}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: fadeAnim }]} pointerEvents={open ? 'auto' : 'none'}>
+      {open && (
+        // Deliberately NOT wrapped in the fadeAnim-driven Animated.View —
+        // backdrop-filter blurs whatever's behind it in the page, but an
+        // ancestor with an animated (or any <1) opacity creates a new
+        // compositing layer that the blur samples instead, breaking the
+        // glass effect entirely (confirmed: this is exactly what made the
+        // blur vanish while the card's drop-shadow kept rendering fine,
+        // since the shadow has nothing to do with backdrop-filter). The
+        // card's own fade/scale below is unaffected and still animates.
+        <TouchableWithoutFeedback onPress={handleClose}>
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
-        </Animated.View>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
+      )}
       <View style={styles.centerWrap} pointerEvents={open ? 'box-none' : 'none'}>
         <Animated.View style={[styles.card, { maxHeight: windowHeight * 0.88, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           {localId && <ProductDetailContent productId={localId} onClose={handleClose} />}
