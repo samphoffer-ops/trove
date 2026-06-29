@@ -39,9 +39,13 @@ export function ProductModal() {
     const wasOpen = wasOpenRef.current;
     wasOpenRef.current = true;
     if (!wasOpen) {
+      // Both on the same timing curve and duration, not a spring for scale —
+      // a spring settles well after a 250ms fade completes, so the card hit
+      // full opacity while still visibly growing, reading as "pops up, then
+      // keeps transitioning" instead of one motion finishing together.
       Animated.parallel([
         Animated.timing(fadeAnim,  { toValue: 1, duration: Animation.standard, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, ...Animation.spring }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: Animation.standard, useNativeDriver: true }),
       ]).start();
     }
   }, [localId]);
