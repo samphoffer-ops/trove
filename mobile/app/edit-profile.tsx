@@ -19,6 +19,7 @@ export default function EditProfile() {
   const { profile, updateProfile } = useAuthStore();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [username,    setUsername]    = useState(profile?.username ?? '');
+  const [bio,          setBio]        = useState(profile?.bio ?? '');
   const [shopFor,     setShopFor]     = useState<string[]>(profile?.shop_for ?? []);
   const [saving,       setSaving]     = useState(false);
 
@@ -32,6 +33,7 @@ export default function EditProfile() {
     const { error } = await updateProfile({
       display_name: displayName.trim() || username.trim(),
       username: username.trim().toLowerCase(),
+      bio: bio.trim() || null,
       shop_for: shopFor,
     });
     setSaving(false);
@@ -80,6 +82,18 @@ export default function EditProfile() {
           />
         </View>
 
+        <Text style={styles.label}>Bio</Text>
+        <TextInput
+          style={[styles.input, styles.bioInput]}
+          placeholder="A line about your taste, your vibe, whatever you want"
+          placeholderTextColor={Colors.textMuted}
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          numberOfLines={3}
+          maxLength={160}
+        />
+
         <Text style={styles.label}>Shop for</Text>
         <Text style={styles.sublabel}>Helps tailor what gets surfaced — not your identity, just what you're shopping for.</Text>
         <View style={styles.chipRow}>
@@ -113,6 +127,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
     paddingHorizontal: 16, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
+  bioInput: { minHeight: 80, textAlignVertical: 'top' },
   handleInputWrap: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input, backgroundColor: Colors.surface,

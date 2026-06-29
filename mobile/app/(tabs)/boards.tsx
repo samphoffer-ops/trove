@@ -1,21 +1,55 @@
-import { useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board } from '@/types';
+import { PlusIcon } from '@/components/Icons';
 
 export default function BoardsScreen() {
   const insets = useSafeAreaInsets();
-  const { boards, fetchBoards } = useBoardStore();
+  const { boards, fetchBoards, createBoard } = useBoardStore();
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
 
   useEffect(() => { fetchBoards(); }, []);
 
+  async function handleCreate() {
+    if (!newName.trim()) return;
+    await createBoard(newName.trim());
+    setNewName('');
+    setCreating(false);
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      <Text style={styles.title}>boards</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>boards</Text>
+        <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
+          <PlusIcon color={Colors.text} size={20} />
+        </Pressable>
+      </View>
+
+      {creating && (
+        <View style={styles.newRow}>
+          <TextInput
+            style={styles.newInput}
+            placeholder="New board name"
+            placeholderTextColor={Colors.textMuted}
+            value={newName}
+            onChangeText={setNewName}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleCreate}
+          />
+          <Pressable style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]} onPress={handleCreate} disabled={!newName.trim()}>
+            <Text style={styles.createBtnText}>Create</Text>
+          </Pressable>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {boards.length === 0 ? (
           <View style={styles.empty}>
@@ -32,7 +66,7 @@ export default function BoardsScreen() {
   );
 }
 
-function BoardCard({ board }: { board: Board }) {
+export function BoardCard({ board }: { board: Board }) {
   const items = board.board_items ?? [];
   const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
   const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
@@ -72,7 +106,17 @@ function BoardCard({ board }: { board: Board }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  title:     { ...Typography.display, color: Colors.text, paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
+  titleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
+  title:     { ...Typography.display, color: Colors.text },
+  newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
+  newInput: {
+    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
+    paddingHorizontal: 14, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
+  },
+  createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.input, paddingHorizontal: 16, justifyContent: 'center' },
+  createBtnDisabled: { opacity: 0.35 },
+  createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100 },
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
   card:      { width: '47%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },

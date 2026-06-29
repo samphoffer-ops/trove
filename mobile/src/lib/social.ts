@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Profile } from '@/types';
+import { Profile, Brand } from '@/types';
 
 export async function fetchFollowing(userId: string): Promise<Profile[]> {
   const { data } = await supabase
@@ -42,4 +42,14 @@ export async function followBrand(userId: string, brandId: string): Promise<void
 
 export async function unfollowBrand(userId: string, brandId: string): Promise<void> {
   await supabase.from('brand_follows').delete().eq('user_id', userId).eq('brand_id', brandId);
+}
+
+export async function fetchFollowedBrands(userId: string): Promise<Brand[]> {
+  const { data } = await supabase
+    .from('brand_follows')
+    .select('brand:brands(*)')
+    .eq('user_id', userId);
+  return ((data ?? []) as unknown as { brand: Brand }[])
+    .map(r => r.brand)
+    .filter(Boolean);
 }

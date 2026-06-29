@@ -11,7 +11,7 @@ interface BoardState {
   loading:        boolean;
   fetchBoards:    () => Promise<void>;
   fetchBoardById: (boardId: string) => Promise<Board | null>;
-  createBoard:    (name: string, product: Product) => Promise<Board | null>;
+  createBoard:    (name: string, product?: Product) => Promise<Board | null>;
   addToBoard:     (boardId: string, product: Product) => Promise<void>;
   removeFromBoard:(boardId: string, productId: string) => Promise<void>;
   setCover:       (boardId: string, productId: string) => Promise<void>;
@@ -66,13 +66,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!user) return null;
     const { data: board, error } = await supabase
       .from('boards')
-      .insert({ user_id: user.id, name, cover_product_id: product.id })
+      .insert({ user_id: user.id, name, cover_product_id: product?.id ?? null })
       .select()
       .single();
     if (error || !board) return null;
-    await supabase.from('board_items').insert({
-      board_id: board.id, product_id: product.id, product_data: product,
-    });
+    if (product) {
+      await supabase.from('board_items').insert({
+        board_id: board.id, product_id: product.id, product_data: product,
+      });
+    }
     await get().fetchBoards();
     return board as Board;
   },

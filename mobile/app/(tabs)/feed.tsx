@@ -10,7 +10,7 @@ import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
-import { InboxIcon } from '@/components/Icons';
+import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 
@@ -30,6 +30,7 @@ export default function FeedScreen() {
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [viewingStrip, setViewingStrip] = useState<typeof EDITORIAL_STRIPS[number] | null>(null);
 
   const { products, hasMore } = getProducts({ category: activeCategory, perPage: visibleCount });
 
@@ -79,46 +80,65 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        onScroll={handleScroll}
-        scrollEventThrottle={200}
-      >
-        {/* Editorial strips */}
-        {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
-          const items = allProducts.filter(strip.filter).slice(0, 8);
-          if (!items.length) return null;
-          return (
-            <View key={strip.title} style={styles.strip}>
-              <View style={styles.stripHeader}>
-                <Text style={styles.stripTitle}>{strip.title}</Text>
-                <Text style={styles.seeAll}>see all</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
-                {items.map(p => (
-                  <Pressable key={p.id} style={styles.stripCard} onPress={() => router.push(`/product/${p.id}`)}>
-                    <Image source={{ uri: p.image }} style={styles.stripImg} contentFit="cover" />
-                    <View style={styles.stripInfo}>
-                      <Text style={styles.stripBrand}>{p.brand}</Text>
-                      <Text style={styles.stripName} numberOfLines={1}>{p.name}</Text>
-                      <Text style={styles.stripPrice}>${p.price}</Text>
-                    </View>
+      {viewingStrip ? (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+          <View style={styles.expandedHeader}>
+            <Pressable onPress={() => setViewingStrip(null)} hitSlop={8}>
+              <ChevronLeftIcon />
+            </Pressable>
+            <Text style={styles.expandedTitle}>{viewingStrip.title}</Text>
+            <View style={{ width: 22 }} />
+          </View>
+          <MasonryGrid
+            items={allProducts.filter(viewingStrip.filter)}
+            keyExtractor={p => p.id}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
+          />
+        </ScrollView>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          onScroll={handleScroll}
+          scrollEventThrottle={200}
+        >
+          {/* Editorial strips */}
+          {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
+            const items = allProducts.filter(strip.filter).slice(0, 8);
+            if (!items.length) return null;
+            return (
+              <View key={strip.title} style={styles.strip}>
+                <View style={styles.stripHeader}>
+                  <Text style={styles.stripTitle}>{strip.title}</Text>
+                  <Pressable onPress={() => setViewingStrip(strip)} hitSlop={8}>
+                    <Text style={styles.seeAll}>see all</Text>
                   </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          );
-        })}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
+                  {items.map(p => (
+                    <Pressable key={p.id} style={styles.stripCard} onPress={() => router.push(`/product/${p.id}`)}>
+                      <Image source={{ uri: p.image }} style={styles.stripImg} contentFit="cover" />
+                      <View style={styles.stripInfo}>
+                        <Text style={styles.stripBrand}>{p.brand}</Text>
+                        <Text style={styles.stripName} numberOfLines={1}>{p.name}</Text>
+                        <Text style={styles.stripPrice}>${p.price}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          })}
 
-        <MasonryGrid
-          items={products}
-          keyExtractor={p => p.id}
-          renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
-        />
-        {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
-      </ScrollView>
+          <MasonryGrid
+            items={products}
+            keyExtractor={p => p.id}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
+          />
+          {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
+        </ScrollView>
+      )}
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
     </View>
@@ -141,6 +161,8 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   chipText:   { ...Typography.cardTitle, color: Colors.textMuted },
   chipTextActive: { color: Colors.accentLime },
+  expandedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
+  expandedTitle:  { ...Typography.headline, color: Colors.text },
   strip:       { marginBottom: Spacing[1] },
   stripHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16, paddingBottom: 10, paddingTop: Spacing[2] },
   stripTitle:  { ...Typography.headline, color: Colors.text },
