@@ -186,5 +186,5 @@ const styles = StyleSheet.create({
   purchasedCard:  { width: 110 },
   purchasedImg:   { width: 110, height: 138, borderRadius: Radius.card, backgroundColor: Colors.stoneSoft, marginBottom: Spacing[1] },
   purchasedName:  { ...Typography.caption, color: Colors.text },
-  boardsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
+  boardsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[4] },
 });

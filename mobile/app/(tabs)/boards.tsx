@@ -97,8 +97,8 @@ export function BoardCard({ board }: { board: Board }) {
         )}
       </View>
       <View style={styles.info}>
-        <Text style={styles.name}>{board.name}</Text>
-        <Text style={styles.count}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.name} numberOfLines={1}>{board.name}</Text>
+        <Text style={styles.count} numberOfLines={1}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
       </View>
     </Pressable>
   );
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100 },
-  grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
-  card:      { width: '47%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
+  grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[4] },
+  card:      { width: '31%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
   avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },
