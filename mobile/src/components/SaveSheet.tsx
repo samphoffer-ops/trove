@@ -96,11 +96,12 @@ export function SaveSheet({ product, onClose }: Props) {
               boards.map(board => {
                 const isSaved = (board.board_items ?? []).some(i => i.product_id === product.id);
                 const coverItem = (board.board_items ?? [])[0];
+                const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
                 return (
                   <Pressable key={board.id} style={styles.boardRow} onPress={() => handleToggle(board.id)}>
                     <View style={styles.boardCover}>
-                      {coverItem ? (
-                        <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      {coverImage ? (
+                        <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />
                       ) : (
                         <View style={styles.boardCoverEmpty} />
                       )}
