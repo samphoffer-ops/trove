@@ -57,7 +57,7 @@ export default function FeedScreen() {
       {/* Ink masthead — brand identity anchors every session */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.titleRow}>
-          <Logo width={84} color={Colors.bg} underlineColor={Colors.accent} />
+          <Logo width={84} color={Colors.bg} dotColor={Colors.accent} />
           <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
             <InboxIcon size={22} color={Colors.bg} />
             {unreadCount > 0 && (

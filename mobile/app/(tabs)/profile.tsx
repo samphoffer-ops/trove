@@ -63,7 +63,7 @@ export default function ProfileScreen() {
     <View style={styles.root}>
       <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Logo width={72} color={Colors.text} underlineColor={Colors.accent} />
+          <Logo width={72} color={Colors.text} dotColor={Colors.accent} />
           <Text style={styles.pageLabel}>profile</Text>
         </View>
         <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={8}>

@@ -22,7 +22,7 @@ export default function SignIn() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
       <View style={styles.inner}>
         {/* Wordmark — white on coral */}
-        <Logo width={160} color={Colors.bg} underlineColor="rgba(253,252,249,0.45)" />
+        <Logo width={160} color={Colors.bg}  />
 
         <View style={styles.headingWrap}>
           <Text style={styles.heading}>Welcome back.</Text>

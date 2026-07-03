@@ -28,7 +28,7 @@ export default function SignUp() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
       <View style={styles.inner}>
-        <Logo width={160} color={Colors.bg} underlineColor="rgba(253,252,249,0.45)" />
+        <Logo width={160} color={Colors.bg}  />
 
         <View style={styles.headingWrap}>
           <Text style={styles.heading}>Join Trove.</Text>

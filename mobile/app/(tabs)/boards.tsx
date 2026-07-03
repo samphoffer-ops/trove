@@ -28,7 +28,7 @@ export default function BoardsScreen() {
     <View style={styles.root}>
       <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Logo width={72} color={Colors.text} underlineColor={Colors.accent} />
+          <Logo width={72} color={Colors.text} dotColor={Colors.accent} />
           <Text style={styles.pageLabel}>boards</Text>
         </View>
         <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
