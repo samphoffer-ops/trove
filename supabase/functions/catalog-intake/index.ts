@@ -15,46 +15,73 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // yet. Call this function with a `domains` array; something else (Sam, or a
 // future discovery step) decides what goes in that array.
 
-const RUBRIC = `Trove is a curated shopping discovery app for adults in their 20s-30s. A brand
-fits Trove's bar if it is: curated, intentional, authentic, effortless — a
-quality DTC/independent brand, explicitly NOT Amazon-style mass-market or a
-dropshipper, fits one or more of [fashion, home, beauty], fits one or more of
-these styles: [minimalist, maximalist, streetwear, vintage, coastal,
-cottagecore, industrial, boho].
+// RUBRIC HISTORY: Early automated discovery surfaced too many bohemian, cheap,
+// and "Etsy-tier" brands despite the original rubric. The examples below encode
+// the lessons from those rejections — specifically the aesthetic and price-point
+// signals that the LLM wasn't catching with just the old style-list approach.
+const RUBRIC = `Trove is a curated shopping discovery app for adults in their 20s-30s who
+shop with intention — they buy fewer things but better things, and expect every
+brand they discover to have a clear point of view and genuine quality.
+
+A brand fits Trove if it is: curated, intentional, quality-forward, and
+effortless. It should feel like a discovery — something worth showing a friend —
+not something you'd find on a marketplace or in a Target aisle.
+
+Approved style registers: minimalist, heritage Americana, streetwear (with real
+craft), coastal, elevated casual, quiet luxury, industrial, considered basics.
+
+QUALITY THRESHOLD — apply this first, before anything else:
+If the sample products are mostly under $40, that is a strong signal the brand
+competes on price rather than quality and identity. Reject unless there is clear
+evidence of genuine craft, materials story, or premium positioning that
+justifies the price point (e.g. Havaianas is affordable but has a 60-year
+heritage story and dominant brand identity — that clears the bar).
+
+EXPLICIT REJECTIONS (patterns confirmed from rejected brands — be strict):
+
+Reject bohemian / boho-chic / cottagecore brands. This aesthetic register —
+flowy dresses, macramé, earthy "handmade" festival wear, patchwork prints,
+Etsy-adjacent craft aesthetic — is a confirmed miss for Trove's customer. Even
+if the quality is decent, this is not our customer. If the brand looks like it
+belongs at a music festival marketplace or an artisan craft fair, reject it.
+
+Reject fast-fashion-adjacent brands — brands whose visual language, pricing,
+or product velocity signals trend-chasing over craft. Any brand that seems like
+it's making 200+ SKUs per season to catch trends should be rejected.
+
+Reject brands whose primary differentiation is a busy, colorful, or "playful"
+print aesthetic with no underlying quality or craft story. Maximalism is
+acceptable only when it's driven by identity and craftsmanship (e.g. a Brazilian
+brand with a 60-year heritage), not when it's just colorful for color's sake.
 
 Reject any brand whose catalog is primarily children's/kids' clothing or baby
-products, even if the brand also makes adult items — Trove is not a kids'
-shopping app.
+products, even if the brand also makes adult items.
 
-Reject golf apparel / golf-lifestyle brands as a category — even when framed
-as "streetwear" or "lifestyle," this has been confirmed an explicit miss for
-Trove's taste, not a style worth surfacing more of. A brand that merely has a
-founder or cultural tie to golf is fine; a brand whose core identity and
-catalog IS golf apparel is not.
+Reject golf apparel / golf-lifestyle brands — confirmed explicit miss even when
+framed as "streetwear" or "lifestyle." A brand that merely has a cultural tie to
+golf is fine; a brand whose core catalog IS golf apparel is not.
 
-Reject brands that read as mainstream/mass-retail home goods (the kind of
-brand you'd recognize from a big-box store aisle), even if the product
-photography or copy uses "playful," "design-forward," or similar language —
-prioritize genuinely small/independent over recognizable mass retail.
+Reject mainstream/mass-retail home goods — the kind of brand you'd recognize
+from a big-box store aisle, even if they use "design-forward" language.
 
-Reject unfocused "general store" brands selling across many unrelated
-categories (e.g. stationery + wallets + kids' clothes in one catalog) with no
-single coherent point of view — Trove brands should have a clear identity,
-not be a curated multi-brand marketplace themselves.
+Reject unfocused "general store" brands (stationery + wallets + kids' clothes +
+candles in one catalog) — Trove brands must have a clear identity.
 
-Reject beauty/skincare brands whose branding or positioning (clinical,
-dermatological, anti-aging-forward) skews toward an older demographic than
-Trove's 20s-30s audience — confirmed miss: a clean-beauty brand scored high
-on craft/quality but was still wrong for being aimed at an older customer.
+Reject beauty/skincare brands whose positioning (clinical, dermatological,
+anti-aging-forward) skews toward an older demographic than Trove's 20s-30s.
 
-Reject menswear/womenswear brands whose core register is corporate-formal or
-"stuffy" (e.g. dress shirts and tailoring built for office wear) — Trove
-skews toward effortless/casual even within "elevated" positioning, not
-buttoned-up formalwear.
+Reject corporate-formal menswear/womenswear (dress shirts and tailoring built
+for office wear) — Trove skews effortless/casual, even within "elevated."
 
-Be skeptical of brands whose catalog is narrowly tied to a single occasion or
-life event (e.g. wedding-specific decor) rather than everyday/ongoing use —
-lean toward rejecting unless the craft/quality bar is exceptional.`;
+Reject brands narrowly tied to a single life event (wedding decor, baby shower
+gifts) rather than everyday use.
+
+POSITIVE SIGNALS worth noting (not required, but tilt toward approve):
+Heritage story (10+ years, a founder with a genuine origin story), material
+obsession (leather goods made with specific tanneries, shoes made in a specific
+country with specific craftsmanship), capsule wardrobe positioning ("buy once,
+wear forever"), strong brand visual identity that would be recognizable on
+Instagram without seeing the brand name.`;
 
 const MAX_DOMAINS_PER_RUN = 15;
 const REQUEST_DELAY_MS = 1500;
