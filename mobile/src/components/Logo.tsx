@@ -24,16 +24,13 @@ const VIEW_H = 32.77;
 interface Props {
   width?: number;
   color?: string;
-  dotColor?: string;  // defaults to same as color; pass Colors.accent for a coral accent dot
 }
 
-export function Logo({ width = 134, color = Colors.text, dotColor }: Props) {
+export function Logo({ width = 134, color = Colors.text }: Props) {
   const height = width * (VIEW_H / VIEW_W);
-  const dot = dotColor ?? color;
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
-      {LETTER_PATHS.slice(0, 5).map((d, i) => <Path key={i} d={d} fill={color} />)}
-      <Path d={LETTER_PATHS[5]} fill={dot} />
+      {LETTER_PATHS.map((d, i) => <Path key={i} d={d} fill={color} />)}
     </Svg>
   );
 }
