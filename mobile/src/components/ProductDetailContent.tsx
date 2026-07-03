@@ -278,13 +278,12 @@ const styles = StyleSheet.create({
   },
   shopBtn: {
     flex:            1,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.accentLime,
     borderRadius:    Radius.full,
     paddingVertical: 16,
     alignItems:      'center',
-    ...Shadows.card,
   },
-  shopBtnText: { ...Typography.headline, fontSize: 15, color: '#fff' },
+  shopBtnText: { ...Typography.headline, fontSize: 15, color: Colors.text },
   saveBtn: {
     width:  52, height: 52, borderRadius: 26,
     borderWidth: 1.5, borderColor: Colors.border,
