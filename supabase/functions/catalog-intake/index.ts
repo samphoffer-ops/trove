@@ -554,6 +554,14 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Convenience action: re-scrape all currently-approved brands without
+    // having to look up their domains first. { "action": "refresh_all" }
+    if (body.action === 'refresh_all') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved');
+      body.domains = (approved ?? []).map((b: { domain: string }) => b.domain);
+    }
+
     const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
       return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
