@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Product } from '@/types';
-import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
 import { BookmarkIcon, CloseIcon } from './Icons';
 
@@ -16,17 +16,22 @@ interface Props {
 export function ProductCard({ product, saved, onSave, onNotInterested }: Props) {
   return (
     <Pressable style={styles.card} onPress={() => openProduct(product.id)}>
+      {/* Image IS the card — no white box wrapper */}
       <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
         <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+
+        <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => onSave(product)} hitSlop={12}>
+          <BookmarkIcon color={saved ? Colors.accent : '#fff'} filled={saved} size={14} />
+        </Pressable>
+
         {onNotInterested && (
-          <Pressable style={styles.dismissBtn} onPress={() => onNotInterested(product)} hitSlop={8}>
-            <CloseIcon color={Colors.text} size={12} />
+          <Pressable style={styles.dismissBtn} onPress={() => onNotInterested(product)} hitSlop={10}>
+            <CloseIcon color="rgba(255,255,255,0.8)" size={10} />
           </Pressable>
         )}
-        <Pressable style={styles.saveBtn} onPress={() => onSave(product)} hitSlop={8}>
-          <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={16} />
-        </Pressable>
       </View>
+
+      {/* Minimal editorial info — brand link + name + price */}
       <View style={styles.info}>
         {product.brand_id ? (
           <Pressable
@@ -47,53 +52,56 @@ export function ProductCard({ product, saved, onSave, onNotInterested }: Props) 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius:    Radius.card,
-    overflow:        'hidden',
-    backgroundColor: Colors.surface,
-    marginBottom:    Spacing[4],
-    ...Shadows.card,
+    marginBottom: Spacing[3],
   },
   media: {
     width:           '100%',
+    borderRadius:    Radius.card,
+    overflow:        'hidden',
     backgroundColor: Colors.stoneSoft,
   },
   saveBtn: {
     position:        'absolute',
-    top:             8,
-    right:           8,
-    width:           32,
-    height:          32,
-    borderRadius:    16,
-    backgroundColor: 'rgba(255,255,255,0.88)',
+    top:             10,
+    right:           10,
+    width:           30,
+    height:          30,
+    borderRadius:    15,
+    backgroundColor: 'rgba(13,16,53,0.30)',
     alignItems:      'center',
     justifyContent:  'center',
   },
+  saveBtnActive: {
+    backgroundColor: 'rgba(13,16,53,0.55)',
+  },
   dismissBtn: {
     position:        'absolute',
-    top:             8,
-    left:            8,
-    width:           26,
-    height:          26,
-    borderRadius:    13,
-    backgroundColor: 'rgba(255,255,255,0.88)',
+    top:             10,
+    left:            10,
+    width:           24,
+    height:          24,
+    borderRadius:    12,
+    backgroundColor: 'rgba(13,16,53,0.28)',
     alignItems:      'center',
     justifyContent:  'center',
   },
   info: {
-    padding: Spacing[4],
+    paddingHorizontal: 2,
+    paddingTop:        Spacing[3],
+    paddingBottom:     Spacing[1],
   },
   brand: {
     ...Typography.label,
-    color:        Colors.textMuted,
-    marginBottom: Spacing[1],
+    color:        Colors.accentBlue,
+    marginBottom: 3,
   },
   name: {
     ...Typography.cardTitle,
     color:        Colors.text,
-    marginBottom: Spacing[1],
+    marginBottom: 3,
   },
   price: {
-    ...Typography.cardTitle,
-    color: Colors.accentBlue,
+    ...Typography.price,
+    color: Colors.textMuted,
   },
 });

@@ -13,10 +13,10 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
-          <BlurView intensity={70} tint="light" style={styles.blur} />
+          <BlurView intensity={95} tint="dark" style={styles.blur} />
         ),
-        tabBarActiveTintColor:   Colors.text,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor:   Colors.accentLime,
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.42)',
         tabBarLabelStyle: styles.label,
         tabBarShowLabel: true,
       }}
@@ -57,29 +57,31 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position:        'absolute',
-    left:            16,
-    right:           16,
-    bottom:          14,
-    height:          60,
+    left:            20,
+    right:           20,
+    bottom:          18,
+    height:          62,
     borderRadius:    999,
     backgroundColor: 'transparent',
     borderTopWidth:  0,
+    // A faint border against the page content below
     borderWidth:     1,
-    borderColor:     'rgba(255,255,255,0.5)',
+    borderColor:     'rgba(255,255,255,0.10)',
     elevation:       0,
-    shadowColor:     '#1E1C1A',
-    shadowOffset:    { width: 0, height: 6 },
-    shadowOpacity:   0.1,
-    shadowRadius:    18,
+    shadowColor:     '#0D1035',
+    shadowOffset:    { width: 0, height: 10 },
+    shadowOpacity:   0.28,
+    shadowRadius:    24,
     overflow:        'hidden',
   },
   blur: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    // Tint the blur layer slightly toward inky black
+    backgroundColor: 'rgba(13,16,53,0.70)',
   },
   label: {
     ...Typography.caption,
-    fontSize:   10.5,
-    marginTop:  -2,
+    fontSize:  10,
+    marginTop: -2,
   },
 });

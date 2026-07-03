@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,6 +56,7 @@ export default function FeedScreen() {
       {/* Sticky header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
+          {/* Editorial masthead — the biggest, boldest thing on screen */}
           <Text style={styles.title}>for you</Text>
           <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
             <InboxIcon size={22} />
@@ -66,6 +67,8 @@ export default function FeedScreen() {
             )}
           </Pressable>
         </View>
+
+        {/* Category chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CATEGORIES.map(cat => (
             <Pressable
@@ -81,6 +84,7 @@ export default function FeedScreen() {
         </ScrollView>
       </View>
 
+      {/* Expanded strip view */}
       {viewingStrip ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
           <View style={styles.expandedHeader}>
@@ -106,23 +110,29 @@ export default function FeedScreen() {
         >
           {/* Editorial strips */}
           {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
-            const items = allProducts.filter(strip.filter).slice(0, 8);
+            const items = allProducts.filter(strip.filter).slice(0, 10);
             if (!items.length) return null;
             return (
               <View key={strip.title} style={styles.strip}>
+                {/* Strip header — coral accent bar + bold title */}
                 <View style={styles.stripHeader}>
-                  <Text style={styles.stripTitle}>{strip.title}</Text>
+                  <View style={styles.stripTitleWrap}>
+                    <View style={styles.stripAccentBar} />
+                    <Text style={styles.stripTitle}>{strip.title}</Text>
+                  </View>
                   <Pressable onPress={() => setViewingStrip(strip)} hitSlop={8}>
                     <Text style={styles.seeAll}>see all</Text>
                   </Pressable>
                 </View>
+
+                {/* Full-bleed image cards with overlay text */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
                   {items.map(p => (
                     <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
-                      <Image source={{ uri: p.image }} style={styles.stripImg} contentFit="cover" />
+                      <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
                       <View style={styles.stripInfo}>
-                        <Text style={styles.stripBrand}>{p.brand}</Text>
-                        <Text style={styles.stripName} numberOfLines={1}>{p.name}</Text>
+                        <Text style={styles.stripBrand} numberOfLines={1}>{p.brand}</Text>
+                        <Text style={styles.stripName} numberOfLines={2}>{p.name}</Text>
                         <Text style={styles.stripPrice}>${p.price}</Text>
                       </View>
                     </Pressable>
@@ -132,6 +142,7 @@ export default function FeedScreen() {
             );
           })}
 
+          {/* Main masonry feed */}
           <MasonryGrid
             items={products}
             keyExtractor={p => p.id}
@@ -147,32 +158,96 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.bg },
-  header: { backgroundColor: Colors.bg, zIndex: 10 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 },
-  title:  { ...Typography.display, color: Colors.text },
-  inboxBtn: { padding: 2 },
+  root:     { flex: 1, backgroundColor: Colors.bg },
+  header:   { backgroundColor: Colors.bg, zIndex: 10 },
+
+  titleRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingHorizontal: 20,
+    paddingTop:      12,
+    paddingBottom:   2,
+  },
+  // Big, editorial masthead — the "for you" is the first thing the eye lands on
+  title: {
+    ...Typography.displayXl,
+    color: Colors.text,
+  },
+  inboxBtn: { padding: 4 },
   badge: {
     position: 'absolute', top: -4, right: -6, minWidth: 17, height: 17, borderRadius: 8.5,
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
   },
   badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
-  chips:  { paddingHorizontal: 16, paddingVertical: Spacing[3], gap: Spacing[3] },
-  chip:   { paddingHorizontal: 15, paddingVertical: Spacing[3], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
-  chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  chipText:   { ...Typography.cardTitle, color: Colors.textMuted },
+
+  chips: { paddingHorizontal: 16, paddingVertical: Spacing[3], gap: Spacing[3] },
+  chip:  {
+    paddingHorizontal: 14,
+    paddingVertical:   Spacing[2],
+    borderRadius:      Radius.full,
+    borderWidth:       1.5,
+    borderColor:       Colors.border,
+  },
+  chipActive:     { backgroundColor: Colors.ink, borderColor: Colors.ink },
+  chipText:       { ...Typography.caption, color: Colors.textMuted },
   chipTextActive: { color: Colors.accentLime },
-  expandedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
-  expandedTitle:  { ...Typography.headline, color: Colors.text },
-  strip:       { marginBottom: Spacing[1] },
-  stripHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 16, paddingBottom: 10, paddingTop: Spacing[2] },
-  stripTitle:  { ...Typography.headline, color: Colors.text },
-  seeAll:      { ...Typography.caption, color: Colors.accent },
-  stripScroll: { paddingHorizontal: 16, gap: Spacing[3], paddingBottom: 16 },
-  stripCard:   { width: 140, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface },
-  stripImg:    { width: 140, height: 186, backgroundColor: Colors.stoneSoft },
-  stripInfo:   { padding: Spacing[3] },
-  stripBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
-  stripName:   { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
-  stripPrice:  { ...Typography.cardTitle, color: Colors.accentBlue },
+
+  expandedHeader: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop:     16,
+    paddingBottom:  Spacing[3],
+  },
+  expandedTitle: { ...Typography.headline, color: Colors.text },
+
+  // Strips
+  strip:       { marginBottom: Spacing[5] },
+  stripHeader: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+    paddingHorizontal: 16,
+    paddingBottom:  12,
+    paddingTop:     Spacing[3],
+  },
+  stripTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
+  // Coral left-edge accent bar — gives strips a magazine-section identity
+  stripAccentBar: {
+    width:        3,
+    height:       18,
+    borderRadius: 2,
+    backgroundColor: Colors.accent,
+  },
+  stripTitle: { ...Typography.headline, fontSize: 19, color: Colors.text },
+  seeAll:     { ...Typography.caption, color: Colors.textMuted },
+
+  stripScroll: { paddingHorizontal: 16, gap: Spacing[3], paddingBottom: 4 },
+
+  // Full-bleed card — image fills, text overlays via gradient scrim
+  stripCard: {
+    width:           150,
+    height:          210,
+    borderRadius:    Radius.card,
+    overflow:        'hidden',
+    backgroundColor: Colors.stoneSoft,
+  },
+  stripInfo: {
+    position:   'absolute',
+    bottom:     0,
+    left:       0,
+    right:      0,
+    padding:    Spacing[3],
+    paddingTop: Spacing[5],
+    // Dark-to-transparent gradient effect via background
+    backgroundColor: 'rgba(13,16,53,0.55)',
+    // Extra gradient feel: top edge of this block should be softer
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  stripBrand: { ...Typography.label, color: Colors.accentBlueSoft, marginBottom: 3 },
+  stripName:  { ...Typography.cardTitle, fontSize: 12, color: '#fff', marginBottom: 4, lineHeight: 16 },
+  stripPrice: { ...Typography.label, fontSize: 11, letterSpacing: 0.1, color: 'rgba(255,255,255,0.7)' },
 });

@@ -18,6 +18,7 @@ export interface Product {
   name: string;
   price: number;
   image: string;
+  images?: string[];   // additional product photos (scraper populates when available)
   ratio: number;
   url: string;
   category?: string;

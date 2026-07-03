@@ -107,7 +107,7 @@ export function BoardCard({ board }: { board: Board }) {
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
   titleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
-  title:     { ...Typography.display, color: Colors.text },
+  title:     { ...Typography.displayXl, color: Colors.text },
   newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
   newInput: {
