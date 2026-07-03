@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, ScrollView, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { Colors } from '@/lib/theme';
 
@@ -10,23 +10,36 @@ interface Props {
 
 // Simple horizontal-pager gallery. Works with a single image (dots hidden,
 // no swipe chrome) — so ProductDetailContent doesn't need to branch.
+//
+// Uses onLayout (not useWindowDimensions) for page width — on web the window
+// can be 1200px wide while the modal is only 460px, so useWindowDimensions
+// would make every image page 1200px wide and pagingEnabled would scroll
+// by 1200px at a time. onLayout always reflects the actual rendered size.
 export function ImageGallery({ images, maxHeight }: Props) {
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   // Deduplicate: scraper sometimes includes the hero twice
   const unique = Array.from(new Set(images.filter(Boolean)));
   const multi  = unique.length > 1;
 
+  const pageWidth = containerWidth || windowWidth;
+
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     if (!multi) return;
-    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    const idx = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
     setActiveIndex(idx);
   }
 
+  function onLayout(e: LayoutChangeEvent) {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0) setContainerWidth(w);
+  }
+
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={onLayout}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -38,7 +51,7 @@ export function ImageGallery({ images, maxHeight }: Props) {
         style={{ maxHeight }}
       >
         {unique.map((uri, i) => (
-          <View key={i} style={[styles.page, { width }]}>
+          <View key={i} style={[styles.page, { width: pageWidth }]}>
             <Image
               source={{ uri }}
               style={[styles.img, maxHeight ? { height: maxHeight } : undefined]}

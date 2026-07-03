@@ -12,6 +12,7 @@ import { notify } from '@/lib/alerts';
 import { openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { CameraIcon, GearIcon } from '@/components/Icons';
+import { Logo } from '@/components/Logo';
 import { BoardCard } from './boards';
 import { Brand, BoardItem } from '@/types';
 
@@ -59,9 +60,12 @@ export default function ProfileScreen() {
     .slice(0, 10);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>profile</Text>
+    <View style={styles.root}>
+      <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
+        <View>
+          <Logo width={72} color={Colors.text} underlineColor={Colors.accent} />
+          <Text style={styles.pageLabel}>profile</Text>
+        </View>
         <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={8}>
           <GearIcon color={Colors.text} size={22} />
         </Pressable>
@@ -154,8 +158,8 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
-  titleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
-  title:       { ...Typography.displayXl, color: Colors.text },
+  titleRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
+  pageLabel:   { ...Typography.caption, color: Colors.textMuted, marginTop: 6, letterSpacing: 0.4 },
   gearBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   content:     { paddingHorizontal: 20, paddingBottom: 100 },
   hero:        { alignItems: 'center', paddingVertical: Spacing[6] },

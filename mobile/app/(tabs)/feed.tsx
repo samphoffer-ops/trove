@@ -11,6 +11,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
+import { Logo } from '@/components/Logo';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
@@ -52,14 +53,13 @@ export default function FeedScreen() {
   }, []);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Sticky header */}
-      <View style={styles.header}>
+    <View style={styles.root}>
+      {/* Ink masthead — brand identity anchors every session */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.titleRow}>
-          {/* Editorial masthead — the biggest, boldest thing on screen */}
-          <Text style={styles.title}>for you</Text>
+          <Logo width={84} color={Colors.bg} underlineColor={Colors.accent} />
           <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
-            <InboxIcon size={22} />
+            <InboxIcon size={22} color={Colors.bg} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -68,7 +68,7 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* Category chips */}
+        {/* Category chips — on ink, chartreuse when active */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CATEGORIES.map(cat => (
             <Pressable
@@ -114,14 +114,13 @@ export default function FeedScreen() {
             if (!items.length) return null;
             return (
               <View key={strip.title} style={styles.strip}>
-                {/* Strip header — coral accent bar + bold title */}
+                {/* Strip header — coral filled pill label */}
                 <View style={styles.stripHeader}>
-                  <View style={styles.stripTitleWrap}>
-                    <View style={styles.stripAccentBar} />
+                  <View style={styles.stripTag}>
                     <Text style={styles.stripTitle}>{strip.title}</Text>
                   </View>
                   <Pressable onPress={() => setViewingStrip(strip)} hitSlop={8}>
-                    <Text style={styles.seeAll}>see all</Text>
+                    <Text style={styles.seeAll}>see all →</Text>
                   </Pressable>
                 </View>
 
@@ -158,21 +157,16 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: Colors.bg },
-  header:   { backgroundColor: Colors.bg, zIndex: 10 },
+  root:   { flex: 1, backgroundColor: Colors.bg },
+  header: { backgroundColor: Colors.ink, zIndex: 10 },
 
   titleRow: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
     paddingHorizontal: 20,
-    paddingTop:      12,
-    paddingBottom:   2,
-  },
-  // Big, editorial masthead — the "for you" is the first thing the eye lands on
-  title: {
-    ...Typography.displayXl,
-    color: Colors.text,
+    paddingTop:        16,
+    paddingBottom:     14,
   },
   inboxBtn: { padding: 4 },
   badge: {
@@ -181,17 +175,17 @@ const styles = StyleSheet.create({
   },
   badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
 
-  chips: { paddingHorizontal: 16, paddingVertical: Spacing[3], gap: Spacing[3] },
+  chips: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 14, gap: Spacing[3] },
   chip:  {
     paddingHorizontal: 14,
     paddingVertical:   Spacing[2],
     borderRadius:      Radius.full,
-    borderWidth:       1.5,
-    borderColor:       Colors.border,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.22)',
   },
-  chipActive:     { backgroundColor: Colors.ink, borderColor: Colors.ink },
-  chipText:       { ...Typography.caption, color: Colors.textMuted },
-  chipTextActive: { color: Colors.accentLime },
+  chipActive:     { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
+  chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
+  chipTextActive: { color: Colors.ink },
 
   expandedHeader: {
     flexDirection:  'row',
@@ -206,22 +200,21 @@ const styles = StyleSheet.create({
   // Strips
   strip:       { marginBottom: Spacing[5] },
   stripHeader: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
+    flexDirection:     'row',
+    justifyContent:    'space-between',
+    alignItems:        'center',
     paddingHorizontal: 16,
-    paddingBottom:  12,
-    paddingTop:     Spacing[3],
+    paddingBottom:     12,
+    paddingTop:        Spacing[5],
   },
-  stripTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
-  // Coral left-edge accent bar — gives strips a magazine-section identity
-  stripAccentBar: {
-    width:        3,
-    height:       18,
-    borderRadius: 2,
-    backgroundColor: Colors.accent,
+  // Coral filled pill — magazine section label
+  stripTag: {
+    backgroundColor:  Colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical:   5,
+    borderRadius:      Radius.badge,
   },
-  stripTitle: { ...Typography.headline, fontSize: 19, color: Colors.text },
+  stripTitle: { ...Typography.caption, fontSize: 10, color: '#FFF8F0', letterSpacing: 0.5 },
   seeAll:     { ...Typography.caption, color: Colors.textMuted },
 
   stripScroll: { paddingHorizontal: 16, gap: Spacing[3], paddingBottom: 4 },

@@ -7,6 +7,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
+import { Logo } from '@/components/Logo';
 
 export default function BoardsScreen() {
   const insets = useSafeAreaInsets();
@@ -24,9 +25,12 @@ export default function BoardsScreen() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>boards</Text>
+    <View style={styles.root}>
+      <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
+        <View>
+          <Logo width={72} color={Colors.text} underlineColor={Colors.accent} />
+          <Text style={styles.pageLabel}>boards</Text>
+        </View>
         <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
           <PlusIcon color={Colors.text} size={20} />
         </Pressable>
@@ -106,8 +110,8 @@ export function BoardCard({ board }: { board: Board }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  titleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: Spacing[3] },
-  title:     { ...Typography.displayXl, color: Colors.text },
+  titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
+  pageLabel: { ...Typography.caption, color: Colors.textMuted, marginTop: 6, letterSpacing: 0.4 },
   newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
   newInput: {
