@@ -1,18 +1,38 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
+import { supabase } from '@/lib/supabase';
 import { Colors, Typography, Spacing } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
 
+const ADMIN_EMAIL = 'samphoffer@gmail.com';
+
 export default function Settings() {
   const insets = useSafeAreaInsets();
-  const { signOut, deleteAccount } = useAuthStore();
+  const { signOut, deleteAccount, user } = useAuthStore();
   const [deleting, setDeleting] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<string | null>(null);
+  const [adminRunning, setAdminRunning] = useState(false);
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  async function runAdminAction(fn: string, body: Record<string, unknown>, label: string) {
+    setAdminRunning(true);
+    setAdminStatus(`Running ${label}…`);
+    try {
+      const { data, error } = await supabase.functions.invoke(fn, { body });
+      if (error) throw error;
+      const count = data?.found_new ?? data?.results?.length ?? data?.refreshed ?? '—';
+      setAdminStatus(`✓ ${label} done — ${count} items`);
+    } catch (e: any) {
+      setAdminStatus(`✗ ${label} failed: ${e?.message ?? String(e)}`);
+    }
+    setAdminRunning(false);
+  }
 
   function confirmSignOut() {
     confirmAction('Sign out', 'Are you sure?', 'Sign out', signOut);
@@ -74,6 +94,33 @@ export default function Settings() {
         <Pressable style={styles.deleteBtn} onPress={confirmDeleteAccount} disabled={deleting}>
           <Text style={styles.deleteText}>{deleting ? 'Deleting account…' : 'Delete account'}</Text>
         </Pressable>
+
+        {isAdmin && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.adminHeading}>Admin</Text>
+
+            <Pressable
+              style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
+              onPress={() => runAdminAction('catalog-intake', { action: 'refresh_all' }, 'Product refresh')}
+              disabled={adminRunning}
+            >
+              {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
+              <Text style={styles.adminBtnText}>Refresh all products</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
+              onPress={() => runAdminAction('discover-brands', {}, 'Brand discovery')}
+              disabled={adminRunning}
+            >
+              {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
+              <Text style={styles.adminBtnText}>Discover new brands</Text>
+            </Pressable>
+
+            {adminStatus && <Text style={styles.adminStatus}>{adminStatus}</Text>}
+          </>
+        )}
       </ScrollView>
     </View>
     </WebFrame>
@@ -92,4 +139,10 @@ const styles = StyleSheet.create({
   deleteText:  { ...Typography.cardTitle, color: Colors.textMuted },
   signOutBtn:  { paddingVertical: 14, alignItems: 'center' },
   signOutText: { ...Typography.body, fontSize: 15, fontWeight: '600', color: Colors.destructive },
+
+  adminHeading:    { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[3], letterSpacing: 0.5 },
+  adminBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.inkGhost, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, marginBottom: Spacing[3] },
+  adminBtnDisabled:{ opacity: 0.5 },
+  adminBtnText:    { ...Typography.body, fontSize: 14, color: Colors.text },
+  adminStatus:     { ...Typography.caption, color: Colors.textMuted, marginTop: Spacing[2], lineHeight: 18 },
 });
