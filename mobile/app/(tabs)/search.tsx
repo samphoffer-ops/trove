@@ -14,6 +14,7 @@ import { SaveSheet } from '@/components/SaveSheet';
 import { Product, Profile } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { SearchIcon, CloseIcon } from '@/components/Icons';
+import { Logo } from '@/components/Logo';
 
 const PAGE_SIZE = 30;
 
@@ -63,23 +64,26 @@ export default function SearchScreen() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.searchBar}>
-        <SearchIcon color={Colors.textMuted} />
-        <TextInput
-          style={styles.input}
-          placeholder="Search products, brands, people…"
-          placeholderTextColor={Colors.textMuted}
-          value={query}
-          onChangeText={setQuery}
-          autoCorrect={false}
-          returnKeyType="search"
-        />
-        {hasQuery && (
-          <Pressable onPress={() => setQuery('')} hitSlop={8}>
-            <CloseIcon />
-          </Pressable>
-        )}
+    <View style={styles.root}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <Logo width={72} color={Colors.bg} />
+        <View style={styles.searchBar}>
+          <SearchIcon color="rgba(255,255,255,0.45)" />
+          <TextInput
+            style={styles.input}
+            placeholder="products, brands, people…"
+            placeholderTextColor="rgba(255,255,255,0.38)"
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {hasQuery && (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <CloseIcon color="rgba(255,255,255,0.55)" />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={200}>
@@ -138,13 +142,26 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: Colors.bg },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    margin: 16, paddingHorizontal: 14,
-    backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
+  root:   { flex: 1, backgroundColor: Colors.bg },
+  header: {
+    backgroundColor:   Colors.ink,
+    paddingHorizontal: 20,
+    paddingTop:        16,
+    paddingBottom:     16,
+    gap:               12,
   },
-  input:   { flex: 1, paddingVertical: 14, ...Typography.body, color: Colors.text },
+  searchBar: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             10,
+    paddingHorizontal: 14,
+    paddingVertical:   2,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth:     1,
+    borderColor:     'rgba(255,255,255,0.14)',
+    borderRadius:    Radius.full,
+  },
+  input:   { flex: 1, paddingVertical: 13, ...Typography.body, color: Colors.bg },
   content: { paddingHorizontal: 16, paddingBottom: 100 },
   hint:    { ...Typography.body, fontSize: 15, color: Colors.textMuted, textAlign: 'center', paddingTop: 60 },
   peopleSection: { marginBottom: Spacing[4], borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: Spacing[3] },

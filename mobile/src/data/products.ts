@@ -53,9 +53,32 @@ export const ONBOARDING_STEPS = [
 // for getProducts()/getProductById(). The 29 products that used to be
 // hardcoded here are now seeded via supabase/migrations/007_seed_products.sql.
 
-export const EDITORIAL_STRIPS = [
-  { title: 'trending now',  filter: (p: Product) => p.price > 150 },
-  { title: 'under $60',     filter: (p: Product) => p.price < 60 },
-  { title: 'minimal picks', filter: (p: Product) => p.styles?.includes('minimalist') ?? false },
-  { title: 'new arrivals',  filter: (_: Product, i: number) => i % 3 === 0 },
+export const EDITORIAL_STRIPS: {
+  title: string;
+  subtitle: string;
+  bg: string;
+  fg: string;
+  filter: (p: Product, i: number) => boolean;
+}[] = [
+  {
+    title: 'just in',
+    subtitle: 'The latest from brands we\'re watching.',
+    bg: '#FF4422',
+    fg: '#FFF8F0',
+    filter: (_p, i) => i % 3 === 0,
+  },
+  {
+    title: 'stripped back',
+    subtitle: 'Considered objects. Nothing extra.',
+    bg: '#0D1035',
+    fg: '#FFF8F0',
+    filter: (p) => p.styles?.includes('minimalist') ?? false,
+  },
+  {
+    title: 'under $60',
+    subtitle: 'Quality that doesn\'t ask for much.',
+    bg: '#D6E849',
+    fg: '#0D1035',
+    filter: (p) => p.price < 60,
+  },
 ];

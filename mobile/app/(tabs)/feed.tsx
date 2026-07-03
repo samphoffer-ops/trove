@@ -10,8 +10,8 @@ import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
-import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
+import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
@@ -54,7 +54,7 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Ink masthead — brand identity anchors every session */}
+      {/* Ink masthead */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.titleRow}>
           <Logo width={84} color={Colors.bg} />
@@ -68,7 +68,7 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* Category chips — on ink, chartreuse when active */}
+        {/* Category chips on ink */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CATEGORIES.map(cat => (
             <Pressable
@@ -87,11 +87,11 @@ export default function FeedScreen() {
       {/* Expanded strip view */}
       {viewingStrip ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-          <View style={styles.expandedHeader}>
+          <View style={[styles.expandedHeader, { backgroundColor: viewingStrip.bg }]}>
             <Pressable onPress={() => setViewingStrip(null)} hitSlop={8}>
-              <ChevronLeftIcon />
+              <ChevronLeftIcon color={viewingStrip.fg} size={22} />
             </Pressable>
-            <Text style={styles.expandedTitle}>{viewingStrip.title}</Text>
+            <Text style={[styles.expandedTitle, { color: viewingStrip.fg }]}>{viewingStrip.title}</Text>
             <View style={{ width: 22 }} />
           </View>
           <MasonryGrid
@@ -109,22 +109,22 @@ export default function FeedScreen() {
           scrollEventThrottle={200}
         >
           {/* Editorial strips */}
-          {activeCategory === 'all' && EDITORIAL_STRIPS.map(strip => {
+          {activeCategory === 'all' && EDITORIAL_STRIPS.map((strip, idx) => {
             const items = allProducts.filter(strip.filter).slice(0, 10);
             if (!items.length) return null;
             return (
-              <View key={strip.title} style={styles.strip}>
-                {/* Strip header — coral filled pill label */}
-                <View style={styles.stripHeader}>
-                  <View style={styles.stripTag}>
-                    <Text style={styles.stripTitle}>{strip.title}</Text>
-                  </View>
-                  <Pressable onPress={() => setViewingStrip(strip)} hitSlop={8}>
-                    <Text style={styles.seeAll}>see all →</Text>
-                  </Pressable>
-                </View>
+              <View key={strip.title}>
+                {/* Full-bleed editorial section card */}
+                <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
+                  <Text style={[styles.editorialNum, { color: strip.fg }]}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </Text>
+                  <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
+                  <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
+                  <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
+                </Pressable>
 
-                {/* Full-bleed image cards with overlay text */}
+                {/* Product rail */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
                   {items.map(p => (
                     <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
@@ -140,6 +140,15 @@ export default function FeedScreen() {
               </View>
             );
           })}
+
+          {/* Divider before main grid */}
+          {activeCategory === 'all' && allProducts.length > 0 && (
+            <View style={styles.gridDivider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerLabel}>everything</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          )}
 
           {/* Main masonry feed */}
           <MasonryGrid
@@ -187,60 +196,80 @@ const styles = StyleSheet.create({
   chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
   chipTextActive: { color: Colors.ink },
 
+  // Expanded strip view header
   expandedHeader: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop:     16,
-    paddingBottom:  Spacing[3],
-  },
-  expandedTitle: { ...Typography.headline, color: Colors.text },
-
-  // Strips
-  strip:       { marginBottom: Spacing[5] },
-  stripHeader: {
     flexDirection:     'row',
-    justifyContent:    'space-between',
     alignItems:        'center',
-    paddingHorizontal: 16,
-    paddingBottom:     12,
-    paddingTop:        Spacing[5],
+    justifyContent:    'space-between',
+    paddingHorizontal: 20,
+    paddingVertical:   20,
   },
-  // Coral filled pill — magazine section label
-  stripTag: {
-    backgroundColor:  Colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      Radius.badge,
+  expandedTitle: { fontFamily: 'Mulish_900Black', fontSize: 20, letterSpacing: -0.5 },
+
+  // Editorial section cards — full-bleed, display-scale type
+  editorialCard: {
+    paddingHorizontal: 20,
+    paddingTop:        28,
+    paddingBottom:     24,
+    marginTop:         24,
   },
-  stripTitle: { ...Typography.caption, fontSize: 10, color: '#FFF8F0', letterSpacing: 0.5 },
-  seeAll:     { ...Typography.caption, color: Colors.textMuted },
+  editorialNum: {
+    fontFamily:    'Mulish_900Black',
+    fontSize:      10,
+    letterSpacing: 2,
+    marginBottom:  10,
+    opacity:       0.5,
+  },
+  editorialTitle: {
+    fontFamily:    'Mulish_900Black',
+    fontSize:      52,
+    letterSpacing: -2.2,
+    lineHeight:    52,
+    marginBottom:  10,
+  },
+  editorialSub: {
+    ...Typography.body,
+    fontSize:      15,
+    lineHeight:    22,
+    marginBottom:  20,
+    opacity:       0.72,
+  },
+  editorialLink: {
+    ...Typography.caption,
+    fontSize:      11,
+    letterSpacing: 0.4,
+    opacity:       0.8,
+  },
 
-  stripScroll: { paddingHorizontal: 16, gap: Spacing[3], paddingBottom: 4 },
-
-  // Full-bleed card — image fills, text overlays via gradient scrim
+  // Product rail below each editorial section
+  stripScroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
   stripCard: {
-    width:           150,
-    height:          210,
+    width:           160,
+    height:          213,
     borderRadius:    Radius.card,
     overflow:        'hidden',
     backgroundColor: Colors.stoneSoft,
   },
   stripInfo: {
     position:   'absolute',
-    bottom:     0,
-    left:       0,
-    right:      0,
+    bottom:     0, left: 0, right: 0,
     padding:    Spacing[3],
     paddingTop: Spacing[5],
-    // Dark-to-transparent gradient effect via background
-    backgroundColor: 'rgba(13,16,53,0.55)',
-    // Extra gradient feel: top edge of this block should be softer
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+    backgroundColor: 'rgba(13,16,53,0.58)',
   },
   stripBrand: { ...Typography.label, color: Colors.accentBlueSoft, marginBottom: 3 },
   stripName:  { ...Typography.cardTitle, fontSize: 12, color: '#fff', marginBottom: 4, lineHeight: 16 },
   stripPrice: { ...Typography.label, fontSize: 11, letterSpacing: 0.1, color: 'rgba(255,255,255,0.7)' },
+
+  // Divider before main grid
+  gridDivider: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    paddingHorizontal: 20,
+    marginTop:      32,
+    marginBottom:   16,
+    gap:            12,
+  },
+  dividerLine:  { flex: 1, height: 0.5, backgroundColor: Colors.border },
+  dividerLabel: { ...Typography.label, color: Colors.textMuted, letterSpacing: 0.5 },
 });
