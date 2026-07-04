@@ -16,9 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://github.com/supabase/cli/releases/download/v2.30.4/supabase_linux_amd64.tar.gz \
+            | tar -xz -C /tmp
+          sudo mv /tmp/supabase /usr/local/bin/supabase
 
       - name: Deploy catalog-intake
         run: supabase functions deploy catalog-intake --project-ref xxyserlkigllpmtxzlsa --no-bundle
