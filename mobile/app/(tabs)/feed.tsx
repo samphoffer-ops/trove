@@ -117,14 +117,15 @@ export default function FeedScreen() {
             if (!items.length) return null;
             return (
               <View key={strip.title}>
-                {/* Full-bleed editorial section card */}
+                {/* Full-bleed editorial section card — bg bleeds edge-to-edge,
+                    inner content aligns to the same column as the header logo */}
                 <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
-                  <Text style={[styles.editorialNum, { color: strip.fg }]}>
-                    {String(idx + 1).padStart(2, '0')}
-                  </Text>
-                  <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
-                  <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
-                  <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
+                  <View style={styles.editorialCardContent}>
+                    <Text style={[styles.editorialNum, { color: strip.fg }]}>{idx + 1}</Text>
+                    <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
+                    <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
+                    <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
+                  </View>
                 </Pressable>
 
                 {/* Product rail */}
@@ -210,12 +211,18 @@ const styles = StyleSheet.create({
   },
   expandedTitle: { fontFamily: 'Mulish_900Black', fontSize: 20, letterSpacing: -0.5 },
 
-  // Editorial section cards — full-bleed, display-scale type
+  // Editorial section cards — background bleeds full-width
   editorialCard: {
+    marginTop: 24,
+  },
+  // Inner content constrained to the same column as the header logo
+  editorialCardContent: {
+    maxWidth:          1100,
+    alignSelf:         'center',
+    width:             '100%',
     paddingHorizontal: 20,
     paddingTop:        28,
     paddingBottom:     24,
-    marginTop:         24,
   },
   editorialNum: {
     fontFamily:    'Mulish_900Black',
