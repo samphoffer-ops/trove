@@ -15,73 +15,130 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // yet. Call this function with a `domains` array; something else (Sam, or a
 // future discovery step) decides what goes in that array.
 
-// RUBRIC HISTORY: Early automated discovery surfaced too many bohemian, cheap,
-// and "Etsy-tier" brands despite the original rubric. The examples below encode
-// the lessons from those rejections — specifically the aesthetic and price-point
-// signals that the LLM wasn't catching with just the old style-list approach.
-const RUBRIC = `Trove is a curated shopping discovery app for adults in their 20s-30s who
-shop with intention — they buy fewer things but better things, and expect every
-brand they discover to have a clear point of view and genuine quality.
+const RUBRIC = `You are the brand judge for Trove, a curated shopping discovery app. Your job
+is to decide whether a brand belongs in Trove's catalog. Be strict — it is better
+to reject a borderline brand than to let the catalog drift generic.
 
-A brand fits Trove if it is: curated, intentional, quality-forward, and
-effortless. It should feel like a discovery — something worth showing a friend —
-not something you'd find on a marketplace or in a Target aisle.
+━━━ WHO TROVE IS FOR ━━━
 
-Approved style registers: minimalist, heritage Americana, streetwear (with real
-craft), coastal, elevated casual, quiet luxury, industrial, considered basics.
+Trove's customer defines themselves through taste, not income. They'd rather be
+the person who *found* a brand than the person visibly wearing the expensive one.
+They discover brands through friends' closets, algorithmic feeds, and rabbit holes
+— not department stores or traditional ads. Their wardrobe mixes a few real splurge
+pieces ($400 boots) with thrifted finds and a $60 t-shirt from a label they love.
+They read Highsnobiety, Cool Hunting, Wallpaper, and style-forward TikTok — not
+Vogue runway or traditional luxury media.
 
-QUALITY THRESHOLD — apply this first, before anything else:
-If the sample products are mostly under $40, that is a strong signal the brand
-competes on price rather than quality and identity. Reject unless there is clear
-evidence of genuine craft, materials story, or premium positioning that
-justifies the price point (e.g. Havaianas is affordable but has a 60-year
-heritage story and dominant brand identity — that clears the bar).
+Two overlapping sub-personas the catalog must serve (do not average them into a
+bland middle — serve both):
+• Downtown/design-forward (skews 25–40): Bode, Story Mfg., Online Ceramics,
+  Imogene & Willie, 3sixteen — craft- and narrative-driven, willing to spend more
+  for the story
+• Streetwear/prep-adjacent (skews 18–28): Aimé Leon Dore, Rowing Blazers, Cherry
+  LA, Every Other Thursday — collab-driven, slightly more price-sensitive, graphic-
+  and logo-aware
 
-EXPLICIT REJECTIONS (patterns confirmed from rejected brands — be strict):
+━━━ THE AESTHETIC ━━━
 
-Reject bohemian / boho-chic / cottagecore brands. This aesthetic register —
-flowy dresses, macramé, earthy "handmade" festival wear, patchwork prints,
-Etsy-adjacent craft aesthetic — is a confirmed miss for Trove's customer. Even
-if the quality is decent, this is not our customer. If the brand looks like it
-belongs at a music festival marketplace or an artisan craft fair, reject it.
+Core words: cool, considered, downtown, off-duty, quietly confident, craft-driven,
+a little irreverent. A brand with a point of view — not just clean minimalism, and
+not necessarily quiet. Texture and personality (graphics, color, print) are welcome
+when they're driven by identity and craft, not trend-chasing.
 
-Reject fast-fashion-adjacent brands — brands whose visual language, pricing,
-or product velocity signals trend-chasing over craft. Any brand that seems like
-it's making 200+ SKUs per season to catch trends should be rejected.
+Think: "grew up skating or in a design studio" — not "grew up in private equity."
 
-Reject brands whose primary differentiation is a busy, colorful, or "playful"
-print aesthetic with no underlying quality or craft story. Maximalism is
-acceptable only when it's driven by identity and craftsmanship (e.g. a Brazilian
-brand with a 60-year heritage), not when it's just colorful for color's sake.
+━━━ POSITIVE SIGNALS (each one tilts toward approve) ━━━
 
-Reject any brand whose catalog is primarily children's/kids' clothing or baby
-products, even if the brand also makes adult items.
+• Editorial-style product photography shot on location — not white-seamless studio
+• A founder/small-team story on the site with a real point of view, not corporate
+  mission-statement language
+• Specific, idiosyncratic copy voice (a weird reference is a good sign; "elevated
+  essentials for the modern woman" is a red flag)
+• Limited drops / seasonal releases rather than infinite restocked SKUs
+• Genuine creative collaborations with other small brands, artists, cultural figures
+• Specific material/construction language: "13oz Japanese selvedge," "vegetable-
+  tanned leather," "direct-trade cotton" — not vague "premium fabric"
+• A founding story with real obsession: denim-obsessive, workwear-obsessive,
+  moodboard-turned-brand
 
-Reject golf apparel / golf-lifestyle brands — confirmed explicit miss even when
-framed as "streetwear" or "lifestyle." A brand that merely has a cultural tie to
-golf is fine; a brand whose core catalog IS golf apparel is not.
+━━━ NEGATIVE SIGNALS (each one tilts toward reject) ━━━
 
-Reject mainstream/mass-retail home goods — the kind of brand you'd recognize
-from a big-box store aisle, even if they use "design-forward" language.
+• Generic template-feeling site with stock lifestyle photography
+• Infinite core basics with seasonal color drops only, no design point of view
+• Heavy discount/sale culture, constant promo banners
+• Primarily sold through mass e-commerce aggregators (Amazon, Walmart.com)
+• Marketing that leans on "as seen on" celebrity dressing rather than product story
 
-Reject unfocused "general store" brands (stationery + wallets + kids' clothes +
-candles in one catalog) — Trove brands must have a clear identity.
+━━━ THE SCALE RULE (apply carefully) ━━━
 
-Reject beauty/skincare brands whose positioning (clinical, dermatological,
-anti-aging-forward) skews toward an older demographic than Trove's 20s-30s.
+Scale alone does NOT disqualify a brand. Free People is large and widely distributed
+but still reads as a strong yes — the photography, copy voice, and design point of
+view have stayed intact as it's grown.
 
-Reject corporate-formal menswear/womenswear (dress shirts and tailoring built
-for office wear) — Trove skews effortless/casual, even within "elevated."
+The question is: has scale eroded the specificity of the product, photography, and
+voice — or has it stayed intact?
 
-Reject brands narrowly tied to a single life event (wedding decor, baby shower
-gifts) rather than everyday use.
+Reject when scale has caused the design to get safer and more generic
+(Reformation, Marine Layer — both were once good fits, both drifted into wide
+retail and lost their edge). Reject when corporate ownership has flattened the
+aesthetic (Madewell — right price and occasional right aesthetic, but J.Crew-owned
+mall brand where the point of view has been sanded down). Distribution footprint is
+a signal to investigate, not an automatic disqualifier.
 
-POSITIVE SIGNALS worth noting (not required, but tilt toward approve):
-Heritage story (10+ years, a founder with a genuine origin story), material
-obsession (leather goods made with specific tanneries, shoes made in a specific
-country with specific craftsmanship), capsule wardrobe positioning ("buy once,
-wear forever"), strong brand visual identity that would be recognizable on
-Instagram without seeing the brand name.`;
+━━━ PRICE FLOORS & CEILINGS (by category) ━━━
+
+If sample products are BELOW these floors, reject unless there is a clear heritage,
+craft, or brand-identity story that justifies the price (e.g. a 60-year-old brand
+with dominant brand equity). If products are ABOVE these ceilings, the brand likely
+serves a quiet-luxury or investment-dressing customer, not Trove's.
+
+T-shirts / basics: floor $40, typical $60–90, ceiling $120
+Button-ups / shirting: floor $80, typical $120–180, ceiling $250
+Denim: floor $100, typical $150–220, ceiling $300
+Outerwear / jackets: floor $150, typical $250–450, ceiling $700
+Footwear: floor $100, typical $180–300, ceiling $450
+Boots (leather): floor $150, typical $250–400, ceiling $600
+Bags / leather goods: floor $80, typical $150–300, ceiling $500
+Knitwear: floor $100, typical $150–250, ceiling $400
+Accessories (socks, small leather goods): floor $20, typical $30–60, ceiling $100
+
+━━━ APPROVED REFERENCE BRANDS (these are YES — use as your calibration) ━━━
+
+Aimé Leon Dore, Bode, Story Mfg., Online Ceramics, Sporty & Rich, Rowing Blazers,
+Corridor NYC, Wellen, Cherry LA, Alex Crane, Kapital, Toogood, Every Other Thursday,
+Free People, Imogene & Willie, Noah NYC, 3sixteen, Taylor Stitch, Jungmaven, Dôen,
+Sézane, Faherty, Birdwell, Kotn, Le Bon Shoppe.
+
+━━━ REJECT-WITH-REASON REFERENCE BRANDS (use for calibration) ━━━
+
+The Row — right craft, wrong customer (quiet-luxury/investment-dressing, $1000+ core)
+Everlane — right price, but no point of view ("transparent pricing" is a value prop
+  not an aesthetic)
+Reformation — was a yes; scaled into wide wholesale distribution, design got safer
+Vuori, Alo Yoga — right price, but athletic/performance-first, no downtown edge
+Madewell — right price, occasionally right aesthetic, but J.Crew-owned mall brand
+Marine Layer — right price and casualness, but drifted to generic-comfortable
+
+━━━ EXPLICIT REJECTIONS (hard rules — apply without exception) ━━━
+
+• Fast fashion: Zara, H&M, Shein, Forever 21 — production cycle and quality tell
+• Mass/big-box: Gap, Old Navy, Target private label
+• Corporate athleisure: Lululemon, Vuori, Alo Yoga — too polished, no edge
+• Big-logo hype/resale-driven: Supreme, sneaker-bot culture — different customer
+  motivation (scarcity/flip value, not taste)
+• Bohemian/boho-chic/cottagecore: flowy dresses, macramé, festival-market aesthetic,
+  Etsy-adjacent handmade — confirmed miss for this customer
+• Golf apparel as the core catalog (a brand with cultural tie to golf is fine;
+  a brand whose *catalog* IS golf wear is not)
+• Mainstream/mass-retail home goods recognizable from a big-box store aisle
+• Unfocused "general store" catalogs (stationery + wallets + kids + candles — no
+  clear identity)
+• Beauty/skincare with clinical, dermatological, anti-aging-forward positioning
+• Corporate-formal tailoring built for office wear — Trove skews effortless/casual
+• Children's/kids' clothing as the primary catalog
+• Brands narrowly tied to a single life event (wedding, baby shower)
+• "Instagram ad basics" brands that exist purely as a performance-marketing funnel
+  with no story`;
 
 const MAX_DOMAINS_PER_RUN = 15;
 const REQUEST_DELAY_MS = 1500;

@@ -121,14 +121,14 @@ export default function FeedScreen() {
                     inner content aligns to the same column as the header logo */}
                 <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
                   <View style={styles.editorialCardContent}>
-                    <Text style={[styles.editorialNum, { color: strip.fg }]}>{idx + 1}</Text>
                     <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
                     <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
                     <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
                   </View>
                 </Pressable>
 
-                {/* Product rail */}
+                {/* Product rail — wrapper aligns left edge with content column */}
+                <View style={styles.stripWrapper}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll} scrollsToTop={false}>
                   {items.map(p => (
                     <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
@@ -141,6 +141,7 @@ export default function FeedScreen() {
                     </Pressable>
                   ))}
                 </ScrollView>
+                </View>
               </View>
             );
           })}
@@ -224,13 +225,6 @@ const styles = StyleSheet.create({
     paddingTop:        28,
     paddingBottom:     24,
   },
-  editorialNum: {
-    fontFamily:    'Mulish_900Black',
-    fontSize:      10,
-    letterSpacing: 2,
-    marginBottom:  10,
-    opacity:       0.5,
-  },
   editorialTitle: {
     fontFamily:    'Mulish_900Black',
     fontSize:      52,
@@ -253,7 +247,8 @@ const styles = StyleSheet.create({
   },
 
   // Product rail below each editorial section
-  stripScroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
+  stripWrapper: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
+  stripScroll: { paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
   stripCard: {
     width:           160,
     height:          213,

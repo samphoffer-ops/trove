@@ -63,7 +63,7 @@ async function discoverFromSeeds(
     try {
       const found = await searchExaStorefronts(
         exaKey,
-        `independent brand with similar quality aesthetic and positioning to ${seedNames}`,
+        `independent brand with the same cool, considered, craft-driven downtown aesthetic and customer as ${seedNames} — small team or founder story, strong visual identity, direct-to-consumer, not mall-owned or mass-distributed`,
         rejectedNames,
       );
       for (const b of found) {
@@ -76,27 +76,42 @@ async function discoverFromSeeds(
 
 // ─── LAYER 2: EDITORIAL ─────────────────────────────────────────────────────
 
-// Publications whose curatorial taste overlaps with Trove's target customer
+// Publications that Trove's customer actually reads — editorial whose curatorial
+// taste maps to "downtown, craft-driven, cool" rather than luxury or fast fashion.
 const EDITORIAL_SEARCHES: { query: string; domains: string[] }[] = [
   {
-    query: 'best new independent fashion brands discover 2024 2025',
+    // The core discovery pipe: Highsnobiety and GQ's best-new-brand coverage
+    // skews exactly toward the ALD/Bode/Noah NYC tier
+    query: 'best new independent menswear brands to know 2024 2025 downtown cool craft',
     domains: ['highsnobiety.com', 'gq.com', 'esquire.com'],
   },
   {
-    query: 'best independent menswear brands quality heritage craft',
-    domains: ['gq.com', 'esquire.com', 'monocle.com'],
+    // Hypebeast covers the streetwear/prep-adjacent persona (ALD, Rowing Blazers,
+    // Cherry LA tier) without drifting into pure hype/resale culture
+    query: 'best independent streetwear brands quality craft considered cool 2024 2025',
+    domains: ['hypebeast.com', 'highsnobiety.com'],
   },
   {
-    query: 'best independent womenswear brands to know elevated quality',
-    domains: ['whowhatwear.com', 'vogue.com', 'harpersbazaar.com'],
+    // Women's side of the same customer — Sporty & Rich, Dôen, Alex Crane tier
+    query: 'best independent womenswear brands downtown elevated cool off-duty considered',
+    domains: ['whowhatwear.com', 'gq.com', 'highsnobiety.com'],
   },
   {
-    query: 'best independent sneaker footwear brands premium quality',
-    domains: ['highsnobiety.com', 'hypebeast.com', 'gq.com'],
+    // Craft/heritage rabbit hole — 3sixteen, Imogene & Willie, Taylor Stitch tier
+    query: 'best craft heritage workwear denim brands independent small batch quality story',
+    domains: ['gq.com', 'esquire.com', 'highsnobiety.com'],
   },
   {
-    query: 'emerging independent brands quality lifestyle craft design',
-    domains: ['monocle.com', 'wallpaper.com', 'kinfolk.com'],
+    // Wallpaper and Monocle surface design-obsessed brands with a visual POV —
+    // Toogood, Story Mfg., Kapital-adjacent
+    query: 'best independent fashion design brands considered craft point of view editorial',
+    domains: ['wallpaper.com', 'monocle.com', 'kinfolk.com'],
+  },
+  {
+    // Cool Hunting and similar surfaces the culturally-active, drop-driven
+    // independent label scene before it hits mainstream coverage
+    query: 'cool new independent brand drop limited release quality lifestyle 2024 2025',
+    domains: ['coolhunting.com', 'hypebeast.com', 'highsnobiety.com'],
   },
 ];
 
@@ -185,21 +200,28 @@ If no qualifying brands found, respond with [].`,
 
 // ─── LAYER 3: KEYWORD FALLBACK ──────────────────────────────────────────────
 
+// Queries are written to surface the specific brand archetypes in the brief.
+// Language mirrors how Trove's customer would talk about what they're looking
+// for — not generic "quality premium" but specific cultural signals.
 const KEYWORD_QUERIES = [
-  // Footwear — consistently strong category
-  'premium independent leather footwear brand craft heritage quality',
-  'independent elevated sneaker brand minimalist premium DTC',
-  'independent heritage American boot brand quality craftsmanship',
-  'independent premium sandal brand quality materials strong identity',
-  // Clothing
-  'independent heritage workwear brand quality materials American made',
-  'independent elevated minimalist basics brand capsule wardrobe premium',
-  'independent considered elevated womenswear brand timeless quality DTC',
-  // Accessories & home
-  'independent premium leather bag accessories brand craft heritage',
-  'independent premium considered home goods brand craft minimal quality',
-  // Beauty
-  'independent clean beauty brand young effortless urban quality DTC',
+  // Downtown/design-forward menswear — Bode, Story Mfg., Corridor tier
+  'independent menswear brand craft narrative small batch downtown NYC considered',
+  // Streetwear/prep-adjacent — ALD, Noah NYC, Rowing Blazers tier
+  'independent brand NYC prep streetwear quality collab downtown cool DTC',
+  // Selvedge/heritage denim — 3sixteen, Imogene & Willie, Taylor Stitch tier
+  'independent denim workwear brand Japanese selvedge heritage craft obsessive',
+  // Graphic/art-adjacent — Online Ceramics, Cherry LA tier
+  'independent graphic brand skate art-world cool irreverent quality DTC',
+  // California coastal women's — Dôen, Alex Crane, Wellen tier
+  'independent womenswear brand California coastal off-duty considered quality DTC',
+  // Premium footwear with identity
+  'independent footwear brand leather craft heritage quality point of view DTC',
+  // Accessories/leather goods with craft story
+  'independent leather goods bag brand craft heritage tannery quality small brand',
+  // Drop-model / limited release labels
+  'independent brand limited drop seasonal release point of view small team DTC',
+  // European/international equivalent of the above
+  'independent European menswear womenswear brand considered craft downtown quality',
 ];
 
 async function discoverFromKeywords(
