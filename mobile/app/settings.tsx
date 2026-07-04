@@ -34,6 +34,33 @@ export default function Settings() {
     setAdminRunning(false);
   }
 
+  async function runDiscoverAndIntake() {
+    setAdminRunning(true);
+    try {
+      setAdminStatus('Step 1/2 — discovering candidates…');
+      const { data: discovered, error: e1 } = await supabase.functions.invoke('discover-brands', { body: {} });
+      if (e1) throw e1;
+
+      const domains: string[] = (discovered?.candidates ?? []).map((c: any) => c.domain);
+      if (domains.length === 0) {
+        setAdminStatus('No new candidates found — catalog is up to date.');
+        setAdminRunning(false);
+        return;
+      }
+
+      setAdminStatus(`Step 2/2 — intaking ${domains.length} candidates…`);
+      const { data: intook, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains } });
+      if (e2) throw e2;
+
+      const queued   = (intook?.results ?? []).filter((r: any) => r.action === 'queued_for_review').length;
+      const rejected = (intook?.results ?? []).filter((r: any) => r.action?.startsWith('rejected')).length;
+      setAdminStatus(`✓ Done — ${queued} queued for review, ${rejected} rejected`);
+    } catch (e: any) {
+      setAdminStatus(`✗ Discovery failed: ${e?.message ?? String(e)}`);
+    }
+    setAdminRunning(false);
+  }
+
   function confirmSignOut() {
     confirmAction('Sign out', 'Are you sure?', 'Sign out', signOut);
   }
@@ -111,7 +138,7 @@ export default function Settings() {
 
             <Pressable
               style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
-              onPress={() => runAdminAction('discover-brands', {}, 'Brand discovery')}
+              onPress={runDiscoverAndIntake}
               disabled={adminRunning}
             >
               {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
