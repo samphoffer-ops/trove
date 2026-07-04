@@ -88,6 +88,7 @@ export interface Share {
   recipient_id: string;
   product_id: string;
   product_data: Product;
+  message?: string | null;
   read_at: string | null;
   created_at: string;
   profiles?: Profile;

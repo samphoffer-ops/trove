@@ -33,10 +33,21 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [similar, setSimilar] = useState<Product[]>([]);
+  const [fallbackProduct, setFallbackProduct] = useState<Product | null>(null);
 
   useEffect(() => { fetchProducts(); }, []);
 
-  const product = getProductById(productId);
+  const storeProduct = getProductById(productId);
+
+  // If the store is loaded but doesn't have this product (e.g. opened from an
+  // inbox share that isn't in the user's feed slice), fetch it directly by ID.
+  useEffect(() => {
+    if (!loaded || storeProduct) return;
+    supabase.from('products').select('*').eq('id', productId).single()
+      .then(({ data }) => { if (data) setFallbackProduct(data as Product); });
+  }, [loaded, storeProduct, productId]);
+
+  const product = storeProduct ?? fallbackProduct;
 
   useEffect(() => {
     if (!product) return;
@@ -61,7 +72,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
     router.push(`/brand/${brandId}`);
   }
 
-  if (!loaded) {
+  if (!loaded || (loaded && !storeProduct && !fallbackProduct)) {
     return (
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={Colors.accent} />

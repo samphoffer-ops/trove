@@ -56,6 +56,7 @@ export default function FeedScreen() {
     <View style={styles.root}>
       {/* Ink masthead */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
         <View style={styles.titleRow}>
           <Logo width={84} color={Colors.bg} />
           <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
@@ -82,6 +83,7 @@ export default function FeedScreen() {
             </Pressable>
           ))}
         </ScrollView>
+        </View>
       </View>
 
       {/* Expanded strip view */}
@@ -169,6 +171,7 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   header: { backgroundColor: Colors.ink, zIndex: 10 },
+  headerContent: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
 
   titleRow: {
     flexDirection:     'row',

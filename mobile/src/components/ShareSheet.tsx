@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet,
+  View, Text, Pressable, StyleSheet, TextInput,
   Modal, Animated, ScrollView, TouchableWithoutFeedback,
 } from 'react-native';
 import { Product, Profile } from '@/types';
@@ -20,6 +20,7 @@ export function ShareSheet({ product, onClose }: Props) {
   const { sendShare } = useShareStore();
   const [friends,  setFriends]  = useState<Profile[]>([]);
   const [picked,   setPicked]   = useState<string[]>([]);
+  const [message,  setMessage]  = useState('');
   const [sending,  setSending]  = useState(false);
   const [sent,     setSent]     = useState(false);
   const slideAnim = useRef(new Animated.Value(400)).current;
@@ -27,6 +28,7 @@ export function ShareSheet({ product, onClose }: Props) {
   useEffect(() => {
     if (product && user) {
       setPicked([]);
+      setMessage('');
       setSent(false);
       fetchFollowing(user.id).then(setFriends);
       Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
@@ -44,7 +46,7 @@ export function ShareSheet({ product, onClose }: Props) {
   async function handleSend() {
     if (!product || picked.length === 0) return;
     setSending(true);
-    await sendShare(picked, product);
+    await sendShare(picked, product, message);
     setSending(false);
     setSent(true);
     setTimeout(close, 700);
@@ -68,7 +70,7 @@ export function ShareSheet({ product, onClose }: Props) {
             </Pressable>
           </View>
 
-          <ScrollView style={styles.list}>
+          <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
             {friends.length === 0 ? (
               <Text style={styles.empty}>You're not following anyone yet — follow people from their profile to share with them.</Text>
             ) : (
@@ -90,18 +92,28 @@ export function ShareSheet({ product, onClose }: Props) {
                 );
               })
             )}
-            <View style={{ height: 24 }} />
           </ScrollView>
 
           {friends.length > 0 && (
             <View style={styles.footer}>
+              <TextInput
+                style={styles.messageInput}
+                placeholder="Add a note… (optional)"
+                placeholderTextColor={Colors.textMuted}
+                value={message}
+                onChangeText={setMessage}
+                multiline
+                maxLength={280}
+                returnKeyType="done"
+                blurOnSubmit
+              />
               <Pressable
                 style={[styles.sendBtn, (picked.length === 0 || sending) && styles.sendBtnDisabled]}
                 onPress={handleSend}
                 disabled={picked.length === 0 || sending}
               >
                 <Text style={styles.sendBtnText}>
-                  {sent ? 'Sent' : sending ? 'Sending…' : picked.length > 1 ? `Send to ${picked.length}` : 'Send'}
+                  {sent ? 'Sent ✓' : sending ? 'Sending…' : picked.length > 1 ? `Send to ${picked.length}` : 'Send'}
                 </Text>
               </Pressable>
             </View>
@@ -119,7 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopLeftRadius:  20,
     borderTopRightRadius: 20,
-    maxHeight:       '80%',
+    maxHeight:       '85%',
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,
@@ -136,7 +148,7 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center',
   },
-  list:  { paddingHorizontal: 20 },
+  list:  { paddingHorizontal: 20, maxHeight: 260 },
   empty: { ...Typography.body, fontSize: 14, color: Colors.textMuted, paddingVertical: 20 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
@@ -152,7 +164,16 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   checkActive: { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
-  footer:    { padding: 16, borderTopWidth: 1, borderTopColor: Colors.border },
+  footer: {
+    padding: 16, gap: 10,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  messageInput: {
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
+    paddingHorizontal: 14, paddingVertical: 11,
+    ...Typography.body, fontSize: 14, color: Colors.text,
+    backgroundColor: Colors.bg, minHeight: 44, maxHeight: 88,
+  },
   sendBtn:   { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
   sendBtnText:     { ...Typography.headline, fontSize: 15, color: Colors.text },

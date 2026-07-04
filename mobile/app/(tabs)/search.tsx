@@ -66,23 +66,25 @@ export default function SearchScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <Logo width={72} color={Colors.bg} />
-        <View style={styles.searchBar}>
-          <SearchIcon color="rgba(255,255,255,0.45)" />
-          <TextInput
-            style={styles.input}
-            placeholder="products, brands, people…"
-            placeholderTextColor="rgba(255,255,255,0.38)"
-            value={query}
-            onChangeText={setQuery}
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {hasQuery && (
-            <Pressable onPress={() => setQuery('')} hitSlop={8}>
-              <CloseIcon color="rgba(255,255,255,0.55)" />
-            </Pressable>
-          )}
+        <View style={styles.headerContent}>
+          <Logo width={72} color={Colors.bg} />
+          <View style={styles.searchBar}>
+            <SearchIcon color="rgba(255,255,255,0.45)" />
+            <TextInput
+              style={styles.input}
+              placeholder="products, brands, people…"
+              placeholderTextColor="rgba(255,255,255,0.38)"
+              value={query}
+              onChangeText={setQuery}
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {hasQuery && (
+              <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                <CloseIcon color="rgba(255,255,255,0.55)" />
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
 
@@ -144,7 +146,12 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   header: {
-    backgroundColor:   Colors.ink,
+    backgroundColor: Colors.ink,
+  },
+  headerContent: {
+    maxWidth:          1100,
+    alignSelf:         'center',
+    width:             '100%',
     paddingHorizontal: 20,
     paddingTop:        16,
     paddingBottom:     16,

@@ -6,7 +6,7 @@ interface ShareState {
   inbox:        Share[];
   unreadCount:  number;
   fetchInbox:   () => Promise<void>;
-  sendShare:    (recipientIds: string[], product: Product) => Promise<void>;
+  sendShare:    (recipientIds: string[], product: Product, message?: string) => Promise<void>;
   markRead:     (shareId: string) => Promise<void>;
 }
 
@@ -26,15 +26,17 @@ export const useShareStore = create<ShareState>((set, get) => ({
     set({ inbox, unreadCount: inbox.filter(s => !s.read_at).length });
   },
 
-  async sendShare(recipientIds, product) {
+  async sendShare(recipientIds, product, message) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || recipientIds.length === 0) return;
+    const msg = message?.trim() || null;
     await supabase.from('shares').insert(
       recipientIds.map(recipientId => ({
         sender_id:    user.id,
         recipient_id: recipientId,
         product_id:   product.id,
         product_data: product,
+        message:      msg,
       })),
     );
   },
