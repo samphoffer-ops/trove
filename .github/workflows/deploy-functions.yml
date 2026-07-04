@@ -23,13 +23,13 @@ jobs:
           sudo mv /tmp/supabase /usr/local/bin/supabase
 
       - name: Deploy catalog-intake
-        run: supabase functions deploy catalog-intake --project-ref xxyserlkigllpmtxzlsa --no-bundle
+        run: supabase functions deploy catalog-intake --project-ref xxyserlkigllpmtxzlsa
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy discover-brands
-        run: supabase functions deploy discover-brands --project-ref xxyserlkigllpmtxzlsa --no-bundle
+        run: supabase functions deploy discover-brands --project-ref xxyserlkigllpmtxzlsa
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
