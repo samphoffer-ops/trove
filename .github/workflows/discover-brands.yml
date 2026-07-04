@@ -40,14 +40,15 @@ jobs:
         run: |
           domains=($(jq -r '.candidates[].domain' discover.json))
           echo "Processing ${#domains[@]} candidate domains"
-          for ((i=0; i<${#domains[@]}; i+=5)); do
-            batch=("${domains[@]:i:5}")
+          for ((i=0; i<${#domains[@]}; i+=3)); do
+            batch=("${domains[@]:i:3}")
             json_batch=$(printf '%s\n' "${batch[@]}" | jq -R . | jq -s .)
             echo "Batch: $json_batch"
             curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"domains\": $json_batch}" --max-time 140
+              -d "{\"domains\": $json_batch}" --max-time 140 \
+              || echo "Batch timed out or errored — continuing"
             echo ""
             sleep 20
           done
