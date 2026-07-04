@@ -1,0 +1,31 @@
+name: Deploy Supabase Edge Functions
+
+# Auto-deploys whenever function source changes, or can be run manually.
+# Requires SUPABASE_ACCESS_TOKEN secret — see README for one-time setup.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy catalog-intake
+        run: supabase functions deploy catalog-intake --project-ref xxyserlkigllpmtxzlsa
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy discover-brands
+        run: supabase functions deploy discover-brands --project-ref xxyserlkigllpmtxzlsa
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
