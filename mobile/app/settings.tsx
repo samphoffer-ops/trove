@@ -39,7 +39,10 @@ export default function Settings() {
     try {
       setAdminStatus('Step 1/2 — discovering candidates…');
       const { data: discovered, error: e1 } = await supabase.functions.invoke('discover-brands', { body: {} });
-      if (e1) throw e1;
+      if (e1) {
+        const detail = await (e1 as any).context?.json?.().catch(() => null);
+        throw new Error(detail?.error ?? e1.message);
+      }
 
       const domains: string[] = (discovered?.candidates ?? []).map((c: any) => c.domain);
       if (domains.length === 0) {
@@ -50,7 +53,10 @@ export default function Settings() {
 
       setAdminStatus(`Step 2/2 — intaking ${domains.length} candidates…`);
       const { data: intook, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains } });
-      if (e2) throw e2;
+      if (e2) {
+        const detail = await (e2 as any).context?.json?.().catch(() => null);
+        throw new Error(detail?.error ?? e2.message);
+      }
 
       const queued   = (intook?.results ?? []).filter((r: any) => r.action === 'queued_for_review').length;
       const rejected = (intook?.results ?? []).filter((r: any) => r.action?.startsWith('rejected')).length;
