@@ -54,7 +54,7 @@ export default function BoardsScreen() {
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} scrollsToTop={true}>
         {boards.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No boards yet</Text>
@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
   createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.input, paddingHorizontal: 16, justifyContent: 'center' },
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
-  content:   { paddingHorizontal: 16, paddingBottom: 100 },
+  content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
   grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[4] },
-  card:      { width: '31%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
+  card:      { width: 180, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
   avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },

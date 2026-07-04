@@ -2,11 +2,9 @@ import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Colors, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
-import { WebFrame } from '@/components/WebFrame';
 
 export default function TabsLayout() {
   return (
-    <WebFrame>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -47,7 +45,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
-    </WebFrame>
   );
 }
 

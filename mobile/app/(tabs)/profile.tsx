@@ -70,7 +70,7 @@ export default function ProfileScreen() {
           <GearIcon color={Colors.text} size={22} />
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} scrollsToTop={true}>
 
         {/* Avatar + name + bio */}
         <View style={styles.hero}>
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
         {followedBrands.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Brands you follow</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow} scrollsToTop={false}>
               {followedBrands.map(brand => (
                 <Pressable key={brand.id} style={styles.brandChip} onPress={() => router.push(`/brand/${brand.id}`)}>
                   <Text style={styles.brandChipText}>{brand.name}</Text>
@@ -125,7 +125,7 @@ export default function ProfileScreen() {
         {recentlyPurchased.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Recently purchased</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.purchasedRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.purchasedRow} scrollsToTop={false}>
               {recentlyPurchased.map(item => (
                 <Pressable key={item.product_id} style={styles.purchasedCard} onPress={() => openProduct(item.product_id)}>
                   <Image source={{ uri: item.product_data?.image }} style={styles.purchasedImg} contentFit="cover" />
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   titleRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
   pageLabel:   { ...Typography.caption, color: Colors.textMuted, marginTop: 6, letterSpacing: 0.4 },
   gearBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  content:     { paddingHorizontal: 20, paddingBottom: 100 },
+  content:     { paddingHorizontal: 20, paddingBottom: 100, maxWidth: 800, alignSelf: 'center', width: '100%' },
   hero:        { alignItems: 'center', paddingVertical: Spacing[6] },
   avatarWrap:  { width: 72, height: 72, marginBottom: Spacing[3], position: 'relative' },
   avatar:      { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

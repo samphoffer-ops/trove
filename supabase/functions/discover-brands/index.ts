@@ -269,12 +269,25 @@ async function searchExaStorefronts(
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+function respond(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return respond({}, 200);
   try {
     const exaKey = Deno.env.get('EXA_API_KEY');
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!exaKey) {
-      return new Response(JSON.stringify({ error: 'EXA_API_KEY secret not configured' }), { status: 500 });
+      return respond({ error: 'EXA_API_KEY secret not configured' }, 500);
     }
 
     // Pull current brand state — all three queries in parallel
@@ -315,7 +328,7 @@ Deno.serve(async (req) => {
       candidates.push({ ...c, domain });
     }
 
-    return new Response(JSON.stringify({
+    return respond({
       found_new: candidates.length,
       breakdown: {
         seed:       seedCandidates.filter(c => !knownDomains.has(c.domain)).length,
@@ -328,11 +341,8 @@ Deno.serve(async (req) => {
         editorial_enabled: !!anthropicKey,
       },
       candidates,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return respond({ error: String(err) }, 500);
   }
 });

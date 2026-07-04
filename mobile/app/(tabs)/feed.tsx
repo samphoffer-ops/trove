@@ -69,7 +69,7 @@ export default function FeedScreen() {
         </View>
 
         {/* Category chips on ink */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} scrollsToTop={false}>
           {CATEGORIES.map(cat => (
             <Pressable
               key={cat.id}
@@ -103,6 +103,7 @@ export default function FeedScreen() {
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
+          scrollsToTop={true}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
           contentContainerStyle={{ paddingBottom: 100 }}
           onScroll={handleScroll}
@@ -125,7 +126,7 @@ export default function FeedScreen() {
                 </Pressable>
 
                 {/* Product rail */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll} scrollsToTop={false}>
                   {items.map(p => (
                     <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
                       <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />

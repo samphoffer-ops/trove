@@ -91,6 +91,7 @@ interface ScrapedProduct {
   name: string;
   price: number;
   image: string;
+  images?: string[];
   ratio: number;
   url: string;
   description?: string;
@@ -137,7 +138,7 @@ async function isDisallowed(domain: string): Promise<boolean> {
 
 async function probeShopify(domain: string): Promise<ScrapedProduct[] | null> {
   try {
-    const res = await fetchWithTimeout(`https://${domain}/products.json?limit=20`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const res = await fetchWithTimeout(`https://${domain}/products.json?limit=250`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!res.ok) return null;
     const data = await res.json();
     const products = data.products;
@@ -145,11 +146,13 @@ async function probeShopify(domain: string): Promise<ScrapedProduct[] | null> {
     return products.map((p: any) => {
       const img = p.images?.[0];
       const ratio = img?.width && img?.height ? img.height / img.width : 1.25;
+      const allImages: string[] = (p.images ?? []).map((i: any) => i?.src).filter(Boolean);
       return {
         handle: p.handle,
         name: p.title,
         price: parseFloat(p.variants?.[0]?.price ?? '0'),
         image: img?.src ?? '',
+        images: allImages.length > 1 ? allImages : undefined,
         ratio,
         url: `https://${domain}/products/${p.handle}`,
         description: (p.body_html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300),
@@ -170,7 +173,7 @@ async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
     await sleep(500);
     const productSitemapRes = await fetchWithTimeout(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!productSitemapRes.ok) return null;
-    const productUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 10);
+    const productUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 60);
 
     const products: ScrapedProduct[] = [];
     for (const url of productUrls) {
@@ -364,13 +367,26 @@ async function getSummary(admin: ReturnType<typeof createClient>) {
   };
 }
 
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+function respond(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return respond({}, 200);
   try {
     const body = await req.json();
 
     if (body.action === 'summary') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-      return new Response(JSON.stringify(await getSummary(admin)), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond(await getSummary(admin));
     }
 
     // One-off cleanup action for brands named before the judge started
@@ -388,7 +404,7 @@ Deno.serve(async (req) => {
         }
         results.push({ domain, name, ok: !error, error: error?.message });
       }
-      return new Response(JSON.stringify({ results }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond({ results }, 200);
     }
 
     // One-off backfill for products inserted before classifyCategory existed,
@@ -427,7 +443,7 @@ Deno.serve(async (req) => {
         }
         if (rows.length < pageSize) break;
       }
-      return new Response(JSON.stringify({ updated, removed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond({ updated, removed }, 200);
     }
 
     // One-off backfill: embeds every product that doesn't have one yet —
@@ -438,7 +454,7 @@ Deno.serve(async (req) => {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const voyageKey = Deno.env.get('VOYAGE_API_KEY');
       if (!voyageKey) {
-        return new Response(JSON.stringify({ error: 'VOYAGE_API_KEY secret not configured' }), { status: 500 });
+        return respond({ error: 'VOYAGE_API_KEY secret not configured' }, 500);
       }
       let embedded = 0;
       let failed = 0;
@@ -471,7 +487,7 @@ Deno.serve(async (req) => {
         if (rows.length < pageSize) break;
         if (failed > 40) break; // bail out if Voyage is broadly failing, not just one bad row
       }
-      return new Response(JSON.stringify({ embedded, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond({ embedded, failed }, 200);
     }
 
     // One-off backfill: classifies audience for every approved brand that
@@ -481,7 +497,7 @@ Deno.serve(async (req) => {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const anthropicKeyLocal = Deno.env.get('ANTHROPIC_API_KEY');
       if (!anthropicKeyLocal) {
-        return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
+        return respond({ error: 'ANTHROPIC_API_KEY secret not configured' }, 500);
       }
       const { data: brands } = await admin
         .from('brands').select('id, name, judge_reasoning, matched_categories, matched_styles')
@@ -519,7 +535,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         }
         await sleep(300);
       }
-      return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond({ updated, failed }, 200);
     }
 
     // One-off backfill: generates search keywords for every product that
@@ -528,7 +544,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const anthropicKeyLocal = Deno.env.get('ANTHROPIC_API_KEY');
       if (!anthropicKeyLocal) {
-        return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
+        return respond({ error: 'ANTHROPIC_API_KEY secret not configured' }, 500);
       }
       let updated = 0;
       let failed = 0;
@@ -551,7 +567,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         if (rows.length < pageSize) break;
         if (failed > 30) break;
       }
-      return new Response(JSON.stringify({ updated, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return respond({ updated, failed }, 200);
     }
 
     // Convenience action: re-scrape all currently-approved brands without
@@ -564,12 +580,12 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
 
     const { domains } = body;
     if (!Array.isArray(domains) || domains.length === 0) {
-      return new Response(JSON.stringify({ error: 'Provide a non-empty "domains" array' }), { status: 400 });
+      return respond({ error: 'Provide a non-empty "domains" array' }, 400);
     }
 
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicKey) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY secret not configured' }), { status: 500 });
+      return respond({ error: 'ANTHROPIC_API_KEY secret not configured' }, 500);
     }
     // Embeddings degrade gracefully, not a hard requirement — if VOYAGE_API_KEY
     // isn't set yet, products still scrape/refresh fine, just without a vector
@@ -609,7 +625,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
               const searchKeywords = await generateSearchKeywords(anthropicKey, existing.name, p.name, p.description ?? '');
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
-                image: p.image, ratio: p.ratio, url: p.url, description: p.description,
+                image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
                 category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
                 search_keywords: searchKeywords,
                 ...(embedding ? { embedding: JSON.stringify(embedding) } : {}),
@@ -667,8 +683,8 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       results.push({ domain, action: 'queued_for_review', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
     }
 
-    return new Response(JSON.stringify({ results }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return respond({ results }, 200);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return respond({ error: String(err) }, 500);
   }
 });
