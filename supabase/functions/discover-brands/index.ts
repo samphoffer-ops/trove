@@ -222,6 +222,14 @@ const KEYWORD_QUERIES = [
   'independent brand limited drop seasonal release point of view small team DTC',
   // European/international equivalent of the above
   'independent European menswear womenswear brand considered craft downtown quality',
+  // Jewelry / fine accessories with identity
+  'independent jewelry brand considered craft identity downtown cool DTC small studio',
+  // Eyewear with a point of view
+  'independent eyewear sunglasses brand craft identity considered cool DTC',
+  // Hats / caps with brand identity — New Era-adjacent but independent
+  'independent hat cap brand craft identity downtown cool limited DTC',
+  // Bags and leather goods beyond basics
+  'independent bag leather goods brand craft heritage considered identity DTC',
 ];
 
 async function discoverFromKeywords(

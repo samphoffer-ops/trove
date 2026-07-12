@@ -101,6 +101,14 @@ Boots (leather): floor $150, typical $250–400, ceiling $600
 Bags / leather goods: floor $80, typical $150–300, ceiling $500
 Knitwear: floor $100, typical $150–250, ceiling $400
 Accessories (socks, small leather goods): floor $20, typical $30–60, ceiling $100
+Jewelry / fine accessories: floor $40, typical $80–300, ceiling $600
+Eyewear / sunglasses: floor $60, typical $120–250, ceiling $400
+Hats / caps: floor $30, typical $50–100, ceiling $200
+
+Note: accessories are a CORE category for Trove, not secondary. A brand whose
+primary catalog is accessories (jewelry, hats, bags, belts, eyewear, scarves,
+socks) should be judged on the same aesthetic and craft standards as clothing —
+do not downgrade it simply because it doesn't sell apparel.
 
 ━━━ APPROVED REFERENCE BRANDS (these are YES — use as your calibration) ━━━
 
