@@ -50,6 +50,8 @@ export default function Settings() {
     'brothervellies.com',    // Brother Vellies
     'shopdoen.com',          // Doen
     'secondskinltd.com',     // Second Skin LTD
+    'california-arts.com',   // California Arts
+    'motherdenim.com',       // Mother Denim
   ];
 
   async function runHandPickedIntake() {

@@ -21,7 +21,7 @@ const BOARDS_PREVIEW_COUNT = 4;
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { profile, updateProfile } = useAuthStore();
-  const { boards } = useBoardStore();
+  const { boards, fetchBoards } = useBoardStore();
   const [followerCount,  setFollowerCount]  = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [followedBrands, setFollowedBrands] = useState<Brand[]>([]);
@@ -41,6 +41,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!profile) return;
+    fetchBoards();
     supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', profile.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
     supabase.from('follows').select('id', { count: 'exact' }).eq('follower_id', profile.id)
@@ -147,7 +148,7 @@ export default function ProfileScreen() {
               )}
             </View>
             <View style={styles.boardsGrid}>
-              {ownedBoards.slice(0, BOARDS_PREVIEW_COUNT).map(board => <BoardCard key={board.id} board={board} />)}
+              {ownedBoards.slice(0, BOARDS_PREVIEW_COUNT).map(board => <BoardCard key={board.id} board={board} style={styles.boardCard} />)}
             </View>
           </View>
         )}
@@ -191,5 +192,6 @@ const styles = StyleSheet.create({
   purchasedCard:  { width: 110 },
   purchasedImg:   { width: 110, height: 138, borderRadius: Radius.card, backgroundColor: Colors.stoneSoft, marginBottom: Spacing[1] },
   purchasedName:  { ...Typography.caption, color: Colors.text },
-  boardsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[4] },
+  boardsGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[3] },
+  boardCard:      { width: '48%' },
 });

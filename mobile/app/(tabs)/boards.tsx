@@ -70,14 +70,14 @@ export default function BoardsScreen() {
   );
 }
 
-export function BoardCard({ board }: { board: Board }) {
+export function BoardCard({ board, style }: { board: Board; style?: object }) {
   const items = board.board_items ?? [];
   const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
   const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
   const collaborators = board.board_collaborators ?? [];
 
   return (
-    <Pressable style={styles.card} onPress={() => router.push(`/board/${board.id}`)}>
+    <Pressable style={[styles.card, style]} onPress={() => router.push(`/board/${board.id}`)}>
       <View style={styles.cover}>
         {coverImage ? (
           <Image
