@@ -34,6 +34,54 @@ export default function Settings() {
     setAdminRunning(false);
   }
 
+  // Sam's manually curated picks — run through catalog-intake so they get
+  // judged, categorised, and queued for approval in the normal flow.
+  const HAND_PICKED_DOMAINS = [
+    'foundco.com',           // Profound Co (rebranded to FOUND)
+    'shop-jamiehaller.com',  // Jamie Haller
+    'bareknuckles.co',       // Bare Knuckles
+    'wythe.com',             // Wythe New York
+    'uomoclothingcopenhagen.com', // Uomo Clothing Copenhagen
+    'manresaclothing.com',   // Manresa
+    'fivefourfive.it',       // Fivefourfive
+    'manana.co',             // Mañana Surf
+    'percivalclo.com',       // Percival Menswear
+    'arran-studios.com',     // Arran Studios
+    'brothervellies.com',    // Brother Vellies
+    'shopdoen.com',          // Doen
+  ];
+
+  async function runHandPickedIntake() {
+    setAdminRunning(true);
+    try {
+      // Split into two batches to stay under the Edge Function timeout
+      const batch1 = HAND_PICKED_DOMAINS.slice(0, 6);
+      const batch2 = HAND_PICKED_DOMAINS.slice(6);
+
+      setAdminStatus(`Intaking batch 1/2 (${batch1.length} brands)…`);
+      const { data: r1, error: e1 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch1 } });
+      if (e1) {
+        const detail = await (e1 as any).context?.json?.().catch(() => null);
+        throw new Error(detail?.error ?? e1.message);
+      }
+
+      setAdminStatus(`Intaking batch 2/2 (${batch2.length} brands)…`);
+      const { data: r2, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch2 } });
+      if (e2) {
+        const detail = await (e2 as any).context?.json?.().catch(() => null);
+        throw new Error(detail?.error ?? e2.message);
+      }
+
+      const allResults = [...(r1?.results ?? []), ...(r2?.results ?? [])];
+      const queued = allResults.filter((r: any) => r.action === 'queued_for_review').length;
+      const skipped = allResults.filter((r: any) => r.action?.startsWith('skipped')).length;
+      setAdminStatus(`✓ Done — ${queued} queued for review, ${skipped} skipped`);
+    } catch (e: any) {
+      setAdminStatus(`✗ Hand-picked intake failed: ${e?.message ?? String(e)}`);
+    }
+    setAdminRunning(false);
+  }
+
   async function runDiscoverAndIntake() {
     setAdminRunning(true);
     try {
@@ -149,6 +197,15 @@ export default function Settings() {
             >
               {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
               <Text style={styles.adminBtnText}>Discover new brands</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
+              onPress={runHandPickedIntake}
+              disabled={adminRunning}
+            >
+              {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
+              <Text style={styles.adminBtnText}>Intake hand-picked brands</Text>
             </Pressable>
 
             {adminStatus && <Text style={styles.adminStatus}>{adminStatus}</Text>}
