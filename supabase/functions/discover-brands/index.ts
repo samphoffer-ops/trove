@@ -27,7 +27,7 @@ function fetchWithTimeout(url: string, init: RequestInit = {}) {
 interface Candidate {
   name: string;
   domain: string;
-  source: 'seed' | 'editorial' | 'keyword';
+  source: 'seed' | 'editorial' | 'keyword' | 'nuuly';
 }
 
 function cleanDomain(raw: string): string {
@@ -289,6 +289,98 @@ async function searchExaStorefronts(
     .filter((b: { name: string; domain: string }) => b.name && b.domain);
 }
 
+// ─── LAYER 4: NUULY ─────────────────────────────────────────────────────────
+//
+// Nuuly (nuuly.com) carries hundreds of independent brands alongside the URBN
+// family labels — it's one of the strongest external curation signals we have.
+// We crawl their brands listing via Exa, extract brand slugs from URLs + page
+// text, then use Claude to resolve each to a display name + likely DTC domain,
+// filtering out Anthropologie/Free People/UO private labels in the same step.
+
+async function discoverFromNuuly(
+  exaKey: string,
+  anthropicKey: string,
+  knownDomains: Set<string>,
+  rejectedNames: string[],
+): Promise<Candidate[]> {
+  try {
+    const res = await fetchWithTimeout('https://api.exa.ai/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
+      body: JSON.stringify({
+        query: 'fashion brands available to rent clothing',
+        type: 'keyword',
+        numResults: 25,
+        includeDomains: ['nuuly.com'],
+        contents: { text: { maxCharacters: 4000 } },
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const results: { url?: string; text?: string }[] = data.results ?? [];
+
+    // Pull brand slugs from URLs like /rent/brands/{slug}
+    const brandSlugs = new Set<string>();
+    for (const r of results) {
+      const match = r.url?.match(/\/rent\/brands\/([^/?#]+)/);
+      if (match) brandSlugs.add(match[1].replace(/-/g, ' '));
+    }
+
+    const combinedText = results.map(r => r.text ?? '').join('\n').slice(0, 5000);
+    if (!combinedText.trim() && brandSlugs.size === 0) return [];
+
+    const antiExamples = rejectedNames.length > 0
+      ? `\n\nDo NOT include brands similar to these already-rejected examples: ${rejectedNames.slice(0, 10).join(', ')}.`
+      : '';
+
+    const extractRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        messages: [{
+          role: 'user',
+          content: `You are identifying independent fashion brands from Nuuly's rental catalog.
+
+Brand slugs extracted from nuuly.com URLs: ${[...brandSlugs].join(', ') || 'see page text'}
+
+Page text:
+${combinedText}${antiExamples}
+
+For each brand, provide their display name and most likely DTC website domain.
+
+SKIP these — they are URBN private labels or sub-brands, not independent:
+Anthropologie, Free People, Urban Outfitters, BHLDN, Maeve, Pilcro, Cloth & Stone,
+Sanctuary, Floreat, Holding Horses, Eliza J, Moon River, BB Dakota.
+Also skip any brand that is obviously mass-market, fast fashion, or not DTC.
+
+Respond ONLY with a JSON array — no other text:
+[{"name": "Brand Name", "domain": "brandname.com"}, ...]`,
+        }],
+      }),
+    });
+
+    if (!extractRes.ok) return [];
+    const extractData = await extractRes.json();
+    const text = extractData.content?.[0]?.text ?? '[]';
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return [];
+
+    const extracted: { name: string; domain: string }[] = JSON.parse(match[0]);
+    const candidates: Candidate[] = [];
+    for (const b of extracted) {
+      const domain = cleanDomain(b.domain);
+      if (domain && b.name && !knownDomains.has(domain)) {
+        candidates.push({ name: b.name, domain, source: 'nuuly' });
+      }
+    }
+    return candidates;
+  } catch {
+    return [];
+  }
+}
+
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 
 
@@ -324,26 +416,30 @@ Deno.serve(async (req) => {
     const rejectedNames = (rejectedBrands ?? []).map(b => b.name).filter(Boolean);
     const approved = (approvedBrands ?? []) as { name: string; domain: string }[];
 
-    // Layers 1 + 2 run in parallel (independent, both fast enough)
-    const [seedCandidates, editorialCandidates] = await Promise.all([
+    // Layers 1, 2, 4 run in parallel (all independent)
+    const [seedCandidates, editorialCandidates, nuulyCandidates] = await Promise.all([
       discoverFromSeeds(exaKey, approved, rejectedNames, knownDomains),
       anthropicKey
         ? discoverFromEditorial(exaKey, anthropicKey, knownDomains, rejectedNames)
         : Promise.resolve([] as Candidate[]),
+      anthropicKey
+        ? discoverFromNuuly(exaKey, anthropicKey, knownDomains, rejectedNames)
+        : Promise.resolve([] as Candidate[]),
     ]);
 
-    // Layer 3: keyword fallback — exclude anything layers 1+2 already found
+    // Layer 3: keyword fallback — exclude anything layers 1+2+4 already found
     const alreadyFound = new Set([
       ...knownDomains,
       ...seedCandidates.map(c => c.domain),
       ...editorialCandidates.map(c => c.domain),
+      ...nuulyCandidates.map(c => c.domain),
     ]);
     const keywordCandidates = await discoverFromKeywords(exaKey, rejectedNames, alreadyFound);
 
-    // Final dedup across all three layers
+    // Final dedup across all four layers
     const seenDomains = new Set<string>();
     const candidates: Candidate[] = [];
-    for (const c of [...seedCandidates, ...editorialCandidates, ...keywordCandidates]) {
+    for (const c of [...seedCandidates, ...editorialCandidates, ...nuulyCandidates, ...keywordCandidates]) {
       const domain = cleanDomain(c.domain);
       if (!domain || seenDomains.has(domain) || knownDomains.has(domain)) continue;
       seenDomains.add(domain);
@@ -355,6 +451,7 @@ Deno.serve(async (req) => {
       breakdown: {
         seed:       seedCandidates.filter(c => !knownDomains.has(c.domain)).length,
         editorial:  editorialCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        nuuly:      nuulyCandidates.filter(c => !knownDomains.has(c.domain)).length,
         keyword:    keywordCandidates.filter(c => !knownDomains.has(c.domain)).length,
       },
       context: {

@@ -49,6 +49,7 @@ export default function Settings() {
     'arran-studios.com',     // Arran Studios
     'brothervellies.com',    // Brother Vellies
     'shopdoen.com',          // Doen
+    'secondskinltd.com',     // Second Skin LTD
   ];
 
   async function runHandPickedIntake() {
