@@ -416,8 +416,8 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const [{ data: allBrands }, { data: rejectedBrands }, { data: approvedBrands }] = await Promise.all([
       admin.from('brands').select('domain'),
-      admin.from('brands').select('name').eq('status', 'rejected').order('created_at', { ascending: false }).limit(25),
-      admin.from('brands').select('name, domain').eq('status', 'approved').limit(40),
+      admin.from('brands').select('name').eq('status', 'rejected').order('created_at', { ascending: false }).limit(100),
+      admin.from('brands').select('name, domain').eq('status', 'approved').limit(200),
     ]);
 
     const knownDomains = new Set((allBrands ?? []).map(b => cleanDomain(b.domain)));

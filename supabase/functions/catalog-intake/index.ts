@@ -706,7 +706,33 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
           continue;
         }
         if (existing.status === 'pending_review') {
-          results.push({ domain, action: 'skipped_already_pending' });
+          if (!body.auto_approve) {
+            results.push({ domain, action: 'skipped_already_pending' });
+            continue;
+          }
+          // Hand-picked path: promote straight to approved and scrape products now.
+          await admin.from('brands').update({ status: 'approved' }).eq('id', existing.id);
+          const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
+          const autoProducts = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
+          if (autoProducts.length > 0) {
+            const embeddings = voyageKey
+              ? await generateEmbeddings(voyageKey, autoProducts.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
+              : autoProducts.map(() => null);
+            for (let i = 0; i < autoProducts.length; i++) {
+              const p = autoProducts[i];
+              const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
+              const searchKeywords = await generateSearchKeywords(anthropicKey, existing.name, p.name, p.description ?? '');
+              await admin.from('products').upsert({
+                id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
+                image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
+                category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
+                search_keywords: searchKeywords,
+                ...(embeddings[i] ? { embedding: JSON.stringify(embeddings[i]) } : {}),
+                source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
+              });
+            }
+          }
+          results.push({ domain, action: 'auto_approved', count: autoProducts.length });
           continue;
         }
       }
@@ -733,10 +759,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const brandName = judgment.brand_name || domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
         .replace(/\b\w/g, c => c.toUpperCase());
 
+      const finalStatus = body.auto_approve ? 'approved' : 'pending_review';
       const { data: brandRow } = await admin.from('brands').upsert({
         name: brandName,
         domain,
-        status: 'pending_review',
+        status: finalStatus,
         platform,
         judge_confidence: judgment.confidence ?? null,
         judge_reasoning: judgment.reasoning ?? null,
@@ -745,7 +772,30 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         audience: judgment.audience ?? null,
       }, { onConflict: 'domain' }).select().single();
 
-      results.push({ domain, action: 'queued_for_review', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
+      if (body.auto_approve && brandRow) {
+        const filteredProducts = products.filter(p => !isExcludedProduct(p.name));
+        if (filteredProducts.length > 0) {
+          const embeddings = voyageKey
+            ? await generateEmbeddings(voyageKey, filteredProducts.map(p => `${brandRow.name} ${p.name} ${p.description ?? ''}`.trim()))
+            : filteredProducts.map(() => null);
+          for (let i = 0; i < filteredProducts.length; i++) {
+            const p = filteredProducts[i];
+            const id = `${slugify(brandRow.name)}-${slugify(p.handle)}`;
+            const searchKeywords = await generateSearchKeywords(anthropicKey, brandRow.name, p.name, p.description ?? '');
+            await admin.from('products').upsert({
+              id, brand_id: brandRow.id, brand: brandRow.name, name: p.name, price: p.price,
+              image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
+              category: classifyCategory(p.name, brandRow.matched_categories?.[0] ?? null),
+              search_keywords: searchKeywords,
+              ...(embeddings[i] ? { embedding: JSON.stringify(embeddings[i]) } : {}),
+              source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
+            });
+          }
+        }
+        results.push({ domain, action: 'auto_approved', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id, count: filteredProducts.length });
+      } else {
+        results.push({ domain, action: 'queued_for_review', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
+      }
     }
 
     return respond({ results }, 200);

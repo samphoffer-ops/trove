@@ -62,23 +62,24 @@ export default function Settings() {
       const batch2 = HAND_PICKED_DOMAINS.slice(6);
 
       setAdminStatus(`Intaking batch 1/2 (${batch1.length} brands)…`);
-      const { data: r1, error: e1 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch1 } });
+      const { data: r1, error: e1 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch1, auto_approve: true } });
       if (e1) {
         const detail = await (e1 as any).context?.json?.().catch(() => null);
         throw new Error(detail?.error ?? e1.message);
       }
 
       setAdminStatus(`Intaking batch 2/2 (${batch2.length} brands)…`);
-      const { data: r2, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch2 } });
+      const { data: r2, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch2, auto_approve: true } });
       if (e2) {
         const detail = await (e2 as any).context?.json?.().catch(() => null);
         throw new Error(detail?.error ?? e2.message);
       }
 
       const allResults = [...(r1?.results ?? []), ...(r2?.results ?? [])];
-      const queued = allResults.filter((r: any) => r.action === 'queued_for_review').length;
+      const approved = allResults.filter((r: any) => r.action === 'auto_approved').length;
       const skipped = allResults.filter((r: any) => r.action?.startsWith('skipped')).length;
-      setAdminStatus(`✓ Done — ${queued} queued for review, ${skipped} skipped`);
+      const totalProducts = allResults.reduce((n: number, r: any) => n + (r.count ?? 0), 0);
+      setAdminStatus(`✓ Done — ${approved} brands approved, ${totalProducts} products added, ${skipped} skipped`);
     } catch (e: any) {
       setAdminStatus(`✗ Hand-picked intake failed: ${e?.message ?? String(e)}`);
     }
