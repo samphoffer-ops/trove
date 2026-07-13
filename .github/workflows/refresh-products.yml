@@ -1,0 +1,31 @@
+name: Daily product refresh
+
+# Runs every morning at 6:00 UTC (2 AM EST / 11 PM PST).
+# Re-scrapes all currently-approved brands and upserts their products —
+# catches new arrivals, price changes, and removed items.
+# Can also be triggered manually from the Actions tab.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+env:
+  SUPABASE_URL: https://xxyserlkigllpmtxzlsa.supabase.co
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eXNlcmxraWdsbHBtdHh6bHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjQ2NzEsImV4cCI6MjA5NzIwMDY3MX0.69xsoMopJi39sCbHmQZC3I-AeZiP-aKg9KQns4CS6uk
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh all approved brand products
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"action": "refresh_all"}' \
+            --max-time 300 \
+            | tee refresh.json
+          echo ""
+          echo "Refreshed: $(jq '.results | length' refresh.json 2>/dev/null || echo 'unknown') brands"
