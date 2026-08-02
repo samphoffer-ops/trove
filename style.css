@@ -75,7 +75,41 @@ img {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--bg);
+  background: var(--ink);
+}
+
+.feed-top-bar {
+  padding: 16px 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feed-logo {
+  width: 84px;
+  height: 22px;
+  overflow: visible;
+}
+
+.feed-inbox-btn {
+  color: rgba(255,255,255,0.9);
+}
+
+.feed-inbox-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Chips on the dark feed header need inverse colour treatment */
+.feed-header .chip {
+  border-color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.58);
+}
+
+.feed-header .chip.active {
+  background: var(--accent-lime);
+  border-color: var(--accent-lime);
+  color: var(--ink);
 }
 
 .top-bar {

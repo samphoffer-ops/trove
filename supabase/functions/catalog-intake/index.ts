@@ -718,7 +718,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
             continue;
           }
           // Hand-picked path: promote straight to approved and scrape products now.
-          await admin.from('brands').update({ status: 'approved' }).eq('id', existing.id);
+          await admin.from('brands').update({ status: 'approved', hand_picked: true }).eq('id', existing.id);
           const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
           const autoProducts = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
           if (autoProducts.length > 0) {
@@ -777,6 +777,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         matched_categories: judgment.matched_categories ?? [],
         matched_styles: judgment.matched_styles ?? [],
         audience: judgment.audience ?? null,
+        hand_picked: !!body.auto_approve,
       }, { onConflict: 'domain' }).select().single();
 
       if (body.auto_approve && brandRow) {

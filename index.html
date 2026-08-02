@@ -29,8 +29,14 @@
     <!-- FEED -->
     <section id="feed" class="screen">
       <div class="feed-header">
-        <div class="top-bar">
-          <h1>For You</h1>
+        <div class="feed-top-bar">
+          <!-- Trove wordmark -->
+          <svg class="feed-logo" viewBox="0 0 84 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Trove">
+            <text x="0" y="18" font-family="Mulish, sans-serif" font-weight="900" font-size="20" letter-spacing="-0.04em" fill="#FFF8F0">trove</text>
+          </svg>
+          <button class="icon-btn feed-inbox-btn" id="feed-inbox-btn" aria-label="Inbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </button>
         </div>
         <div class="chip-row" id="feed-chips"></div>
       </div>

@@ -27,7 +27,7 @@ function fetchWithTimeout(url: string, init: RequestInit = {}) {
 interface Candidate {
   name: string;
   domain: string;
-  source: 'seed' | 'editorial' | 'keyword' | 'nuuly';
+  source: 'hand_picked' | 'seed' | 'editorial' | 'keyword' | 'nuuly';
 }
 
 function cleanDomain(raw: string): string {
@@ -35,6 +35,39 @@ function cleanDomain(raw: string): string {
     .replace(/^https?:\/\//, '')
     .replace(/^www\./, '')
     .replace(/\/.*$/, '');
+}
+
+// ─── LAYER 0: HAND-PICKED BRAND SEEDS ───────────────────────────────────────
+// For each brand Sam has explicitly hand-picked, run a dedicated single-brand
+// Exa search. These are the strongest possible taste signal — not random
+// clusters of approved brands, but the specific labels Sam has curated.
+// Runs one search per brand in parallel (no cluster budget to worry about).
+
+async function discoverFromHandPicked(
+  exaKey: string,
+  handPickedBrands: { name: string; domain: string }[],
+  rejectedNames: string[],
+  knownDomains: Set<string>,
+): Promise<Candidate[]> {
+  if (handPickedBrands.length === 0) return [];
+  const results = await Promise.allSettled(
+    handPickedBrands.map(brand =>
+      searchExaStorefronts(
+        exaKey,
+        `independent brand with the same aesthetic, craft quality, and downtown point of view as ${brand.name} — same vibe, DTC, founder-led, not mall-owned or mass-distributed`,
+        rejectedNames,
+      ).then(found =>
+        found
+          .filter(b => !knownDomains.has(b.domain))
+          .map(b => ({ ...b, source: 'hand_picked' as const })),
+      ),
+    ),
+  );
+  const candidates: Candidate[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') candidates.push(...result.value);
+  }
+  return candidates;
 }
 
 // ─── LAYER 1: SEED-BASED ────────────────────────────────────────────────────
@@ -412,20 +445,23 @@ Deno.serve(async (req) => {
       return respond({ error: 'EXA_API_KEY secret not configured' }, 500);
     }
 
-    // Pull current brand state — all three queries in parallel
+    // Pull current brand state — all four queries in parallel
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    const [{ data: allBrands }, { data: rejectedBrands }, { data: approvedBrands }] = await Promise.all([
+    const [{ data: allBrands }, { data: rejectedBrands }, { data: approvedBrands }, { data: handPickedBrands }] = await Promise.all([
       admin.from('brands').select('domain'),
       admin.from('brands').select('name').eq('status', 'rejected').order('created_at', { ascending: false }).limit(100),
       admin.from('brands').select('name, domain').eq('status', 'approved').limit(200),
+      admin.from('brands').select('name, domain').eq('status', 'approved').eq('hand_picked', true),
     ]);
 
     const knownDomains = new Set((allBrands ?? []).map(b => cleanDomain(b.domain)));
     const rejectedNames = (rejectedBrands ?? []).map(b => b.name).filter(Boolean);
     const approved = (approvedBrands ?? []) as { name: string; domain: string }[];
+    const handPicked = (handPickedBrands ?? []) as { name: string; domain: string }[];
 
-    // Layers 1, 2, 4 run in parallel (all independent)
-    const [seedCandidates, editorialCandidates, nuulyCandidates] = await Promise.all([
+    // Layers 0, 1, 2, 4 run in parallel (all independent)
+    const [handPickedCandidates, seedCandidates, editorialCandidates, nuulyCandidates] = await Promise.all([
+      discoverFromHandPicked(exaKey, handPicked, rejectedNames, knownDomains),
       discoverFromSeeds(exaKey, approved, rejectedNames, knownDomains),
       anthropicKey
         ? discoverFromEditorial(exaKey, anthropicKey, knownDomains, rejectedNames)
@@ -435,19 +471,20 @@ Deno.serve(async (req) => {
         : Promise.resolve([] as Candidate[]),
     ]);
 
-    // Layer 3: keyword fallback — exclude anything layers 1+2+4 already found
+    // Layer 3: keyword fallback — exclude anything layers 0+1+2+4 already found
     const alreadyFound = new Set([
       ...knownDomains,
+      ...handPickedCandidates.map(c => c.domain),
       ...seedCandidates.map(c => c.domain),
       ...editorialCandidates.map(c => c.domain),
       ...nuulyCandidates.map(c => c.domain),
     ]);
     const keywordCandidates = await discoverFromKeywords(exaKey, rejectedNames, alreadyFound);
 
-    // Final dedup across all four layers
+    // Final dedup — hand-picked candidates first (highest signal, so they win any domain collision)
     const seenDomains = new Set<string>();
     const candidates: Candidate[] = [];
-    for (const c of [...seedCandidates, ...editorialCandidates, ...nuulyCandidates, ...keywordCandidates]) {
+    for (const c of [...handPickedCandidates, ...seedCandidates, ...editorialCandidates, ...nuulyCandidates, ...keywordCandidates]) {
       const domain = cleanDomain(c.domain);
       if (!domain || seenDomains.has(domain) || knownDomains.has(domain)) continue;
       seenDomains.add(domain);
@@ -457,13 +494,15 @@ Deno.serve(async (req) => {
     return respond({
       found_new: candidates.length,
       breakdown: {
-        seed:       seedCandidates.filter(c => !knownDomains.has(c.domain)).length,
-        editorial:  editorialCandidates.filter(c => !knownDomains.has(c.domain)).length,
-        nuuly:      nuulyCandidates.filter(c => !knownDomains.has(c.domain)).length,
-        keyword:    keywordCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        hand_picked: handPickedCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        seed:        seedCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        editorial:   editorialCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        nuuly:       nuulyCandidates.filter(c => !knownDomains.has(c.domain)).length,
+        keyword:     keywordCandidates.filter(c => !knownDomains.has(c.domain)).length,
       },
       context: {
         approved_seeds: approved.length,
+        hand_picked_seeds: handPicked.length,
         rejected_anti_examples: rejectedNames.length,
         editorial_enabled: !!anthropicKey,
       },

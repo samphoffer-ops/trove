@@ -52,14 +52,18 @@ export default function Settings() {
     'secondskinltd.com',     // Second Skin LTD
     'california-arts.com',   // California Arts
     'motherdenim.com',       // Mother Denim
+    'vitosnewyork.com',      // Vito's New York
+    'pearledivory.com',      // Pearled Ivory
+    'amundsen.com',          // Amundsen Sports
+    'freepeople.com',        // Free People
   ];
 
   async function runHandPickedIntake() {
     setAdminRunning(true);
     try {
       // Split into two batches to stay under the Edge Function timeout
-      const batch1 = HAND_PICKED_DOMAINS.slice(0, 6);
-      const batch2 = HAND_PICKED_DOMAINS.slice(6);
+      const batch1 = HAND_PICKED_DOMAINS.slice(0, 10);
+      const batch2 = HAND_PICKED_DOMAINS.slice(10);
 
       setAdminStatus(`Intaking batch 1/2 (${batch1.length} brands)…`);
       const { data: r1, error: e1 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch1, auto_approve: true } });
