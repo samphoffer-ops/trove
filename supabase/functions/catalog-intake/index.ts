@@ -645,7 +645,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const offset = body.refresh_offset ?? 0;
       const limit  = body.refresh_limit  ?? 5;
       const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved')
-        .order('updated_at', { ascending: true })
+        .order('created_at', { ascending: true })
         .range(offset, offset + limit - 1);
       body.domains = (approved ?? []).map((b: { domain: string }) => b.domain);
     }

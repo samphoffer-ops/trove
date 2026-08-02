@@ -52,10 +52,12 @@ export default function Settings() {
     'secondskinltd.com',     // Second Skin LTD
     'california-arts.com',   // California Arts
     'motherdenim.com',       // Mother Denim
-    'vitosnewyork.com',      // Vito's New York
-    'pearledivory.com',      // Pearled Ivory
-    'amundsen.com',          // Amundsen Sports
-    'freepeople.com',        // Free People
+    'vitosnewyork.com',         // Vito's New York
+    'pearledivory.com',         // Pearled Ivory
+    'amundsen.com',             // Amundsen Sports
+    'freepeople.com',           // Free People
+    'freemanssportingclub.com', // Freeman's Sporting Club
+    'freeagencynewyork.com',    // Free Agency New York
   ];
 
   async function runHandPickedIntake() {
