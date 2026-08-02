@@ -30,6 +30,8 @@ export interface Product {
   brand_id?: string;
   source?: 'manual' | 'auto_scrape';
   status?: 'active' | 'stale' | 'removed';
+  created_at?: string;
+  last_seen_at?: string;
 }
 
 export interface Brand {

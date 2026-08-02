@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,10 +17,13 @@ import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
 
-const CATEGORIES = [
-  { id: 'all', label: 'all' },
-  ...ONBOARDING_STEPS[2].options.map(o => ({ id: o.id, label: o.label })),
-];
+const CHIPS = [
+  { id: 'explore',  label: 'explore'  },
+  { id: 'new',      label: 'new'      },
+  { id: 'trending', label: 'trending' },
+] as const;
+
+type ChipId = typeof CHIPS[number]['id'];
 
 const PAGE_SIZE = 30;
 
@@ -28,15 +32,43 @@ export default function FeedScreen() {
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
-  const [activeCategory, setActiveCategory] = useState('all');
+  const { boards } = useBoardStore();
+  const [activeChip, setActiveChip] = useState<ChipId>('explore');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [viewingStrip, setViewingStrip] = useState<typeof EDITORIAL_STRIPS[number] | null>(null);
 
-  const { products, hasMore } = getProducts({ category: activeCategory, perPage: visibleCount });
+  // Board save counts — used to rank Trending
+  const saveCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const board of boards) {
+      for (const item of board.board_items ?? []) {
+        counts.set(item.product_id, (counts.get(item.product_id) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [boards]);
 
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeCategory]);
+  const visibleProducts = useMemo(() => {
+    const base = allProducts.filter(p => !notInterestedIds.has(p.id));
+    if (activeChip === 'new') {
+      return [...base].sort((a, b) =>
+        (b.created_at ?? '').localeCompare(a.created_at ?? '')
+      );
+    }
+    if (activeChip === 'trending') {
+      return [...base].sort((a, b) =>
+        (saveCounts.get(b.id) ?? 0) - (saveCounts.get(a.id) ?? 0)
+      );
+    }
+    return base; // explore — store order (ranked by taste)
+  }, [allProducts, notInterestedIds, activeChip, saveCounts]);
+
+  const pagedProducts = visibleProducts.slice(0, visibleCount);
+  const hasMore = visibleCount < visibleProducts.length;
+
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip]);
   useEffect(() => { fetchInbox(); fetchProducts(); }, []);
 
   function handleScroll(e: any) {
@@ -44,6 +76,11 @@ export default function FeedScreen() {
     if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
       setVisibleCount(c => c + PAGE_SIZE);
     }
+  }
+
+  function handleSave(product: Product) {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSaveTarget(product);
   }
 
   const onRefresh = useCallback(async () => {
@@ -69,24 +106,24 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* Category chips on ink */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} scrollsToTop={false}>
-          {CATEGORIES.map(cat => (
+        {/* Feed mode chips */}
+        <View style={styles.chips}>
+          {CHIPS.map(chip => (
             <Pressable
-              key={cat.id}
-              style={[styles.chip, activeCategory === cat.id && styles.chipActive]}
-              onPress={() => setActiveCategory(cat.id)}
+              key={chip.id}
+              style={[styles.chip, activeChip === chip.id && styles.chipActive]}
+              onPress={() => setActiveChip(chip.id)}
             >
-              <Text style={[styles.chipText, activeCategory === cat.id && styles.chipTextActive]}>
-                {cat.label}
+              <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
+                {chip.label}
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
         </View>
       </View>
 
-      {/* Expanded strip view */}
+      {/* Expanded strip view (explore only) */}
       {viewingStrip ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
           <View style={[styles.expandedHeader, { backgroundColor: viewingStrip.bg }]}>
@@ -99,7 +136,7 @@ export default function FeedScreen() {
           <MasonryGrid
             items={allProducts.filter(viewingStrip.filter)}
             keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} />}
           />
         </ScrollView>
       ) : (
@@ -111,14 +148,12 @@ export default function FeedScreen() {
           onScroll={handleScroll}
           scrollEventThrottle={200}
         >
-          {/* Editorial strips */}
-          {activeCategory === 'all' && EDITORIAL_STRIPS.map((strip, idx) => {
+          {/* Editorial strips — explore mode only */}
+          {activeChip === 'explore' && EDITORIAL_STRIPS.map((strip) => {
             const items = allProducts.filter(strip.filter).slice(0, 10);
             if (!items.length) return null;
             return (
               <View key={strip.title}>
-                {/* Full-bleed editorial section card — bg bleeds edge-to-edge,
-                    inner content aligns to the same column as the header logo */}
                 <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
                   <View style={styles.editorialCardContent}>
                     <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
@@ -126,28 +161,26 @@ export default function FeedScreen() {
                     <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
                   </View>
                 </Pressable>
-
-                {/* Product rail — wrapper aligns left edge with content column */}
                 <View style={styles.stripWrapper}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll} scrollsToTop={false}>
-                  {items.map(p => (
-                    <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
-                      <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                      <View style={styles.stripInfo}>
-                        <Text style={styles.stripBrand} numberOfLines={1}>{p.brand}</Text>
-                        <Text style={styles.stripName} numberOfLines={2}>{p.name}</Text>
-                        <Text style={styles.stripPrice}>${p.price}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll} scrollsToTop={false}>
+                    {items.map(p => (
+                      <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
+                        <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                        <View style={styles.stripInfo}>
+                          <Text style={styles.stripBrand} numberOfLines={1}>{p.brand}</Text>
+                          <Text style={styles.stripName} numberOfLines={2}>{p.name}</Text>
+                          <Text style={styles.stripPrice}>${p.price}</Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
                 </View>
               </View>
             );
           })}
 
           {/* Divider before main grid */}
-          {activeCategory === 'all' && allProducts.length > 0 && (
+          {activeChip === 'explore' && allProducts.length > 0 && (
             <View style={styles.gridDivider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerLabel}>everything</Text>
@@ -155,13 +188,23 @@ export default function FeedScreen() {
             </View>
           )}
 
-          {/* Main masonry feed */}
+          {/* Main masonry grid */}
           <MasonryGrid
-            items={products}
+            items={pagedProducts}
             keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} />}
           />
-          {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
+
+          {hasMore
+            ? <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />
+            : pagedProducts.length > 0
+              ? <View style={styles.caughtUp}>
+                  <View style={styles.caughtUpLine} />
+                  <Text style={styles.caughtUpText}>you're all caught up</Text>
+                  <View style={styles.caughtUpLine} />
+                </View>
+              : null
+          }
         </ScrollView>
       )}
 
@@ -190,9 +233,9 @@ const styles = StyleSheet.create({
   },
   badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
 
-  chips: { paddingHorizontal: 16, paddingTop: 2, paddingBottom: 14, gap: Spacing[3] },
+  chips: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 2, paddingBottom: 14, gap: Spacing[3] },
   chip:  {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical:   Spacing[2],
     borderRadius:      Radius.full,
     borderWidth:       1,
@@ -201,6 +244,17 @@ const styles = StyleSheet.create({
   chipActive:     { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
   chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
   chipTextActive: { color: Colors.ink },
+
+  caughtUp: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    paddingHorizontal: 24,
+    marginTop:      24,
+    marginBottom:   40,
+    gap:            12,
+  },
+  caughtUpLine: { flex: 1, height: 0.5, backgroundColor: Colors.border },
+  caughtUpText: { ...Typography.label, color: Colors.textMuted, letterSpacing: 0.4 },
 
   // Expanded strip view header
   expandedHeader: {

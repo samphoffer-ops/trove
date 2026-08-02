@@ -100,10 +100,18 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   },
 }));
 
-export function getProducts({ category = 'all', query = '', page = 1, perPage = 30 } = {}) {
+export function getProducts({
+  category = 'all', query = '', page = 1, perPage = 30,
+  minPrice, maxPrice,
+}: {
+  category?: string; query?: string; page?: number; perPage?: number;
+  minPrice?: number; maxPrice?: number;
+} = {}) {
   const { products, notInterestedIds } = useProductsStore.getState();
   let list = products.filter(p => !notInterestedIds.has(p.id));
   list = category === 'all' ? list : list.filter(p => p.category === category);
+  if (minPrice != null) list = list.filter(p => p.price >= minPrice!);
+  if (maxPrice != null) list = list.filter(p => p.price <= maxPrice!);
   if (query) {
     const q = query.toLowerCase();
     list = list.filter(p =>
