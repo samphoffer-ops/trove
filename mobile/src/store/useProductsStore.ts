@@ -5,9 +5,11 @@ import { Product } from '@/types';
 interface ProductsState {
   products: Product[];
   notInterestedIds: Set<string>;
+  trendingCounts: Map<string, number>; // platform-wide save counts
   loading: boolean;
   loaded: boolean;
   fetchProducts: () => Promise<void>;
+  fetchTrendingCounts: () => Promise<void>;
   markNotInterested: (product: Product) => Promise<void>;
 }
 
@@ -53,6 +55,7 @@ function interleaveByBrand(products: Product[]): Product[] {
 export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   notInterestedIds: new Set(),
+  trendingCounts: new Map(),
   loading: false,
   loaded: false,
 
@@ -85,6 +88,18 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
       : interleaveByBrand((productsRes.data ?? []) as Product[]);
     set({ products, notInterestedIds, loading: false, loaded: true });
+  },
+
+  // Platform-wide save counts — fetched once, used to blend global popularity
+  // into the Trending sort alongside the current user's personal saves.
+  async fetchTrendingCounts() {
+    const { data } = await supabase.from('board_items').select('product_id');
+    if (!data) return;
+    const counts = new Map<string, number>();
+    for (const row of data) {
+      counts.set(row.product_id, (counts.get(row.product_id) ?? 0) + 1);
+    }
+    set({ trendingCounts: counts });
   },
 
   // Hides the product from the feed immediately (this session and every

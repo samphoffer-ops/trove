@@ -31,7 +31,7 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
-  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
+  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts } = useProductsStore();
   const { boards } = useBoardStore();
   const [activeChip, setActiveChip] = useState<ChipId>('explore');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
@@ -58,18 +58,21 @@ export default function FeedScreen() {
       );
     }
     if (activeChip === 'trending') {
-      return [...base].sort((a, b) =>
-        (saveCounts.get(b.id) ?? 0) - (saveCounts.get(a.id) ?? 0)
-      );
+      // Blend: platform-wide saves (global popularity) + personal saves × 2
+      // (your taste amplifies the signal). As more users join, the global
+      // count becomes increasingly meaningful on its own.
+      const score = (id: string) =>
+        (trendingCounts.get(id) ?? 0) + (saveCounts.get(id) ?? 0) * 2;
+      return [...base].sort((a, b) => score(b.id) - score(a.id));
     }
     return base; // explore — store order (ranked by taste)
-  }, [allProducts, notInterestedIds, activeChip, saveCounts]);
+  }, [allProducts, notInterestedIds, activeChip, saveCounts, trendingCounts]);
 
   const pagedProducts = visibleProducts.slice(0, visibleCount);
   const hasMore = visibleCount < visibleProducts.length;
 
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip]);
-  useEffect(() => { fetchInbox(); fetchProducts(); }, []);
+  useEffect(() => { fetchInbox(); fetchProducts(); fetchTrendingCounts(); }, []);
 
   function handleScroll(e: any) {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
