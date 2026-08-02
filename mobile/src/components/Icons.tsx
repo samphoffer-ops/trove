@@ -1,10 +1,8 @@
 import Svg, { Path, Rect, Circle, Line } from 'react-native-svg';
 
-const SIZE = 22;
-
-export function GridIcon({ color }: { color: string }) {
+export function GridIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Rect x="3" y="3" width="7" height="7" rx="1.5" />
       <Rect x="14" y="3" width="7" height="7" rx="1.5" />
       <Rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -13,9 +11,9 @@ export function GridIcon({ color }: { color: string }) {
   );
 }
 
-export function BoardsIcon({ color }: { color: string }) {
+export function BoardsIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Rect x="3" y="3" width="18" height="18" rx="2" />
       <Path d="M3 9h18" />
       <Path d="M9 21V9" />
@@ -23,18 +21,18 @@ export function BoardsIcon({ color }: { color: string }) {
   );
 }
 
-export function SearchIcon({ color }: { color: string }) {
+export function SearchIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Circle cx="11" cy="11" r="7" />
       <Path d="M21 21l-4.35-4.35" />
     </Svg>
   );
 }
 
-export function ProfileIcon({ color }: { color: string }) {
+export function ProfileIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <Svg width={SIZE} height={SIZE} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <Circle cx="12" cy="8" r="4" />
       <Path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
     </Svg>

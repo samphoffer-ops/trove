@@ -635,11 +635,18 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       return respond({ updated, failed }, 200);
     }
 
-    // Convenience action: re-scrape all currently-approved brands without
-    // having to look up their domains first. { "action": "refresh_all" }
+    // Convenience action: re-scrape currently-approved brands.
+    // Supports optional offset + limit for paginated batching from the
+    // GitHub Actions workflow — calling this in one shot on a large catalog
+    // hits Supabase's 150s idle timeout.
+    // { "action": "refresh_all", "refresh_offset": 0, "refresh_limit": 5 }
     if (body.action === 'refresh_all') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-      const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved');
+      const offset = body.refresh_offset ?? 0;
+      const limit  = body.refresh_limit  ?? 5;
+      const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved')
+        .order('updated_at', { ascending: true })
+        .range(offset, offset + limit - 1);
       body.domains = (approved ?? []).map((b: { domain: string }) => b.domain);
     }
 

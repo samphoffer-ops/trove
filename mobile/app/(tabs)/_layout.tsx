@@ -18,7 +18,7 @@ export default function TabsLayout() {
         tabBarStyle: [styles.tabBar, tabHPad > 0 && { paddingHorizontal: tabHPad }],
         tabBarBackground: () => <View style={styles.tabBg} />,
         tabBarActiveTintColor:   Colors.accentLime,
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.35)',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',
         tabBarLabelStyle: styles.label,
         tabBarShowLabel: true,
       }}
@@ -27,28 +27,28 @@ export default function TabsLayout() {
         name="feed"
         options={{
           title: 'feed',
-          tabBarIcon: ({ color }) => <GridIcon color={color} />,
+          tabBarIcon: ({ color, size }) => <GridIcon color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="boards"
         options={{
           title: 'boards',
-          tabBarIcon: ({ color }) => <BoardsIcon color={color} />,
+          tabBarIcon: ({ color, size }) => <BoardsIcon color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: 'search',
-          tabBarIcon: ({ color }) => <SearchIcon color={color} />,
+          tabBarIcon: ({ color, size }) => <SearchIcon color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'profile',
-          tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
+          tabBarIcon: ({ color, size }) => <ProfileIcon color={color} size={size} />,
         }}
       />
     </Tabs>

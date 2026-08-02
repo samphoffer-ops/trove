@@ -4,6 +4,10 @@ name: Daily product refresh
 # Re-scrapes all currently-approved brands and upserts their products —
 # catches new arrivals, price changes, and removed items.
 # Can also be triggered manually from the Actions tab.
+#
+# Batches of 5 brands per call (each call ~45s), covering up to 50 brands
+# total. Supabase Edge Functions have a 150s idle timeout — a single
+# refresh_all call on a large catalog times out silently.
 
 on:
   schedule:
@@ -18,14 +22,26 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
-      - name: Refresh all approved brand products
+      - name: Refresh brands in batches of 5
         run: |
-          curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"action": "refresh_all"}' \
-            --max-time 300 \
-            | tee refresh.json
+          TOTAL=0
+          for OFFSET in 0 5 10 15 20 25 30 35 40 45; do
+            echo "Batch offset=$OFFSET"
+            RESULT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"action\": \"refresh_all\", \"refresh_offset\": $OFFSET, \"refresh_limit\": 5}" \
+              --max-time 120 || echo '{"results":[]}')
+            echo "$RESULT"
+            COUNT=$(echo "$RESULT" | jq '.results | length' 2>/dev/null || echo 0)
+            echo "  → $COUNT brands in this batch"
+            TOTAL=$((TOTAL + COUNT))
+            # Stop early if this batch came back empty (no more brands)
+            if [ "$COUNT" = "0" ]; then
+              break
+            fi
+            sleep 5
+          done
           echo ""
-          echo "Refreshed: $(jq '.results | length' refresh.json 2>/dev/null || echo 'unknown') brands"
+          echo "Total brands refreshed: $TOTAL"
