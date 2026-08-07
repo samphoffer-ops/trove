@@ -718,7 +718,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
             continue;
           }
           // Hand-picked path: promote straight to approved and scrape products now.
-          await admin.from('brands').update({ status: 'approved', hand_picked: true }).eq('id', existing.id);
+          const { error: promoteError } = await admin.from('brands').update({ status: 'approved', hand_picked: true }).eq('id', existing.id);
+          if (promoteError) {
+            results.push({ domain, action: 'db_error_promote', error: promoteError.message });
+            continue;
+          }
           const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
           const autoProducts = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
           if (autoProducts.length > 0) {
@@ -767,7 +771,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         .replace(/\b\w/g, c => c.toUpperCase());
 
       const finalStatus = body.auto_approve ? 'approved' : 'pending_review';
-      const { data: brandRow } = await admin.from('brands').upsert({
+      const { data: brandRow, error: upsertError } = await admin.from('brands').upsert({
         name: brandName,
         domain,
         status: finalStatus,
@@ -779,6 +783,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         audience: judgment.audience ?? null,
         hand_picked: !!body.auto_approve,
       }, { onConflict: 'domain' }).select().single();
+
+      if (upsertError) {
+        results.push({ domain, action: 'db_error_upsert', error: upsertError.message });
+        continue;
+      }
 
       if (body.auto_approve && brandRow) {
         const filteredProducts = products.filter(p => !isExcludedProduct(p.name));
