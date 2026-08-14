@@ -478,6 +478,21 @@ function respond(body: unknown, status = 200): Response {
   });
 }
 
+// Server-side admin check for actions that write data (review_decision) or
+// expose pre-review brand reasoning (list_pending) — brands.judge_reasoning
+// for pending/rejected brands isn't public (RLS only exposes approved), so
+// this can't be a client-side isAdmin check alone. Verifies the caller's own
+// session JWT against their actual email, via Supabase Auth, not a
+// client-supplied flag.
+const ADMIN_EMAIL = 'samphoffer@gmail.com';
+async function requireAdmin(req: Request, admin: ReturnType<typeof createClient>): Promise<{ id: string } | null> {
+  const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!jwt) return null;
+  const { data, error } = await admin.auth.getUser(jwt);
+  if (error || !data.user || data.user.email !== ADMIN_EMAIL) return null;
+  return { id: data.user.id };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return respond({}, 200);
   try {
@@ -486,6 +501,51 @@ Deno.serve(async (req) => {
     if (body.action === 'summary') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       return respond(await getSummary(admin));
+    }
+
+    // List brands awaiting review — used by the in-app review queue.
+    if (body.action === 'list_pending') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const caller = await requireAdmin(req, admin);
+      if (!caller) return respond({ error: 'Unauthorized' }, 403);
+
+      const { data, error } = await admin
+        .from('brands')
+        .select('id, name, domain, platform, judge_confidence, judge_reasoning, matched_categories, matched_styles, audience, created_at')
+        .eq('status', 'pending_review')
+        .order('created_at', { ascending: false });
+      if (error) return respond({ error: error.message }, 500);
+      return respond({ brands: data ?? [] });
+    }
+
+    // Approve or reject a pending brand from the review queue. The
+    // status='pending_review' guard on the update means a double-tap or a
+    // stale client list can't re-decide something already resolved.
+    if (body.action === 'review_decision') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const caller = await requireAdmin(req, admin);
+      if (!caller) return respond({ error: 'Unauthorized' }, 403);
+
+      const { brand_id, decision } = body;
+      if (!brand_id || (decision !== 'approve' && decision !== 'reject')) {
+        return respond({ error: 'Provide brand_id and decision ("approve"|"reject")' }, 400);
+      }
+
+      const status = decision === 'approve' ? 'approved' : 'rejected';
+      const { data, error } = await admin
+        .from('brands')
+        .update({
+          status,
+          approved_by: decision === 'approve' ? caller.id : null,
+          approved_at: decision === 'approve' ? new Date().toISOString() : null,
+        })
+        .eq('id', brand_id)
+        .eq('status', 'pending_review')
+        .select()
+        .maybeSingle();
+      if (error) return respond({ error: error.message }, 500);
+      if (!data) return respond({ error: 'Brand was already decided or not found' }, 409);
+      return respond({ ok: true, status });
     }
 
     // One-off cleanup action for brands named before the judge started
