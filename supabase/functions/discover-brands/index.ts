@@ -34,6 +34,9 @@ const FETCH_TIMEOUT_MS = 12000;
 function fetchWithTimeout(url: string, init: RequestInit = {}) {
   return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 interface Candidate {
   name: string;
@@ -284,13 +287,13 @@ async function discoverFromEditorial(
           max_tokens: 800,
           messages: [{
             role: 'user',
-            content: `Extract independent fashion/lifestyle brand names and their most likely website domains from this editorial content. Only include actual brands (not publications, department stores, or multi-brand retailers). For each brand, predict the most likely bare domain (usually brandname.com or brand-name.com).${antiExamplesBlock}
+            content: `Extract independent fashion/lifestyle brand names mentioned in this editorial content. Only include actual brands (not publications, department stores, or multi-brand retailers).${antiExamplesBlock}
 
 Content:
 ${combinedText}
 
-Respond ONLY with a JSON array — no other text:
-[{"name": "Brand Name", "domain": "brandname.com"}, ...]
+Respond ONLY with a JSON array of brand names — no other text:
+["Brand Name", ...]
 
 If no qualifying brands found, respond with [].`,
           }],
@@ -303,11 +306,17 @@ If no qualifying brands found, respond with [].`,
       const match = text.match(/\[[\s\S]*\]/);
       if (!match) continue;
 
-      const extracted: { name: string; domain: string }[] = JSON.parse(match[0]);
-      for (const b of extracted) {
-        const domain = cleanDomain(b.domain);
-        if (domain && b.name && !knownDomains.has(domain)) {
-          candidates.push({ name: b.name, domain, source: 'editorial' });
+      // Capped — this loop now makes one Exa call per name (see
+      // resolveDomainForBrand), and this runs once per editorial query
+      // (6 total), so an uncapped list here could push total execution
+      // time toward the platform limit.
+      const names: string[] = JSON.parse(match[0]).slice(0, 8);
+      for (const name of names) {
+        if (!name) continue;
+        await sleep(300);
+        const domain = await resolveDomainForBrand(exaKey, name);
+        if (domain && !knownDomains.has(domain)) {
+          candidates.push({ name, domain, source: 'editorial' });
         }
       }
     } catch { /* skip failed editorial query */ }
@@ -422,6 +431,44 @@ async function searchExaStorefronts(
     .filter((b: { name: string; domain: string }) => b.name && b.domain);
 }
 
+// Resolves a known brand NAME to its real domain via Exa's own search +
+// extraction, rather than trusting an LLM's guessed "brandname.com". The
+// editorial and Nuuly layers used to ask Claude to predict a domain directly
+// from a brand name mentioned in text — measured 0% of those guesses ever
+// resolved to a real scrapeable storefront (42 candidates, 0 reached the
+// judge), against 24–39% for layers that use Exa to find the real page.
+// This function gives editorial/Nuuly the same real-search treatment.
+async function resolveDomainForBrand(exaKey: string, brandName: string): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout('https://api.exa.ai/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
+      body: JSON.stringify({
+        query: `${brandName} official online store`,
+        type: 'auto',
+        numResults: 3,
+        systemPrompt: 'Return only the brand\'s own official storefront (where they sell directly) — never marketplaces, department stores, multi-brand retailers, listicle articles, or social media profiles. Extract the bare domain (no https://, no www, no path).',
+        outputSchema: {
+          type: 'object',
+          required: ['brands'],
+          properties: {
+            brands: {
+              type: 'array',
+              items: { type: 'object', required: ['domain'], properties: { domain: { type: 'string' } } },
+            },
+          },
+        },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const domain = data.output?.content?.brands?.[0]?.domain;
+    return domain ? cleanDomain(domain) : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── LAYER 4: NUULY ─────────────────────────────────────────────────────────
 //
 // Nuuly (nuuly.com) carries hundreds of independent brands alongside the URBN
@@ -488,15 +535,15 @@ Brand slugs extracted from nuuly.com URLs: ${[...brandSlugs].join(', ') || 'see 
 Page text:
 ${combinedText}${antiExamplesBlock}
 
-For each brand, provide their display name and most likely DTC website domain.
+Provide each brand's display name.
 
 SKIP these — they are URBN private labels or sub-brands, not independent:
 Anthropologie, Free People, Urban Outfitters, BHLDN, Maeve, Pilcro, Cloth & Stone,
 Sanctuary, Floreat, Holding Horses, Eliza J, Moon River, BB Dakota.
 Also skip any brand that is obviously mass-market, fast fashion, or not DTC.
 
-Respond ONLY with a JSON array — no other text:
-[{"name": "Brand Name", "domain": "brandname.com"}, ...]`,
+Respond ONLY with a JSON array of brand names — no other text:
+["Brand Name", ...]`,
         }],
       }),
     });
@@ -507,12 +554,14 @@ Respond ONLY with a JSON array — no other text:
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) return [];
 
-    const extracted: { name: string; domain: string }[] = JSON.parse(match[0]);
+    const names: string[] = JSON.parse(match[0]).slice(0, 15);
     const candidates: Candidate[] = [];
-    for (const b of extracted) {
-      const domain = cleanDomain(b.domain);
-      if (domain && b.name && !knownDomains.has(domain)) {
-        candidates.push({ name: b.name, domain, source: 'nuuly' });
+    for (const name of names) {
+      if (!name) continue;
+      await sleep(300);
+      const domain = await resolveDomainForBrand(exaKey, name);
+      if (domain && !knownDomains.has(domain)) {
+        candidates.push({ name, domain, source: 'nuuly' });
       }
     }
     return candidates;
@@ -538,6 +587,7 @@ function respond(body: unknown, status = 200): Response {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return respond({}, 200);
   try {
+    const body = await req.json().catch(() => ({}));
     const exaKey = Deno.env.get('EXA_API_KEY');
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!exaKey) {
@@ -565,14 +615,16 @@ Deno.serve(async (req) => {
     const tasteProfile = buildTasteProfile(approved);
     const rejectionPatterns = anthropicKey ? await summarizeRejectionPatterns(anthropicKey, rejected) : '';
 
-    // Layers 0, 1, 2, 4 run in parallel (all independent)
+    // Layers 0, 1, 2 run every time; Layer 4 (Nuuly) was a one-time bootstrap
+    // source, not meant to carry ongoing weight — only runs when explicitly
+    // requested via { "include_nuuly": true }, not on every regular call.
     const [handPickedCandidates, seedCandidates, editorialCandidates, nuulyCandidates] = await Promise.all([
       discoverFromHandPicked(exaKey, handPicked, rejectedNames, rejectionPatterns, knownDomains),
       discoverFromSeeds(exaKey, approved, rejectedNames, rejectionPatterns, tasteProfile, knownDomains),
       anthropicKey
         ? discoverFromEditorial(exaKey, anthropicKey, knownDomains, rejectedNames, rejectionPatterns)
         : Promise.resolve([] as Candidate[]),
-      anthropicKey
+      anthropicKey && body.include_nuuly
         ? discoverFromNuuly(exaKey, anthropicKey, knownDomains, rejectedNames, rejectionPatterns)
         : Promise.resolve([] as Candidate[]),
     ]);
