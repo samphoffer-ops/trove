@@ -1,3 +1,4 @@
+import { Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '@/lib/theme';
 
@@ -24,13 +25,15 @@ const VIEW_H = 32.77;
 interface Props {
   width?: number;
   color?: string;
+  onPress?: () => void;
 }
 
-export function Logo({ width = 134, color = Colors.text }: Props) {
+export function Logo({ width = 134, color = Colors.text, onPress }: Props) {
   const height = width * (VIEW_H / VIEW_W);
-  return (
+  const svg = (
     <Svg width={width} height={height} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}>
       {LETTER_PATHS.map((d, i) => <Path key={i} d={d} fill={color} />)}
     </Svg>
   );
+  return onPress ? <Pressable onPress={onPress} hitSlop={8}>{svg}</Pressable> : svg;
 }

@@ -1,24 +1,40 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Image } from 'expo-image';
+import { View, Text, Pressable, StyleSheet, Platform, GestureResponderEvent } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
 import { BookmarkIcon, CloseIcon } from './Icons';
+import { ImageGallery } from './ImageGallery';
 
 interface Props {
   product: Product;
   saved:   boolean;
   onSave:  (product: Product) => void;
   onNotInterested?: (product: Product) => void;
+  onQuickActions?: (product: Product, anchor: { x: number; y: number }) => void;
 }
 
-export function ProductCard({ product, saved, onSave, onNotInterested }: Props) {
+export function ProductCard({ product, saved, onSave, onNotInterested, onQuickActions }: Props) {
+  function handleLongPress(e: GestureResponderEvent) {
+    if (!onQuickActions) return;
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const { pageX, pageY } = e.nativeEvent;
+    onQuickActions(product, { x: pageX, y: pageY });
+  }
+
+  const photos = [product.image, ...(product.images ?? [])];
+
   return (
-    <Pressable style={styles.card} onPress={() => openProduct(product.id)}>
+    <Pressable
+      style={styles.card}
+      onPress={() => openProduct(product.id)}
+      onLongPress={handleLongPress}
+      delayLongPress={350}
+    >
       {/* Image IS the card — no white box wrapper */}
       <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
-        <Image source={{ uri: product.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <ImageGallery images={photos} aspectRatio={1 / product.ratio} />
 
         <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => onSave(product)} hitSlop={12}>
           <BookmarkIcon color={saved ? Colors.accent : '#fff'} filled={saved} size={14} />

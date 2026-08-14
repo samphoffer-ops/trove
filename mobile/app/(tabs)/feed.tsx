@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
 import { useProductsStore, getProducts } from '@/store/useProductsStore';
@@ -11,8 +12,10 @@ import { useShareStore } from '@/store/useShareStore';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
+import { ShareSheet } from '@/components/ShareSheet';
+import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Logo } from '@/components/Logo';
-import { InboxIcon, ChevronLeftIcon } from '@/components/Icons';
+import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
@@ -35,9 +38,20 @@ export default function FeedScreen() {
   const { boards } = useBoardStore();
   const [activeChip, setActiveChip] = useState<ChipId>('explore');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [shareTarget, setShareTarget] = useState<Product | null>(null);
+  const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [viewingStrip, setViewingStrip] = useState<typeof EDITORIAL_STRIPS[number] | null>(null);
+
+  // Ink masthead needs light status bar icons; other tabs sit on Colors.bg
+  // and use the dark default set in the root layout.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, [])
+  );
 
   // Board save counts — used to rank Trending
   const saveCounts = useMemo(() => {
@@ -85,6 +99,28 @@ export default function FeedScreen() {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSaveTarget(product);
   }
+
+  function handleQuickActions(product: Product, anchor: { x: number; y: number }) {
+    setQuickActions({ product, anchor });
+  }
+
+  const quickActionsList: QuickAction[] = quickActions ? [
+    {
+      key: 'save', label: 'Save',
+      icon: (color) => <BookmarkIcon color={color} size={18} />,
+      onPress: () => setSaveTarget(quickActions.product),
+    },
+    {
+      key: 'share', label: 'Share',
+      icon: (color) => <ShareIcon color={color} size={18} />,
+      onPress: () => setShareTarget(quickActions.product),
+    },
+    {
+      key: 'remove', label: 'Remove',
+      icon: (color) => <CloseIcon color={color} size={14} />,
+      onPress: () => markNotInterested(quickActions.product),
+    },
+  ] : [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -139,7 +175,7 @@ export default function FeedScreen() {
           <MasonryGrid
             items={allProducts.filter(viewingStrip.filter)}
             keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} />}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
           />
         </ScrollView>
       ) : (
@@ -195,7 +231,7 @@ export default function FeedScreen() {
           <MasonryGrid
             items={pagedProducts}
             keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} />}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
           />
 
           {hasMore
@@ -212,6 +248,12 @@ export default function FeedScreen() {
       )}
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
+      <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
+      <QuickActionsMenu
+        anchor={quickActions?.anchor ?? null}
+        actions={quickActionsList}
+        onDismiss={() => setQuickActions(null)}
+      />
     </View>
   );
 }

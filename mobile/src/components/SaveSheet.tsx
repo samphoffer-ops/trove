@@ -98,7 +98,11 @@ export function SaveSheet({ product, onClose }: Props) {
                 const coverItem = (board.board_items ?? [])[0];
                 const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
                 return (
-                  <Pressable key={board.id} style={styles.boardRow} onPress={() => handleToggle(board.id)}>
+                  <Pressable
+                    key={board.id}
+                    style={({ pressed }) => [styles.boardRow, pressed && styles.boardRowPressed]}
+                    onPress={() => handleToggle(board.id)}
+                  >
                     <View style={styles.boardCover}>
                       {coverImage ? (
                         <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -169,6 +173,7 @@ const styles = StyleSheet.create({
   boardRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
   },
+  boardRowPressed: { opacity: 0.6 },
   boardCover: {
     width: 48, height: 48, borderRadius: Radius.input,
     backgroundColor: Colors.stoneSoft, overflow: 'hidden',

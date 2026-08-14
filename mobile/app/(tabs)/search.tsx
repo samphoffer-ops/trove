@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
@@ -11,9 +12,11 @@ import { supabase } from '@/lib/supabase';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
+import { ShareSheet } from '@/components/ShareSheet';
+import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Product, Profile } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
-import { SearchIcon, CloseIcon } from '@/components/Icons';
+import { SearchIcon, CloseIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
 
 const PAGE_SIZE = 30;
@@ -25,9 +28,18 @@ export default function SearchScreen() {
   const { user } = useAuthStore();
   const [query,      setQuery]      = useState('');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [shareTarget, setShareTarget] = useState<Product | null>(null);
+  const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [people,     setPeople]     = useState<Profile[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, [])
+  );
 
   useEffect(() => { fetchProducts(); }, []);
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [query]);
@@ -56,6 +68,28 @@ export default function SearchScreen() {
   const { products, hasMore } = getProducts({ query, perPage: visibleCount });
   const hasQuery = query.trim().length > 0;
 
+  function handleQuickActions(product: Product, anchor: { x: number; y: number }) {
+    setQuickActions({ product, anchor });
+  }
+
+  const quickActionsList: QuickAction[] = quickActions ? [
+    {
+      key: 'save', label: 'Save',
+      icon: (color) => <BookmarkIcon color={color} size={18} />,
+      onPress: () => setSaveTarget(quickActions.product),
+    },
+    {
+      key: 'share', label: 'Share',
+      icon: (color) => <ShareIcon color={color} size={18} />,
+      onPress: () => setShareTarget(quickActions.product),
+    },
+    {
+      key: 'remove', label: 'Remove',
+      icon: (color) => <CloseIcon color={color} size={14} />,
+      onPress: () => markNotInterested(quickActions.product),
+    },
+  ] : [];
+
   function handleScroll(e: any) {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
     if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
@@ -67,7 +101,7 @@ export default function SearchScreen() {
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
-          <Logo width={72} color={Colors.bg} />
+          <Logo width={72} color={Colors.bg} onPress={() => router.push('/(tabs)/feed')} />
           <View style={styles.searchBar}>
             <SearchIcon color="rgba(255,255,255,0.45)" />
             <TextInput
@@ -129,7 +163,7 @@ export default function SearchScreen() {
                   items={products}
                   keyExtractor={p => p.id}
                   horizontalPadding={0}
-                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} />}
+                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
                 />
                 {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
               </>
@@ -139,6 +173,12 @@ export default function SearchScreen() {
       </ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
+      <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
+      <QuickActionsMenu
+        anchor={quickActions?.anchor ?? null}
+        actions={quickActionsList}
+        onDismiss={() => setQuickActions(null)}
+      />
     </View>
   );
 }

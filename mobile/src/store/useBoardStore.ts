@@ -80,21 +80,50 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   async addToBoard(boardId, product) {
+    // Optimistic: the save-sheet checkmark must fill on tap, not after the
+    // upsert + cover-update + refetch round trip resolves.
+    const existing = get().boards.find(b => b.id === boardId);
+    const needsCover = !!existing && !existing.cover_product_id;
+
+    set(state => ({
+      boards: state.boards.map(b => {
+        if (b.id !== boardId) return b;
+        const items = b.board_items ?? [];
+        if (items.some(i => i.product_id === product.id)) return b;
+        const optimisticItem = {
+          id: `optimistic-${product.id}`, board_id: boardId,
+          product_id: product.id, product_data: product,
+          purchased_at: null, created_at: new Date().toISOString(),
+        };
+        return {
+          ...b,
+          cover_product_id: b.cover_product_id ?? product.id,
+          board_items: [...items, optimisticItem],
+        };
+      }),
+    }));
+
     await supabase.from('board_items').upsert({
       board_id: boardId, product_id: product.id, product_data: product,
     });
-    const board = get().boards.find(b => b.id === boardId);
-    if (board && !board.cover_product_id) {
+    if (needsCover) {
       await supabase.from('boards').update({ cover_product_id: product.id }).eq('id', boardId);
     }
     await get().fetchBoards();
   },
 
   async removeFromBoard(boardId, productId) {
+    const wasCover = get().boards.find(b => b.id === boardId)?.cover_product_id === productId;
+
+    set(state => ({
+      boards: state.boards.map(b => b.id === boardId
+        ? { ...b, board_items: (b.board_items ?? []).filter(i => i.product_id !== productId) }
+        : b),
+    }));
+
     await supabase.from('board_items').delete()
       .eq('board_id', boardId).eq('product_id', productId);
-    const board = get().boards.find(b => b.id === boardId);
-    if (board?.cover_product_id === productId) {
+    if (wasCover) {
       const { data } = await supabase.from('board_items')
         .select('product_id').eq('board_id', boardId).limit(1);
       await supabase.from('boards')

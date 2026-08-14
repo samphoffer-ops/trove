@@ -1,21 +1,32 @@
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Colors, Typography } from '@/lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Spacing, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
 
 const CONTENT_MAX_WIDTH = 1100;
+const TAB_BAR_CONTENT_HEIGHT = 58;
 
 export default function TabsLayout() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   // On web, pad the tab items inward so they stay in the same content column
   // as the rest of the page — full-width ink background is handled by tabBg.
-  const tabHPad = Platform.OS === 'web' ? Math.max(0, (width - CONTENT_MAX_WIDTH) / 2) : 0;
+  const tabHPad = Platform.OS === 'web' ? Math.max(0, (width - CONTENT_MAX_WIDTH) / 2) : Spacing[5];
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [styles.tabBar, tabHPad > 0 && { paddingHorizontal: tabHPad }],
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height:        TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
+            paddingLeft:   insets.left + tabHPad,
+            paddingRight:  insets.right + tabHPad,
+          },
+        ],
         tabBarBackground: () => <View style={styles.tabBg} />,
         tabBarActiveTintColor:   Colors.accentLime,
         tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',

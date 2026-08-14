@@ -64,7 +64,7 @@ export default function ProfileScreen() {
     <View style={styles.root}>
       <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Logo width={72} color={Colors.text} />
+          <Logo width={72} color={Colors.text} onPress={() => router.push('/(tabs)/feed')} />
           <Text style={styles.pageLabel}>profile</Text>
         </View>
         <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={8}>
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
   titleRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
-  pageLabel:   { ...Typography.caption, color: Colors.textMuted, marginTop: 6, letterSpacing: 0.4 },
+  pageLabel:   { ...Typography.label, color: Colors.textMuted, marginTop: 6 },
   gearBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   content:     { paddingHorizontal: 20, paddingBottom: 100, maxWidth: 800, alignSelf: 'center', width: '100%' },
   hero:        { alignItems: 'center', paddingVertical: Spacing[6] },

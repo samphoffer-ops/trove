@@ -28,7 +28,7 @@ export default function BoardsScreen() {
     <View style={styles.root}>
       <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Logo width={72} color={Colors.text} />
+          <Logo width={72} color={Colors.text} onPress={() => router.push('/(tabs)/feed')} />
           <Text style={styles.pageLabel}>boards</Text>
         </View>
         <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
@@ -111,7 +111,7 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
   titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
-  pageLabel: { ...Typography.caption, color: Colors.textMuted, marginTop: 6, letterSpacing: 0.4 },
+  pageLabel: { ...Typography.label, color: Colors.textMuted, marginTop: 6 },
   newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
   newInput: {
@@ -122,8 +122,8 @@ const styles = StyleSheet.create({
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
-  grid:      { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[4] },
-  card:      { width: 180, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
+  grid:      { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: Spacing[4] },
+  card:      { width: '48%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
   avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },
