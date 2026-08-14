@@ -196,13 +196,13 @@ const EDITORIAL_SEARCHES: { query: string; domains: string[] }[] = [
   {
     // The core discovery pipe: Highsnobiety and GQ's best-new-brand coverage
     // skews exactly toward the ALD/Bode/Noah NYC tier
-    query: 'best new independent menswear brands to know 2024 2025 downtown cool craft',
+    query: 'best new independent menswear brands to know 2026 downtown cool craft',
     domains: ['highsnobiety.com', 'gq.com', 'esquire.com'],
   },
   {
     // Hypebeast covers the streetwear/prep-adjacent persona (ALD, Rowing Blazers,
     // Cherry LA tier) without drifting into pure hype/resale culture
-    query: 'best independent streetwear brands quality craft considered cool 2024 2025',
+    query: 'best independent streetwear brands quality craft considered cool 2026',
     domains: ['hypebeast.com', 'highsnobiety.com'],
   },
   {
@@ -224,70 +224,81 @@ const EDITORIAL_SEARCHES: { query: string; domains: string[] }[] = [
   {
     // Cool Hunting and similar surfaces the culturally-active, drop-driven
     // independent label scene before it hits mainstream coverage
-    query: 'cool new independent brand drop limited release quality lifestyle 2024 2025',
+    query: 'cool new independent brand drop limited release quality lifestyle 2026',
     domains: ['coolhunting.com', 'hypebeast.com', 'highsnobiety.com'],
+  },
+  // --- Real discussion/recommendation signal, not just top-down "best of"
+  // editorial lists — what people are actually recommending to each other.
+  {
+    // r/malefashionadvice and r/streetwear recommendation threads surface
+    // brands well before they hit formal editorial coverage.
+    query: 'best independent menswear brand recommendation quality worth it',
+    domains: ['reddit.com'],
+  },
+  {
+    query: 'best independent womenswear brand recommendation quality worth it',
+    domains: ['reddit.com'],
+  },
+  {
+    // Substack/newsletter writers covering menswear/womenswear do the same
+    // curatorial work as editorial staff, often earlier and more specifically.
+    query: 'independent brand recommendation newsletter menswear womenswear discovery quality',
+    domains: ['substack.com'],
+  },
+  {
+    // Unrestricted — no domain allowlist, so this can surface whatever's
+    // actually indexed (blogs, roundups, social-adjacent writeups) about a
+    // brand gaining real traction right now, not just brands already on a
+    // fixed publication's radar.
+    query: 'independent fashion brand gaining popularity right now cult following 2026',
+    domains: [],
   },
 ];
 
-async function discoverFromEditorial(
+// One editorial/social query end-to-end: search -> extract brand names ->
+// verify each via a real Exa search (not a guessed domain). Runs entirely
+// independently per query so discoverFromEditorial can run all of them
+// concurrently instead of summing their latency.
+async function runEditorialQuery(
   exaKey: string,
   anthropicKey: string,
+  query: string,
+  domains: string[],
   knownDomains: Set<string>,
-  rejectedNames: string[],
-  rejectionPatterns: string,
+  antiExamplesBlock: string,
 ): Promise<Candidate[]> {
-  const candidates: Candidate[] = [];
+  try {
+    const res = await fetchWithTimeout('https://api.exa.ai/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
+      body: JSON.stringify({
+        query,
+        type: 'neural',
+        numResults: 5,
+        ...(domains.length > 0 ? { includeDomains: domains } : {}),
+        contents: { text: { maxCharacters: 3000 } },
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const articles = (data.results ?? []) as { url: string; text?: string }[];
+    if (!articles.length) return [];
 
-  for (const { query, domains } of EDITORIAL_SEARCHES) {
-    try {
-      // Get article content from editorial publications
-      const res = await fetchWithTimeout('https://api.exa.ai/search', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': exaKey },
-        body: JSON.stringify({
-          query,
-          type: 'neural',
-          numResults: 5,
-          includeDomains: domains,
-          contents: { text: { maxCharacters: 3000 } },
-        }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const articles = (data.results ?? []) as { url: string; text?: string }[];
-      if (!articles.length) continue;
+    const combinedText = articles
+      .map(a => `SOURCE: ${a.url}\n${a.text ?? ''}`)
+      .join('\n\n---\n\n')
+      .slice(0, 8000);
+    if (!combinedText.trim()) return [];
 
-      const combinedText = articles
-        .map(a => `SOURCE: ${a.url}\n${a.text ?? ''}`)
-        .join('\n\n---\n\n')
-        .slice(0, 8000);
-
-      if (!combinedText.trim()) continue;
-
-      // Use Claude Haiku to extract brand names + domains from editorial content
-      const antiExamples = [
-        rejectedNames.length > 0
-          ? `Do NOT include brands similar to these already-rejected examples: ${rejectedNames.slice(0, 12).join(', ')}.`
-          : '',
-        rejectionPatterns
-          ? `Also avoid brands with these traits that have gotten brands rejected before: ${rejectionPatterns}.`
-          : '',
-      ].filter(Boolean).join(' ');
-      const antiExamplesBlock = antiExamples ? `\n\n${antiExamples}` : '';
-
-      const extractRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 800,
-          messages: [{
-            role: 'user',
-            content: `Extract independent fashion/lifestyle brand names mentioned in this editorial content. Only include actual brands (not publications, department stores, or multi-brand retailers).${antiExamplesBlock}
+    const extractRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: `Extract independent fashion/lifestyle brand names mentioned in this content — including brands that come up in discussion/recommendation threads, not just formal "best of" lists. Only include actual brands (not publications, department stores, forums, or multi-brand retailers).${antiExamplesBlock}
 
 Content:
 ${combinedText}
@@ -296,32 +307,63 @@ Respond ONLY with a JSON array of brand names — no other text:
 ["Brand Name", ...]
 
 If no qualifying brands found, respond with [].`,
-          }],
-        }),
-      });
+        }],
+      }),
+    });
+    if (!extractRes.ok) return [];
+    const extractData = await extractRes.json();
+    const text = extractData.content?.[0]?.text ?? '[]';
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return [];
 
-      if (!extractRes.ok) continue;
-      const extractData = await extractRes.json();
-      const text = extractData.content?.[0]?.text ?? '[]';
-      const match = text.match(/\[[\s\S]*\]/);
-      if (!match) continue;
-
-      // Capped — this loop now makes one Exa call per name (see
-      // resolveDomainForBrand), and this runs once per editorial query
-      // (6 total), so an uncapped list here could push total execution
-      // time toward the platform limit.
-      const names: string[] = JSON.parse(match[0]).slice(0, 8);
-      for (const name of names) {
-        if (!name) continue;
-        await sleep(300);
-        const domain = await resolveDomainForBrand(exaKey, name);
-        if (domain && !knownDomains.has(domain)) {
-          candidates.push({ name, domain, source: 'editorial' });
-        }
+    // Capped at 8 — each name below costs its own Exa call (resolveDomainForBrand).
+    const names: string[] = JSON.parse(match[0]).slice(0, 8);
+    const candidates: Candidate[] = [];
+    for (const name of names) {
+      if (!name) continue;
+      await sleep(300);
+      const domain = await resolveDomainForBrand(exaKey, name);
+      if (domain && !knownDomains.has(domain)) {
+        candidates.push({ name, domain, source: 'editorial' });
       }
-    } catch { /* skip failed editorial query */ }
+    }
+    return candidates;
+  } catch {
+    return [];
   }
+}
 
+async function discoverFromEditorial(
+  exaKey: string,
+  anthropicKey: string,
+  knownDomains: Set<string>,
+  rejectedNames: string[],
+  rejectionPatterns: string,
+): Promise<Candidate[]> {
+  const antiExamples = [
+    rejectedNames.length > 0
+      ? `Do NOT include brands similar to these already-rejected examples: ${rejectedNames.slice(0, 12).join(', ')}.`
+      : '',
+    rejectionPatterns
+      ? `Also avoid brands with these traits that have gotten brands rejected before: ${rejectionPatterns}.`
+      : '',
+  ].filter(Boolean).join(' ');
+  const antiExamplesBlock = antiExamples ? `\n\n${antiExamples}` : '';
+
+  // All queries run concurrently — each is now a search + extraction + up
+  // to 8 domain-verification calls, so summing them sequentially (the old
+  // behavior) would scale total latency with the query count. Running them
+  // in parallel keeps total time bounded to roughly the slowest single
+  // query regardless of how many sources are in the list.
+  const results = await Promise.allSettled(
+    EDITORIAL_SEARCHES.map(({ query, domains }) =>
+      runEditorialQuery(exaKey, anthropicKey, query, domains, knownDomains, antiExamplesBlock)),
+  );
+
+  const candidates: Candidate[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') candidates.push(...r.value);
+  }
   return candidates;
 }
 
