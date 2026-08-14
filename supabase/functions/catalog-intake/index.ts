@@ -490,12 +490,29 @@ async function getSummary(admin: ReturnType<typeof createClient>) {
     .order('created_at', { ascending: false })
     .limit(100);
   const rows = data ?? [];
+
+  // by_status above only reflects the most-recent-100 sample, which
+  // undercounts once total brand rows exceed 100 (older pending/rejected
+  // rows age out of the window even though they still exist). true_total
+  // is a real count across the whole table, for tracking actual progress
+  // during a long discovery run.
+  const [approvedCount, rejectedCount, pendingCount] = await Promise.all([
+    admin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+    admin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+    admin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
+  ]);
+
   return {
     total: rows.length,
     by_status: {
       approved: rows.filter(r => r.status === 'approved').length,
       rejected: rows.filter(r => r.status === 'rejected').length,
       pending_review: rows.filter(r => r.status === 'pending_review').length,
+    },
+    true_total: {
+      approved: approvedCount.count ?? null,
+      rejected: rejectedCount.count ?? null,
+      pending_review: pendingCount.count ?? null,
     },
     rejected: rows.filter(r => r.status === 'rejected'),
     pending: rows.filter(r => r.status === 'pending_review'),
