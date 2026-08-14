@@ -817,7 +817,19 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const brandName = judgment.brand_name || domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
         .replace(/\b\w/g, c => c.toUpperCase());
 
-      const finalStatus = body.auto_approve ? 'approved' : 'pending_review';
+      // The judge's verdict used to be computed and thrown away — every brand
+      // landed in pending_review regardless of whether the judge said approve,
+      // reject, or uncertain, so a confident reject (e.g. an explicit
+      // boho-chic or over-ceiling-luxury match) sat in the same queue as a
+      // genuine approve call, forcing a manual re-decision of something
+      // already decided. Only high-confidence rejects skip review — approve
+      // and uncertain verdicts still go to pending_review as before.
+      const REJECT_AUTO_CONFIDENCE = 70;
+      const finalStatus = body.auto_approve
+        ? 'approved'
+        : judgment.verdict === 'reject' && (judgment.confidence ?? 0) >= REJECT_AUTO_CONFIDENCE
+          ? 'rejected'
+          : 'pending_review';
       const { data: brandRow, error: upsertError } = await admin.from('brands').upsert({
         name: brandName,
         domain,
@@ -859,7 +871,8 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         }
         results.push({ domain, action: 'auto_approved', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id, count: filteredProducts.length });
       } else {
-        results.push({ domain, action: 'queued_for_review', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
+        const action = finalStatus === 'rejected' ? 'auto_rejected' : 'queued_for_review';
+        results.push({ domain, action, verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
       }
     }
 
