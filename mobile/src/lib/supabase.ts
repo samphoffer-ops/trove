@@ -23,6 +23,17 @@ const authStorage = Platform.OS === 'web'
   ? (typeof window !== 'undefined' ? AsyncStorage : noopStorage)
   : ExpoSecureStoreAdapter;
 
+// Static export's Node-based SSR pass constructs this client too (module
+// scope, every route), and supabase-js eagerly builds a Realtime client on
+// construction even though this app never uses realtime anywhere (no
+// `.channel()`/`.subscribe()` calls in the codebase). Node 20 — the export
+// pipeline's runtime — has no built-in WebSocket, so that eager construction
+// throws and fails the whole build. A stub constructor satisfies the check
+// without ever being invoked; real browser/native sessions get the real
+// WebSocket and never take this branch.
+class NoopWebSocket {}
+const isNodeSSR = Platform.OS === 'web' && typeof window === 'undefined';
+
 export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,5 +44,6 @@ export const supabase = createClient(
       persistSession:     true,
       detectSessionInUrl: false,
     },
+    ...(isNodeSSR ? { realtime: { transport: NoopWebSocket as any } } : {}),
   },
 );
