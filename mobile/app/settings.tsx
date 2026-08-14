@@ -191,6 +191,10 @@ export default function Settings() {
             <View style={styles.divider} />
             <Text style={styles.adminHeading}>Admin</Text>
 
+            <Pressable style={styles.adminBtn} onPress={() => router.push('/brand-review')}>
+              <Text style={styles.adminBtnText}>Review pending brands</Text>
+            </Pressable>
+
             <Pressable
               style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
               onPress={() => runAdminAction('catalog-intake', { action: 'refresh_all' }, 'Product refresh')}

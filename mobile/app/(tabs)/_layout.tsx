@@ -6,6 +6,7 @@ import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icon
 
 const CONTENT_MAX_WIDTH = 1100;
 const TAB_BAR_CONTENT_HEIGHT = 58;
+const TAB_BAR_TOP_PAD = 10;
 
 export default function TabsLayout() {
   const { width } = useWindowDimensions();
@@ -21,7 +22,11 @@ export default function TabsLayout() {
         tabBarStyle: [
           styles.tabBar,
           {
+            // Same total thickness as before — TAB_BAR_TOP_PAD is carved out
+            // of the existing content height, not added on top of it, so the
+            // icons shift down within the same bar instead of growing it.
             height:        TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+            paddingTop:    TAB_BAR_TOP_PAD,
             paddingBottom: insets.bottom,
             paddingLeft:   insets.left + tabHPad,
             paddingRight:  insets.right + tabHPad,

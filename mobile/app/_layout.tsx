@@ -100,6 +100,7 @@ export default function RootLayout() {
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />
         <Stack.Screen name="edit-profile" options={{ presentation: 'card' }} />
         <Stack.Screen name="settings"     options={{ presentation: 'card' }} />
+        <Stack.Screen name="brand-review" options={{ presentation: 'card' }} />
         <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
         <Stack.Screen name="terms"          options={{ presentation: 'card' }} />
         <Stack.Screen name="features"   options={{ presentation: 'card' }} />
