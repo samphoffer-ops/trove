@@ -18,7 +18,8 @@
       "bundleIdentifier": "app.shoptrove",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Trove uses your photo library to let you set a profile photo.",
-        "NSCameraUsageDescription": "Trove uses your camera to let you set a profile photo."
+        "NSCameraUsageDescription": "Trove uses your camera to let you set a profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,7 +31,8 @@
       }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static"
     },
     "plugins": [
       "expo-router",
@@ -48,6 +50,12 @@
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "410b58f4-7ec4-4eaa-b0a1-50ce023a1e0e"
+      }
     }
   }
 }

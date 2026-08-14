@@ -9,8 +9,19 @@ const ExpoSecureStoreAdapter = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
+// Static export pre-renders routes in Node (no `window`), where AsyncStorage's
+// web implementation crashes on access. Use a no-op adapter there; real
+// browser/native sessions never hit this branch.
+const noopStorage = {
+  getItem:    async () => null,
+  setItem:    async () => {},
+  removeItem: async () => {},
+};
+
 // expo-secure-store has no web implementation; fall back to AsyncStorage (localStorage) there.
-const authStorage = Platform.OS === 'web' ? AsyncStorage : ExpoSecureStoreAdapter;
+const authStorage = Platform.OS === 'web'
+  ? (typeof window !== 'undefined' ? AsyncStorage : noopStorage)
+  : ExpoSecureStoreAdapter;
 
 export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,

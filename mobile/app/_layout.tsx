@@ -75,7 +75,13 @@ export default function RootLayout() {
     if (fontsLoaded) injectWebFont();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  // Native blocks first paint on custom fonts to avoid a system-font flash.
+  // Web can't do that here: this same gate also runs during static export's
+  // server-side render, where the async font fetch never resolves — blocking
+  // on it there means every route (including the marketing pages this static
+  // export exists for) prerenders as an empty shell. Web instead shows
+  // fallback fonts immediately and swaps in via the CSS injected above.
+  if (!fontsLoaded && Platform.OS !== 'web') return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

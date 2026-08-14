@@ -94,7 +94,12 @@ function MarketingHome() {
 export default function Index() {
   const { session, loading, profile, profileLoading } = useAuthStore();
 
-  if (loading || (session && profileLoading)) {
+  // The loading flag only flips once the client-side auth listener fires,
+  // which never happens during static export's server-side render — gating
+  // on it there bakes a bare spinner into the marketing homepage's HTML
+  // instead of real content. Skip the gate for that pass only; real
+  // browsers (where `window` exists) keep the spinner as before.
+  if (typeof window !== 'undefined' && (loading || (session && profileLoading))) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accent }}>
         <ActivityIndicator color={Colors.bg} />
