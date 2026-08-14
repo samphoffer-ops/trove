@@ -346,29 +346,63 @@ async function generateEmbeddings(voyageKey: string, texts: string[]): Promise<(
 // brand's products described only by cut/seam details, never "swim"), so
 // this needs to infer intent from brand + name + description, not match
 // literal substrings.
-async function generateSearchKeywords(anthropicKey: string, brand: string, name: string, description: string): Promise<string[]> {
-  const prompt = `Brand: ${brand}
-Product: ${name}
-Description: ${description.slice(0, 200) || 'none'}
+//
+// Batched like generateEmbeddings, for the same reason: one call per
+// product meant a 250-product brand made 250 sequential Anthropic
+// round-trips, which reliably ran past the Edge Function's execution
+// time limit and got the run killed mid-brand — Jungmaven ended up with
+// 7 of its 250 real products in the catalog before the kill. Chunked at
+// 20 products per call keeps each prompt/response small enough to be
+// reliable, while cutting a 250-product brand from 250 calls to ~13.
+const SEARCH_KEYWORDS_BATCH_SIZE = 20;
 
-List 3-6 generic search terms a shopper might type to find this product — the
-kind of words for the item TYPE, not the brand or styling details (e.g. for a
-bikini top: "swim", "swimwear", "bikini"; for a chore coat: "jacket", "coat",
-"outerwear"). Respond with ONLY a JSON array of lowercase strings, no other text.`;
-  try {
-    const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: prompt }] }),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const text = data.content?.[0]?.text ?? '[]';
-    const match = text.match(/\[[\s\S]*\]/);
-    return match ? JSON.parse(match[0]) : [];
-  } catch {
-    return [];
+async function generateSearchKeywordsBatch(
+  anthropicKey: string,
+  brand: string,
+  items: { name: string; description?: string }[],
+): Promise<string[][]> {
+  const results: string[][] = items.map(() => []);
+
+  for (let start = 0; start < items.length; start += SEARCH_KEYWORDS_BATCH_SIZE) {
+    const chunk = items.slice(start, start + SEARCH_KEYWORDS_BATCH_SIZE);
+    const list = chunk
+      .map((p, i) => `${i}. ${p.name} — ${(p.description ?? '').slice(0, 160) || 'no description'}`)
+      .join('\n');
+    const prompt = `Brand: ${brand}
+
+For each numbered product below, list 3-6 generic search terms a shopper
+might type to find that product type — words for the item TYPE, not the
+brand or styling details (e.g. for a bikini top: "swim", "swimwear",
+"bikini"; for a chore coat: "jacket", "coat", "outerwear").
+
+Products:
+${list}
+
+Respond with ONLY a JSON array of ${chunk.length} arrays of lowercase
+strings, one per product in the same order as above, no other text.
+Example shape: [["jacket","coat"],["shoe","sneaker"]]`;
+
+    try {
+      const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120 * chunk.length, messages: [{ role: 'user', content: prompt }] }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.content?.[0]?.text ?? '[]';
+        const match = text.match(/\[[\s\S]*\]/);
+        const parsed = match ? JSON.parse(match[0]) : [];
+        chunk.forEach((_, i) => {
+          if (Array.isArray(parsed[i])) results[start + i] = parsed[i];
+        });
+      }
+    } catch {
+      // Leave this chunk's entries as [] — a bad chunk shouldn't fail the whole brand.
+    }
   }
+
+  return results;
 }
 
 // Cheap per-product category classification — no extra LLM call. Falls back
@@ -620,13 +654,24 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
           .eq('search_keywords', '{}')
           .range(0, pageSize - 1);
         if (!rows || rows.length === 0) break;
+
+        // Group by brand — one batched call per brand in this page, not
+        // one call per product (see generateSearchKeywordsBatch).
+        const byBrand = new Map<string, typeof rows>();
         for (const row of rows) {
-          const keywords = await generateSearchKeywords(anthropicKeyLocal, row.brand, row.name, row.description ?? '');
-          if (keywords.length > 0) {
-            await admin.from('products').update({ search_keywords: keywords }).eq('id', row.id);
-            updated++;
-          } else {
-            failed++;
+          byBrand.set(row.brand, [...(byBrand.get(row.brand) ?? []), row]);
+        }
+
+        for (const [brand, brandRows] of byBrand) {
+          const keywordsList = await generateSearchKeywordsBatch(anthropicKeyLocal, brand, brandRows);
+          for (let i = 0; i < brandRows.length; i++) {
+            const keywords = keywordsList[i];
+            if (keywords.length > 0) {
+              await admin.from('products').update({ search_keywords: keywords }).eq('id', brandRows[i].id);
+              updated++;
+            } else {
+              failed++;
+            }
           }
         }
         if (rows.length < pageSize) break;
@@ -690,11 +735,12 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
             const embeddings = voyageKey
               ? await generateEmbeddings(voyageKey, products.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
               : products.map(() => null);
+            const keywordsList = await generateSearchKeywordsBatch(anthropicKey, existing.name, products);
             for (let i = 0; i < products.length; i++) {
               const p = products[i];
               const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
               const embedding = embeddings[i];
-              const searchKeywords = await generateSearchKeywords(anthropicKey, existing.name, p.name, p.description ?? '');
+              const searchKeywords = keywordsList[i];
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
                 image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
@@ -729,10 +775,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
             const embeddings = voyageKey
               ? await generateEmbeddings(voyageKey, autoProducts.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
               : autoProducts.map(() => null);
+            const keywordsList = await generateSearchKeywordsBatch(anthropicKey, existing.name, autoProducts);
             for (let i = 0; i < autoProducts.length; i++) {
               const p = autoProducts[i];
               const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
-              const searchKeywords = await generateSearchKeywords(anthropicKey, existing.name, p.name, p.description ?? '');
+              const searchKeywords = keywordsList[i];
               await admin.from('products').upsert({
                 id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
                 image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
@@ -795,10 +842,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
           const embeddings = voyageKey
             ? await generateEmbeddings(voyageKey, filteredProducts.map(p => `${brandRow.name} ${p.name} ${p.description ?? ''}`.trim()))
             : filteredProducts.map(() => null);
+          const keywordsList = await generateSearchKeywordsBatch(anthropicKey, brandRow.name, filteredProducts);
           for (let i = 0; i < filteredProducts.length; i++) {
             const p = filteredProducts[i];
             const id = `${slugify(brandRow.name)}-${slugify(p.handle)}`;
-            const searchKeywords = await generateSearchKeywords(anthropicKey, brandRow.name, p.name, p.description ?? '');
+            const searchKeywords = keywordsList[i];
             await admin.from('products').upsert({
               id, brand_id: brandRow.id, brand: brandRow.name, name: p.name, price: p.price,
               image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
