@@ -233,12 +233,48 @@ async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
     const sitemapRes = await fetchWithTimeout(`https://${domain}/sitemap.xml`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
     if (!sitemapRes.ok) return null;
     const sitemapText = await sitemapRes.text();
+
+    // Two sitemap shapes to handle: an index (points to child sitemaps) or
+    // a flat sitemap (lists pages directly). This used to only handle the
+    // index case, and only when a child sitemap's URL literally contained
+    // "product" — a Shopify-specific naming convention. Real stores on
+    // Squarespace/WooCommerce/custom stacks routinely have real product
+    // pages without naming a sitemap that way, so this silently failed the
+    // large majority of non-Shopify candidates (measured: 88% of a 135-
+    // candidate discovery batch never got past this check).
+    let rawUrls: string[];
     const productSitemapMatch = sitemapText.match(/<loc>([^<]*product[^<]*sitemap[^<]*)<\/loc>/i);
-    if (!productSitemapMatch) return null;
-    await sleep(500);
-    const productSitemapRes = await fetchWithTimeout(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
-    if (!productSitemapRes.ok) return null;
-    const productUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 60);
+    if (productSitemapMatch) {
+      await sleep(500);
+      const productSitemapRes = await fetchWithTimeout(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+      if (!productSitemapRes.ok) return null;
+      rawUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+    } else if (/<sitemapindex/i.test(sitemapText)) {
+      // Index with no obviously-named product child — small stores often
+      // have only one or two sitemap files total, so check the first few.
+      const childLocs = [...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 3);
+      rawUrls = [];
+      for (const childUrl of childLocs) {
+        await sleep(500);
+        try {
+          const childRes = await fetchWithTimeout(childUrl, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+          if (!childRes.ok) continue;
+          rawUrls.push(...[...(await childRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]));
+        } catch { /* skip this child sitemap, try the next */ }
+      }
+    } else {
+      // Flat sitemap — page URLs directly.
+      rawUrls = [...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+    }
+
+    // Prefer URLs that look like product pages when the sitemap mixes page
+    // types together. When nothing matches we're guessing blind across
+    // whatever pages exist (blog posts, collections, etc.) — cap that case
+    // tighter (15 vs 60) so one low-signal domain can't eat the batch's
+    // execution budget fetching mostly-non-product pages at 1.5s apiece.
+    const looksLikeProduct = (u: string) => /\/(products?|shop|item)\//i.test(u);
+    const filtered = rawUrls.filter(looksLikeProduct);
+    const productUrls = filtered.length > 0 ? filtered.slice(0, 60) : rawUrls.slice(0, 15);
 
     const products: ScrapedProduct[] = [];
     for (const url of productUrls) {
