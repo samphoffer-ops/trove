@@ -1,6 +1,22 @@
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useProductModalStore } from '@/store/useProductModalStore';
+
+// On native, Linking.openURL hands off to the OS (Safari/Chrome as a
+// separate app) — the RN app stays alive in the background untouched. On
+// web, Linking.openURL navigates the CURRENT tab to the external site
+// instead of opening a new one; coming back via the browser's back button
+// then re-triggers a full static-export reload of the SPA, which lands on
+// the root route rather than wherever you were (losing scroll position,
+// list state, everything). window.open with _blank sidesteps that
+// entirely by leaving the original tab alone.
+export function openExternal(url: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } else {
+    Linking.openURL(url);
+  }
+}
 
 // router.back() relies on Expo Router's in-memory navigation stack, not
 // browser history — it silently no-ops if there's no in-app "back" entry,

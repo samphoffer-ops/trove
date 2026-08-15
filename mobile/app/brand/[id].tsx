@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -10,7 +10,7 @@ import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Brand, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack } from '@/lib/navigation';
+import { goBack, openExternal } from '@/lib/navigation';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { ProductCard } from '@/components/ProductCard';
 import { SaveSheet } from '@/components/SaveSheet';
@@ -63,7 +63,7 @@ export default function BrandProfile() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <Text style={styles.brandName}>{brand.name}</Text>
-          <Pressable onPress={() => Linking.openURL(`https://${brand.domain}`)}>
+          <Pressable onPress={() => openExternal(`https://${brand.domain}`)}>
             <Text style={styles.website}>{brand.domain}</Text>
           </Pressable>
           <Text style={styles.followerText}>{followerCount} follower{followerCount !== 1 ? 's' : ''}</Text>

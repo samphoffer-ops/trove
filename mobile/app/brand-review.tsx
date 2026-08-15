@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
@@ -7,7 +7,7 @@ import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
 import { ChevronLeftIcon, CheckIcon, CloseIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack } from '@/lib/navigation';
+import { goBack, openExternal } from '@/lib/navigation';
 
 interface PendingBrand {
   id: string;
@@ -99,7 +99,7 @@ export default function BrandReview() {
             {brands.map(brand => (
               <View key={brand.id} style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Pressable onPress={() => Linking.openURL(`https://${brand.domain}`)}>
+                  <Pressable onPress={() => openExternal(`https://${brand.domain}`)}>
                     <Text style={styles.name}>{brand.name}</Text>
                     <Text style={styles.domain}>{brand.domain} ↗</Text>
                   </Pressable>

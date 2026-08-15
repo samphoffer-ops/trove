@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { useProductsStore, getProductById, fetchSimilarProducts } from '@/store/useProductsStore';
@@ -14,7 +14,7 @@ import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Product } from '@/types';
 import { getAffiliateUrl } from '@/lib/affiliate';
-import { goBack, openProduct } from '@/lib/navigation';
+import { goBack, openProduct, openExternal } from '@/lib/navigation';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -172,7 +172,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
       {/* Sticky CTA bar — coral action button */}
       <View style={[styles.actions, { paddingBottom: bottomInset + 16 }]}>
-        <Pressable style={styles.shopBtn} onPress={() => Linking.openURL(getAffiliateUrl(product))}>
+        <Pressable style={styles.shopBtn} onPress={() => openExternal(getAffiliateUrl(product))}>
           <Text style={styles.shopBtnText}>Shop now</Text>
         </Pressable>
         <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => setSaveTarget(product)}>
