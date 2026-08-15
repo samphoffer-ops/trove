@@ -28,15 +28,34 @@ const CHIPS = [
 
 type ChipId = typeof CHIPS[number]['id'];
 
+// 'womens'/'mens' filter on brand audience (see brandAudience in
+// useProductsStore); everything else filters on the product's own
+// category. 'all' is the default, no filtering applied.
+const CATEGORY_CHIPS = [
+  { id: 'all',         label: 'all'         },
+  { id: 'womens',      label: "women's"     },
+  { id: 'mens',        label: "men's"       },
+  { id: 'clothing',    label: 'clothing'    },
+  { id: 'shoes',       label: 'shoes'       },
+  { id: 'bags',        label: 'bags'        },
+  { id: 'accessories', label: 'accessories' },
+  { id: 'home',        label: 'home'        },
+  { id: 'beauty',      label: 'beauty'      },
+] as const;
+
+type CategoryId = typeof CATEGORY_CHIPS[number]['id'];
+const AUDIENCE_CATEGORY_IDS = new Set(['womens', 'mens']);
+
 const PAGE_SIZE = 30;
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
-  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts } = useProductsStore();
+  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience } = useProductsStore();
   const { boards } = useBoardStore();
   const [activeChip, setActiveChip] = useState<ChipId>('explore');
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
@@ -65,7 +84,17 @@ export default function FeedScreen() {
   }, [boards]);
 
   const visibleProducts = useMemo(() => {
-    const base = allProducts.filter(p => !notInterestedIds.has(p.id));
+    let base = allProducts.filter(p => !notInterestedIds.has(p.id));
+    if (activeCategory !== 'all') {
+      base = AUDIENCE_CATEGORY_IDS.has(activeCategory)
+        // 'womens'/'mens' include 'unisex' brands too — a unisex item is
+        // relevant to both, not neither.
+        ? base.filter(p => {
+            const audience = p.brand_id ? brandAudience.get(p.brand_id) : undefined;
+            return audience === activeCategory || audience === 'unisex';
+          })
+        : base.filter(p => p.category === activeCategory);
+    }
     if (activeChip === 'new') {
       return [...base].sort((a, b) =>
         (b.created_at ?? '').localeCompare(a.created_at ?? '')
@@ -80,12 +109,12 @@ export default function FeedScreen() {
       return [...base].sort((a, b) => score(b.id) - score(a.id));
     }
     return base; // explore — store order (ranked by taste)
-  }, [allProducts, notInterestedIds, activeChip, saveCounts, trendingCounts]);
+  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, saveCounts, trendingCounts]);
 
   const pagedProducts = visibleProducts.slice(0, visibleCount);
   const hasMore = visibleCount < visibleProducts.length;
 
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip, activeCategory]);
   useEffect(() => { fetchInbox(); fetchProducts(); fetchTrendingCounts(); }, []);
 
   function handleScroll(e: any) {
@@ -159,6 +188,21 @@ export default function FeedScreen() {
             </Pressable>
           ))}
         </View>
+
+        {/* Category chips — what to show, independent of the sort mode above */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryChips}>
+          {CATEGORY_CHIPS.map(cat => (
+            <Pressable
+              key={cat.id}
+              style={[styles.categoryChip, activeCategory === cat.id && styles.chipActive]}
+              onPress={() => setActiveCategory(cat.id)}
+            >
+              <Text style={[styles.chipText, activeCategory === cat.id && styles.chipTextActive]}>
+                {cat.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
         </View>
       </View>
 
@@ -289,6 +333,15 @@ const styles = StyleSheet.create({
   chipActive:     { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
   chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
   chipTextActive: { color: Colors.ink },
+
+  categoryChips: { flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 16, gap: Spacing[2] },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical:   6,
+    borderRadius:      Radius.full,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.16)',
+  },
 
   caughtUp: {
     flexDirection:  'row',

@@ -6,6 +6,11 @@ interface ProductsState {
   products: Product[];
   notInterestedIds: Set<string>;
   trendingCounts: Map<string, number>; // platform-wide save counts
+  // brand_id -> audience. Products don't carry audience themselves (it's a
+  // brand-level judge classification, see migration 010) — this is a
+  // client-side join rather than a schema change, since it's only needed
+  // for feed filtering, not stored/queried anywhere else.
+  brandAudience: Map<string, 'mens' | 'womens' | 'unisex'>;
   loading: boolean;
   loaded: boolean;
   fetchProducts: () => Promise<void>;
@@ -56,6 +61,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   notInterestedIds: new Set(),
   trendingCounts: new Map(),
+  brandAudience: new Map(),
   loading: false,
   loaded: false,
 
@@ -72,11 +78,12 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     // sampling so nothing is ever fully excluded. PostgREST can't run
     // pgvector's similarity operators directly, which is why this has to be
     // a Postgres function called via .rpc() rather than a plain .select().
-    const [productsRes, notInterestedRes] = await Promise.all([
+    const [productsRes, notInterestedRes, brandsRes] = await Promise.all([
       user
         ? supabase.rpc('rank_products_for_user', { p_user_id: user.id })
         : supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
       user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
+      supabase.from('brands').select('id, audience'),
     ]);
     if (productsRes.error) {
       console.error('fetchProducts:', productsRes.error);
@@ -84,10 +91,15 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       return;
     }
     const notInterestedIds = new Set((notInterestedRes.data ?? []).map(r => r.product_id));
+    const brandAudience = new Map(
+      (brandsRes.data ?? [])
+        .filter((b): b is { id: string; audience: 'mens' | 'womens' | 'unisex' } => !!b.audience)
+        .map(b => [b.id, b.audience]),
+    );
     const products = user
       ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
       : interleaveByBrand((productsRes.data ?? []) as Product[]);
-    set({ products, notInterestedIds, loading: false, loaded: true });
+    set({ products, notInterestedIds, brandAudience, loading: false, loaded: true });
   },
 
   // Platform-wide save counts — fetched once, used to blend global popularity
