@@ -14,6 +14,15 @@ name: Daily product refresh
 # again after its initial approval, ever. Confirmed in production: a
 # brand created after position ~160 was still showing its original
 # handful of scraped products while its live store had 3x as many.
+#
+# A curl failure/timeout on one batch (a slow-scraping brand, a transient
+# network blip) must NOT be treated the same as a genuine empty batch --
+# first attempt at this fix did exactly that (curl failure fell back to
+# a fake "results":[] and the loop read that as "reached the end of the
+# list"), which silently stopped the very first run after batch one,
+# having refreshed nothing. Only a real HTTP 200 with an actually-empty
+# results array means "done"; anything else just skips that batch and
+# moves on to the next offset.
 
 on:
   schedule:
@@ -32,25 +41,48 @@ jobs:
         run: |
           TOTAL=0
           OFFSET=0
+          EMPTY_STREAK=0
           # Safety cap (200 batches = 1000 brands) so a genuine bug can't
           # spin this forever -- not a real ceiling on catalog size at
           # today's scale, just a backstop.
           for i in $(seq 1 200); do
             echo "Batch offset=$OFFSET"
-            RESULT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+            HTTP_CODE=$(curl -s -o /tmp/batch_result.json -w "%{http_code}" -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" \
               -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
               -d "{\"action\": \"refresh_all\", \"refresh_offset\": $OFFSET, \"refresh_limit\": 5}" \
-              --max-time 120 || echo '{"results":[]}')
-            echo "$RESULT"
-            COUNT=$(echo "$RESULT" | jq '.results | length' 2>/dev/null || echo 0)
+              --max-time 120 || echo "000")
+            cat /tmp/batch_result.json 2>/dev/null
+            echo ""
+
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "  → request failed (HTTP $HTTP_CODE) -- skipping this batch, continuing"
+              OFFSET=$((OFFSET + 5))
+              sleep 5
+              continue
+            fi
+
+            COUNT=$(jq '.results | length' /tmp/batch_result.json 2>/dev/null || echo "")
+            if [ -z "$COUNT" ]; then
+              echo "  → couldn't parse response -- skipping this batch, continuing"
+              OFFSET=$((OFFSET + 5))
+              sleep 5
+              continue
+            fi
+
             echo "  → $COUNT brands in this batch"
             TOTAL=$((TOTAL + COUNT))
-            # Stop when a batch comes back empty (reached the end of the
-            # approved list) -- not a fixed offset count.
             if [ "$COUNT" = "0" ]; then
-              break
+              # Two genuinely-empty successful responses in a row means we've
+              # actually reached the end -- one alone could just be an odd
+              # gap (e.g. a brand row that got deleted between calls).
+              EMPTY_STREAK=$((EMPTY_STREAK + 1))
+              if [ "$EMPTY_STREAK" -ge 2 ]; then
+                break
+              fi
+            else
+              EMPTY_STREAK=0
             fi
             OFFSET=$((OFFSET + 5))
             sleep 5
