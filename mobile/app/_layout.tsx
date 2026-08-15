@@ -54,9 +54,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const previousUserId = useAuthStore.getState().user?.id;
       setSession(session);
 
       if (event === 'SIGNED_IN') {
+        // Supabase re-emits SIGNED_IN whenever the browser tab regains
+        // focus/visibility, even for an already-active session (part of its
+        // auto-refresh behavior) — not just on a genuine new sign-in.
+        // Force-navigating on every emission meant switching back to the
+        // tab reset whatever screen you were on to the feed. Only redirect
+        // on an actual sign-in transition (no user -> this user).
+        if (session?.user?.id === previousUserId) return;
         fetchProfile().then(profile => {
           router.replace(profile?.onboarding_completed_at ? '/(tabs)/feed' : '/onboarding');
         });
