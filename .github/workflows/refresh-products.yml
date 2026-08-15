@@ -23,6 +23,17 @@ name: Daily product refresh
 # having refreshed nothing. Only a real HTTP 200 with an actually-empty
 # results array means "done"; anything else just skips that batch and
 # moves on to the next offset.
+#
+# GitHub Actions runs `run:` steps as `bash -e` -- any unguarded command
+# returning non-zero kills the whole job immediately. Second attempt at
+# this fix still had one: `cat file 2>/dev/null` on a batch that timed
+# out before curl ever wrote the output file returns exit 1 (redirecting
+# stderr hides the message, not the exit code), which aborted the entire
+# run on the very first slow batch -- before the skip-and-continue logic
+# below ever got a chance to run. Confirmed happening on the first real
+# workflow_dispatch of this "fixed" version. Every command that can
+# legitimately fail without that meaning the run should stop now has an
+# explicit `|| true`.
 
 on:
   schedule:
@@ -53,7 +64,7 @@ jobs:
               -H "Content-Type: application/json" \
               -d "{\"action\": \"refresh_all\", \"refresh_offset\": $OFFSET, \"refresh_limit\": 5}" \
               --max-time 120 || echo "000")
-            cat /tmp/batch_result.json 2>/dev/null
+            cat /tmp/batch_result.json 2>/dev/null || true
             echo ""
 
             if [ "$HTTP_CODE" != "200" ]; then
