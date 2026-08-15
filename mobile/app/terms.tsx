@@ -48,7 +48,7 @@ export default function Terms() {
         },
         {
           heading: 'Governing law',
-          body: 'These terms are governed by the laws of [Your State/Country] — to be finalized before launch.',
+          body: 'These terms are governed by the laws of the United States.',
         },
         {
           heading: 'Contact us',
