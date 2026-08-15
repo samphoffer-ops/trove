@@ -253,6 +253,18 @@ const EDITORIAL_SEARCHES: { query: string; domains: string[] }[] = [
     query: 'independent fashion brand gaining popularity right now cult following 2026',
     domains: [],
   },
+  // --- Dedicated American lane, alongside (not replacing) the international-
+  // friendly searches above — Sam's customer base is US-based, so American
+  // brands should have guaranteed representation even though brands from
+  // elsewhere are welcome too.
+  {
+    query: 'best independent American-made menswear and womenswear brands downtown craft small batch 2026',
+    domains: ['gq.com', 'highsnobiety.com', 'esquire.com'],
+  },
+  {
+    query: 'best independent American brand recommendation made in USA quality worth it',
+    domains: ['reddit.com'],
+  },
 ];
 
 // One editorial/social query end-to-end: search -> extract brand names ->
