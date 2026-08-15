@@ -5,9 +5,10 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
+import { fetchFollowedBrands } from '@/lib/social';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
-import { Profile, Board } from '@/types';
+import { Profile, Board, Brand } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
 
@@ -17,6 +18,7 @@ export default function UserProfile() {
   const { user } = useAuthStore();
   const [profile,      setProfile]      = useState<Profile | null>(null);
   const [boards,       setBoards]       = useState<Board[]>([]);
+  const [followedBrands, setFollowedBrands] = useState<Brand[]>([]);
   const [isFollowing,  setIsFollowing]  = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
@@ -26,6 +28,7 @@ export default function UserProfile() {
       .then(({ data }) => data && setProfile(data as Profile));
     supabase.from('boards').select('*, board_items(product_id, product_data)').eq('user_id', id).eq('is_public', true)
       .then(({ data }) => setBoards((data ?? []) as Board[]));
+    fetchFollowedBrands(id).then(setFollowedBrands);
     supabase.from('follows').select('id', { count: 'exact' }).eq('following_id', id)
       .then(({ count }) => setFollowerCount(count ?? 0));
     if (user) {
@@ -81,6 +84,19 @@ export default function UserProfile() {
           </Pressable>
         )}
 
+        {followedBrands.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Brands they follow</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brandRow} scrollsToTop={false}>
+              {followedBrands.map(brand => (
+                <Pressable key={brand.id} style={styles.brandChip} onPress={() => router.push(`/brand/${brand.id}`)}>
+                  <Text style={styles.brandChipText}>{brand.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <Text style={styles.sectionTitle}>Boards</Text>
         <View style={styles.boardGrid}>
           {boards.map(board => {
@@ -124,6 +140,10 @@ const styles = StyleSheet.create({
   followBtnText:   { ...Typography.headline, fontSize: 15, color: Colors.text },
   followBtnTextActive: { color: Colors.accentLime },
   sectionTitle:{ ...Typography.headline, color: Colors.text, marginBottom: Spacing[4] },
+  section:        { marginBottom: Spacing[6] },
+  brandRow:       { gap: Spacing[3] },
+  brandChip:      { paddingHorizontal: 14, paddingVertical: Spacing[2], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface },
+  brandChipText:  { ...Typography.cardTitle, color: Colors.text },
   boardGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[5] },
   boardCard:  { width: '47%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface },
   boardCover: { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
