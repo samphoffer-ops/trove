@@ -5,9 +5,15 @@ name: Daily product refresh
 # catches new arrivals, price changes, and removed items.
 # Can also be triggered manually from the Actions tab.
 #
-# Batches of 5 brands per call (each call ~45s), covering up to 50 brands
-# total. Supabase Edge Functions have a 150s idle timeout — a single
-# refresh_all call on a large catalog times out silently.
+# Batches of 5 brands per call (each call ~45s). Supabase Edge Functions
+# have a 150s idle timeout — a single refresh_all call on a large catalog
+# times out silently, hence the small batches. Loops the offset until a
+# batch comes back empty rather than a fixed count -- this used to stop
+# at offset 45 (50 brands) no matter how large the approved catalog grew,
+# so any brand past the first 50 (by creation order) never got refreshed
+# again after its initial approval, ever. Confirmed in production: a
+# brand created after position ~160 was still showing its original
+# handful of scraped products while its live store had 3x as many.
 
 on:
   schedule:
@@ -25,7 +31,11 @@ jobs:
       - name: Refresh brands in batches of 5
         run: |
           TOTAL=0
-          for OFFSET in 0 5 10 15 20 25 30 35 40 45; do
+          OFFSET=0
+          # Safety cap (200 batches = 1000 brands) so a genuine bug can't
+          # spin this forever -- not a real ceiling on catalog size at
+          # today's scale, just a backstop.
+          for i in $(seq 1 200); do
             echo "Batch offset=$OFFSET"
             RESULT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" \
@@ -37,10 +47,12 @@ jobs:
             COUNT=$(echo "$RESULT" | jq '.results | length' 2>/dev/null || echo 0)
             echo "  → $COUNT brands in this batch"
             TOTAL=$((TOTAL + COUNT))
-            # Stop early if this batch came back empty (no more brands)
+            # Stop when a batch comes back empty (reached the end of the
+            # approved list) -- not a fixed offset count.
             if [ "$COUNT" = "0" ]; then
               break
             fi
+            OFFSET=$((OFFSET + 5))
             sleep 5
           done
           echo ""
