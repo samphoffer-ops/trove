@@ -5,15 +5,29 @@ name: Daily product refresh
 # catches new arrivals, price changes, and removed items.
 # Can also be triggered manually from the Actions tab.
 #
-# Batches of 5 brands per call (each call ~45s). Supabase Edge Functions
-# have a 150s idle timeout — a single refresh_all call on a large catalog
-# times out silently, hence the small batches. Loops the offset until a
-# batch comes back empty rather than a fixed count -- this used to stop
-# at offset 45 (50 brands) no matter how large the approved catalog grew,
-# so any brand past the first 50 (by creation order) never got refreshed
-# again after its initial approval, ever. Confirmed in production: a
-# brand created after position ~160 was still showing its original
-# handful of scraped products while its live store had 3x as many.
+# One brand per call. Used to be batches of 5, which seemed reasonable
+# (Supabase Edge Functions have a ~150s idle timeout, and 5 domains
+# "should" fit) but didn't in practice: a real domain's full refresh --
+# live scrape, an Anthropic call for search keywords, a Voyage call for
+# embeddings, then one upsert per product -- routinely takes long enough
+# that 5 in one call blew past curl's 120s --max-time AND Supabase's own
+# ceiling. Confirmed in production: on one run, 200 of 201 batches came
+# back as a bare connection failure (HTTP 000000). The Edge Function
+# doesn't stop just because the client gave up, though -- it keeps
+# writing until IT gets killed, so a batch would complete some prefix of
+# its domains (or even just some prefix of one domain's products) and
+# lose the rest, silently, every single day. Confirmed case: a brand
+# whose live store has 18 products was stuck at 6 (all from one product
+# category) for over a week, re-touched (same 6 rows, fresh
+# last_seen_at) but never completed by the daily run. One domain per
+# call has no such cliff -- worst case, a single slow domain times out
+# and gets skipped for the day rather than silently eating its
+# batch-mates' turn too.
+#
+# Loops the offset until a batch comes back empty rather than a fixed
+# count -- this used to stop at offset 45 (50 brands) no matter how large
+# the approved catalog grew, so any brand past the first 50 (by creation
+# order) never got refreshed again after its initial approval, ever.
 #
 # A curl failure/timeout on one batch (a slow-scraping brand, a transient
 # network blip) must NOT be treated the same as a genuine empty batch --
@@ -48,28 +62,29 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
-      - name: Refresh brands in batches of 5
+      - name: Refresh brands one at a time
         run: |
           TOTAL=0
           OFFSET=0
           EMPTY_STREAK=0
-          # Safety cap (200 batches = 1000 brands) so a genuine bug can't
-          # spin this forever -- not a real ceiling on catalog size at
-          # today's scale, just a backstop.
-          for i in $(seq 1 200); do
+          # Safety cap so a genuine bug can't spin this forever -- not a
+          # real ceiling on catalog size at today's scale (178 approved),
+          # just a backstop. One brand per batch now, so this needs to be
+          # ~5x the old cap to cover the same catalog size.
+          for i in $(seq 1 1000); do
             echo "Batch offset=$OFFSET"
             HTTP_CODE=$(curl -s -o /tmp/batch_result.json -w "%{http_code}" -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" \
               -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"action\": \"refresh_all\", \"refresh_offset\": $OFFSET, \"refresh_limit\": 5}" \
+              -d "{\"action\": \"refresh_all\", \"refresh_offset\": $OFFSET, \"refresh_limit\": 1}" \
               --max-time 120 || echo "000")
             cat /tmp/batch_result.json 2>/dev/null || true
             echo ""
 
             if [ "$HTTP_CODE" != "200" ]; then
               echo "  → request failed (HTTP $HTTP_CODE) -- skipping this batch, continuing"
-              OFFSET=$((OFFSET + 5))
+              OFFSET=$((OFFSET + 1))
               sleep 5
               continue
             fi
@@ -77,7 +92,7 @@ jobs:
             COUNT=$(jq '.results | length' /tmp/batch_result.json 2>/dev/null || echo "")
             if [ -z "$COUNT" ]; then
               echo "  → couldn't parse response -- skipping this batch, continuing"
-              OFFSET=$((OFFSET + 5))
+              OFFSET=$((OFFSET + 1))
               sleep 5
               continue
             fi
@@ -95,7 +110,7 @@ jobs:
             else
               EMPTY_STREAK=0
             fi
-            OFFSET=$((OFFSET + 5))
+            OFFSET=$((OFFSET + 1))
             sleep 5
           done
           echo ""
