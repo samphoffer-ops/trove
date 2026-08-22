@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
@@ -15,9 +15,9 @@ import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Logo } from '@/components/Logo';
-import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon } from '@/components/Icons';
+import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterIcon, CheckIcon } from '@/components/Icons';
 import { Product } from '@/types';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
 
 const CHIPS = [
@@ -47,12 +47,13 @@ type CategoryId = typeof CATEGORY_CHIPS[number]['id'];
 const AUDIENCE_CATEGORY_IDS = new Set(['womens', 'mens']);
 
 const PAGE_SIZE = 30;
+const FILTER_MENU_WIDTH = 190;
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
-  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience } = useProductsStore();
+  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience, loaded: productsLoaded } = useProductsStore();
   const { boards } = useBoardStore();
   const [activeChip, setActiveChip] = useState<ChipId>('explore');
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
@@ -62,6 +63,8 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [viewingStrip, setViewingStrip] = useState<typeof EDITORIAL_STRIPS[number] | null>(null);
+  const [filterAnchor, setFilterAnchor] = useState<{ x: number; y: number } | null>(null);
+  const { width: screenWidth } = useWindowDimensions();
 
   // Ink masthead needs light status bar icons; other tabs sit on Colors.bg
   // and use the dark default set in the root layout.
@@ -82,6 +85,26 @@ export default function FeedScreen() {
     }
     return counts;
   }, [boards]);
+
+  // Trending order is a snapshot, not a live recompute: it's taken when the
+  // tab is (re-)entered or the underlying product set changes, but NOT on
+  // every saveCounts/trendingCounts tick. Sorting live off `boards` meant
+  // bookmarking a single product re-ranked the entire grid on every tap —
+  // since MasonryGrid buckets items into columns by array-index parity, a
+  // re-sort scatters cards into different columns/positions mid-scroll,
+  // which reads as the page jumping/refreshing.
+  const trendingScoresRef = useRef<Map<string, number>>(new Map());
+  const [trendingSnapshotTick, setTrendingSnapshotTick] = useState(0);
+  useEffect(() => {
+    if (activeChip !== 'trending') return;
+    const scores = new Map<string, number>();
+    for (const p of allProducts) {
+      scores.set(p.id, (trendingCounts.get(p.id) ?? 0) + (saveCounts.get(p.id) ?? 0) * 2);
+    }
+    trendingScoresRef.current = scores;
+    setTrendingSnapshotTick(t => t + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChip, allProducts]);
 
   const visibleProducts = useMemo(() => {
     let base = allProducts.filter(p => !notInterestedIds.has(p.id));
@@ -104,12 +127,12 @@ export default function FeedScreen() {
       // Blend: platform-wide saves (global popularity) + personal saves × 2
       // (your taste amplifies the signal). As more users join, the global
       // count becomes increasingly meaningful on its own.
-      const score = (id: string) =>
-        (trendingCounts.get(id) ?? 0) + (saveCounts.get(id) ?? 0) * 2;
+      const score = (id: string) => trendingScoresRef.current.get(id) ?? 0;
       return [...base].sort((a, b) => score(b.id) - score(a.id));
     }
     return base; // explore — store order (ranked by taste)
-  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, saveCounts, trendingCounts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, trendingSnapshotTick]);
 
   const pagedProducts = visibleProducts.slice(0, visibleCount);
   const hasMore = visibleCount < visibleProducts.length;
@@ -153,7 +176,9 @@ export default function FeedScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchBoards(), fetchInbox()]);
+    // fetchProducts() no-ops once already loaded (see useProductsStore), so
+    // this is just the retry path for a feed that failed to load initially.
+    await Promise.all([fetchBoards(), fetchInbox(), fetchProducts()]);
     setRefreshing(false);
   }, []);
 
@@ -174,37 +199,65 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* Feed mode chips */}
-        <View style={styles.chips}>
-          {CHIPS.map(chip => (
-            <Pressable
-              key={chip.id}
-              style={[styles.chip, activeChip === chip.id && styles.chipActive]}
-              onPress={() => setActiveChip(chip.id)}
-            >
-              <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
-                {chip.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {/* Feed mode chips + category filter, one row */}
+        <View style={styles.chipsRow}>
+          <View style={styles.chips}>
+            {CHIPS.map(chip => (
+              <Pressable
+                key={chip.id}
+                style={[styles.chip, activeChip === chip.id && styles.chipActive]}
+                onPress={() => setActiveChip(chip.id)}
+              >
+                <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
+                  {chip.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-        {/* Category chips — what to show, independent of the sort mode above */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryChips}>
-          {CATEGORY_CHIPS.map(cat => (
-            <Pressable
-              key={cat.id}
-              style={[styles.categoryChip, activeCategory === cat.id && styles.chipActive]}
-              onPress={() => setActiveCategory(cat.id)}
-            >
-              <Text style={[styles.chipText, activeCategory === cat.id && styles.chipTextActive]}>
-                {cat.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+          <Pressable
+            style={[styles.filterBtn, activeCategory !== 'all' && styles.chipActive]}
+            onPress={(e) => setFilterAnchor({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
+          >
+            <FilterIcon color={activeCategory !== 'all' ? Colors.ink : 'rgba(255,255,255,0.58)'} size={13} />
+            <Text style={[styles.chipText, activeCategory !== 'all' && styles.chipTextActive]} numberOfLines={1}>
+              {activeCategory === 'all' ? 'filter' : CATEGORY_CHIPS.find(c => c.id === activeCategory)?.label}
+            </Text>
+          </Pressable>
+        </View>
         </View>
       </View>
+
+      {/* Category filter dropdown — anchored to wherever the filter button was tapped */}
+      <Modal transparent visible={!!filterAnchor} animationType="none" onRequestClose={() => setFilterAnchor(null)}>
+        <TouchableWithoutFeedback onPress={() => setFilterAnchor(null)}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+        {filterAnchor && (
+          <View
+            style={[
+              styles.filterMenu,
+              {
+                top: filterAnchor.y + 10,
+                left: Math.min(Math.max(filterAnchor.x - FILTER_MENU_WIDTH + 24, 12), screenWidth - FILTER_MENU_WIDTH - 12),
+              },
+            ]}
+          >
+            {CATEGORY_CHIPS.map(cat => (
+              <Pressable
+                key={cat.id}
+                style={styles.filterMenuRow}
+                onPress={() => { setActiveCategory(cat.id); setFilterAnchor(null); }}
+              >
+                <Text style={[styles.filterMenuRowText, activeCategory === cat.id && styles.filterMenuRowTextActive]}>
+                  {cat.label}
+                </Text>
+                {activeCategory === cat.id && <CheckIcon color={Colors.accentLime} size={14} />}
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </Modal>
 
       {/* Expanded strip view (explore only) */}
       {viewingStrip ? (
@@ -286,7 +339,9 @@ export default function FeedScreen() {
                   <Text style={styles.caughtUpText}>you're all caught up</Text>
                   <View style={styles.caughtUpLine} />
                 </View>
-              : null
+              : !productsLoaded
+                ? <ActivityIndicator color={Colors.accent} style={{ marginTop: 40 }} />
+                : null
           }
         </ScrollView>
       )}
@@ -322,7 +377,16 @@ const styles = StyleSheet.create({
   },
   badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
 
-  chips: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 2, paddingBottom: 14, gap: Spacing[3] },
+  chipsRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: 20,
+    paddingTop:        2,
+    paddingBottom:     16,
+    gap:               Spacing[3],
+  },
+  chips: { flexDirection: 'row', gap: Spacing[3] },
   chip:  {
     paddingHorizontal: 16,
     paddingVertical:   Spacing[2],
@@ -334,14 +398,35 @@ const styles = StyleSheet.create({
   chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
   chipTextActive: { color: Colors.ink },
 
-  categoryChips: { flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 16, gap: Spacing[2] },
-  categoryChip: {
+  filterBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               6,
     paddingHorizontal: 14,
-    paddingVertical:   6,
+    paddingVertical:   Spacing[2],
     borderRadius:      Radius.full,
     borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.16)',
+    borderColor:       'rgba(255,255,255,0.22)',
+    maxWidth:          130,
   },
+
+  filterMenu: {
+    position:        'absolute',
+    width:            FILTER_MENU_WIDTH,
+    backgroundColor:  Colors.surface,
+    borderRadius:     Radius.card,
+    paddingVertical:  Spacing[2],
+    ...Shadows.elevated,
+  },
+  filterMenuRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: 16,
+    paddingVertical:   10,
+  },
+  filterMenuRowText:       { ...Typography.body, fontSize: 14, color: Colors.text },
+  filterMenuRowTextActive: { fontFamily: 'Mulish_800ExtraBold' },
 
   caughtUp: {
     flexDirection:  'row',

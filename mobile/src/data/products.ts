@@ -74,11 +74,4 @@ export const EDITORIAL_STRIPS: {
     fg: '#FFF8F0',
     filter: (p) => p.styles?.includes('minimalist') ?? false,
   },
-  {
-    title: 'under $60',
-    subtitle: 'Quality that doesn\'t ask for much.',
-    bg: '#D6E849',
-    fg: '#0D1035',
-    filter: (p) => p.price < 60,
-  },
 ];

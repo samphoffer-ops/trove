@@ -130,6 +130,19 @@ export function GearIcon({ color = '#0B0C1D', size = 22 }: { color?: string; siz
   );
 }
 
+export function FilterIcon({ color = '#0B0C1D', size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Line x1="4" y1="6" x2="20" y2="6" />
+      <Line x1="4" y1="12" x2="20" y2="12" />
+      <Line x1="4" y1="18" x2="20" y2="18" />
+      <Circle cx="8" cy="6" r="2" fill={color} stroke="none" />
+      <Circle cx="16" cy="12" r="2" fill={color} stroke="none" />
+      <Circle cx="10" cy="18" r="2" fill={color} stroke="none" />
+    </Svg>
+  );
+}
+
 export function PlusIcon({ color = '#0B0C1D', size = 18 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
