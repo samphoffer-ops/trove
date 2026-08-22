@@ -68,38 +68,50 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   async fetchProducts() {
     if (get().loaded || get().loading) return;
     set({ loading: true });
-    const { data: { user } } = await supabase.auth.getUser();
-
-    // Logged-out (the marketing homepage's showcase) has no taste signals to
-    // rank against — same plain shuffle as always. Signed-in users get the
-    // ranked feed via the rank_products_for_user RPC (see migration 010):
-    // semantic similarity to their own behavioral taste vector, plus small
-    // onboarding/shop_for/not-interested adjustments, drawn via weighted
-    // sampling so nothing is ever fully excluded. PostgREST can't run
-    // pgvector's similarity operators directly, which is why this has to be
-    // a Postgres function called via .rpc() rather than a plain .select().
-    const [productsRes, notInterestedRes, brandsRes] = await Promise.all([
-      user
-        ? supabase.rpc('rank_products_for_user', { p_user_id: user.id })
-        : supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
-      user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
-      supabase.from('brands').select('id, audience'),
-    ]);
-    if (productsRes.error) {
-      console.error('fetchProducts:', productsRes.error);
+    try {
+      // Logged-out (the marketing homepage's showcase) has no taste signals to
+      // rank against — same plain shuffle as always. Signed-in users get the
+      // ranked feed via the rank_products_for_user RPC (see migration 010):
+      // semantic similarity to their own behavioral taste vector, plus small
+      // onboarding/shop_for/not-interested adjustments, drawn via weighted
+      // sampling so nothing is ever fully excluded. PostgREST can't run
+      // pgvector's similarity operators directly, which is why this has to be
+      // a Postgres function called via .rpc() rather than a plain .select().
+      // Excludes `embedding` (vector(1024), ~4KB/row, never read client-side —
+      // see the Product type) since pulling it for the entire active catalog
+      // was a meaningful chunk of why this used to be slow at scale.
+      const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, image, images, ratio, url, category, styles, description, source, external_handle, status, first_seen_at, last_seen_at, price_history, removed_at, created_at, search_keywords';
+      const { data: { user } } = await supabase.auth.getUser();
+      const [productsRes, notInterestedRes, brandsRes] = await Promise.all([
+        user
+          ? supabase.rpc('rank_products_for_user', { p_user_id: user.id })
+          : supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false }),
+        user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
+        supabase.from('brands').select('id, audience'),
+      ]);
+      if (productsRes.error) {
+        console.error('fetchProducts:', productsRes.error);
+        return;
+      }
+      const notInterestedIds = new Set((notInterestedRes.data ?? []).map(r => r.product_id));
+      const brandAudience = new Map(
+        (brandsRes.data ?? [])
+          .filter((b): b is { id: string; audience: 'mens' | 'womens' | 'unisex' } => !!b.audience)
+          .map(b => [b.id, b.audience]),
+      );
+      const products = user
+        ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
+        : interleaveByBrand((productsRes.data ?? []) as Product[]);
+      set({ products, notInterestedIds, brandAudience, loaded: true });
+    } catch (e) {
+      // Network hiccup, cold-start race with session restore, etc. Leaving
+      // `loaded` false (not just `loading`) means the guard above lets a
+      // later retry through instead of wedging the feed empty for the rest
+      // of the session — see onRefresh in feed.tsx, which retries this.
+      console.error('fetchProducts:', e);
+    } finally {
       set({ loading: false });
-      return;
     }
-    const notInterestedIds = new Set((notInterestedRes.data ?? []).map(r => r.product_id));
-    const brandAudience = new Map(
-      (brandsRes.data ?? [])
-        .filter((b): b is { id: string; audience: 'mens' | 'womens' | 'unisex' } => !!b.audience)
-        .map(b => [b.id, b.audience]),
-    );
-    const products = user
-      ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
-      : interleaveByBrand((productsRes.data ?? []) as Product[]);
-    set({ products, notInterestedIds, brandAudience, loading: false, loaded: true });
   },
 
   // Platform-wide save counts — fetched once, used to blend global popularity
