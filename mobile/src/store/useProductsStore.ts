@@ -167,6 +167,23 @@ export function getProductById(id: string): Product | undefined {
   return useProductsStore.getState().products.find(p => p.id === id);
 }
 
+// Deliberately NOT a filter over the `products` array above — that's
+// whatever rank_products_for_user's weighted-random sample happened to
+// pull for this user (capped at p_limit, a fraction of the full active
+// catalog), so a low-signal brand with only a handful of products has
+// real odds of never landing in it and being unfindable by name no
+// matter how correctly it's typed. Confirmed: "Vitos New York", 6
+// products, invisible to search. This queries every active product
+// directly (see migration 020), independent of any one user's feed.
+export async function searchProducts(query: string): Promise<Product[]> {
+  const { data, error } = await supabase.rpc('search_products', { q: query });
+  if (error) {
+    console.error('searchProducts:', error);
+    return [];
+  }
+  return (data ?? []) as Product[];
+}
+
 // Same pgvector-via-RPC constraint as fetchProducts() above — similarity
 // has to be computed in Postgres (see migration 011). Returns [] (not an
 // error) when the seed product has no embedding yet, so callers can just

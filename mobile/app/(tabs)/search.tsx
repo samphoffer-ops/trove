@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProducts, useProductsStore } from '@/store/useProductsStore';
+import { searchProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { searchProfiles, fetchFollowing } from '@/lib/social';
@@ -33,6 +33,8 @@ export default function SearchScreen() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [people,     setPeople]     = useState<Profile[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searching,  setSearching]  = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,6 +55,21 @@ export default function SearchScreen() {
     searchProfiles(q, user?.id).then(setPeople);
   }, [query, user]);
 
+  // Debounced — this is a real network round-trip now (searching the full
+  // catalog server-side, see searchProducts), not a free in-memory filter.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    const timeout = setTimeout(() => {
+      searchProducts(q).then(results => {
+        setSearchResults(results.filter(p => !notInterestedIds.has(p.id)));
+        setSearching(false);
+      });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [query, notInterestedIds]);
+
   async function toggleFollow(personId: string) {
     if (!user) return;
     const isFollowing = followingIds.has(personId);
@@ -65,7 +82,8 @@ export default function SearchScreen() {
     else await supabase.from('follows').insert({ follower_id: user.id, following_id: personId });
   }
 
-  const { products, hasMore } = getProducts({ query, perPage: visibleCount });
+  const products = searchResults.slice(0, visibleCount);
+  const hasMore = visibleCount < searchResults.length;
   const hasQuery = query.trim().length > 0;
 
   function handleQuickActions(product: Product, anchor: { x: number; y: number }) {
@@ -155,7 +173,9 @@ export default function SearchScreen() {
               </View>
             )}
 
-            {products.length === 0 && people.length === 0 ? (
+            {searching && products.length === 0 ? (
+              <ActivityIndicator color={Colors.accent} style={{ marginTop: 40 }} />
+            ) : products.length === 0 && people.length === 0 ? (
               <Text style={styles.hint}>No results for "{query}"</Text>
             ) : products.length > 0 ? (
               <>
