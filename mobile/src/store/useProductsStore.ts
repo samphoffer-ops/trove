@@ -81,14 +81,31 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       // see the Product type) since pulling it for the entire active catalog
       // was a meaningful chunk of why this used to be slow at scale.
       const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, image, images, ratio, url, category, styles, description, source, external_handle, status, first_seen_at, last_seen_at, price_history, removed_at, created_at, search_keywords';
+      const unrankedQuery = () =>
+        supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false });
       const { data: { user } } = await supabase.auth.getUser();
-      const [productsRes, notInterestedRes, brandsRes] = await Promise.all([
-        user
-          ? supabase.rpc('rank_products_for_user', { p_user_id: user.id })
-          : supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false }),
+
+      const sideQueries = Promise.all([
         user ? supabase.from('not_interested').select('product_id').eq('user_id', user.id) : Promise.resolve({ data: [] as { product_id: string }[] }),
         supabase.from('brands').select('id, audience'),
       ]);
+
+      let ranked = false;
+      let productsRes = user ? await supabase.rpc('rank_products_for_user', { p_user_id: user.id }) : await unrankedQuery();
+      if (user && productsRes.error) {
+        // Ranking runs a pgvector similarity search across the full active
+        // catalog and can time out under load (confirmed happening in
+        // production for accounts with real taste signal — see migration
+        // 019's follow-up notes). Personalization is a nice-to-have; an
+        // empty feed is not — fall back to the same fast unranked query
+        // logged-out users already get rather than surfacing nothing.
+        console.error('rank_products_for_user failed, falling back to unranked feed:', productsRes.error);
+        productsRes = await unrankedQuery();
+      } else if (user) {
+        ranked = true;
+      }
+
+      const [notInterestedRes, brandsRes] = await sideQueries;
       if (productsRes.error) {
         console.error('fetchProducts:', productsRes.error);
         return;
@@ -99,7 +116,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           .filter((b): b is { id: string; audience: 'mens' | 'womens' | 'unisex' } => !!b.audience)
           .map(b => [b.id, b.audience]),
       );
-      const products = user
+      const products = ranked
         ? (productsRes.data ?? []) as Product[] // already ranked server-side, don't reshuffle it
         : interleaveByBrand((productsRes.data ?? []) as Product[]);
       set({ products, notInterestedIds, brandAudience, loaded: true });
