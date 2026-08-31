@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,9 +12,19 @@ const TAB_BAR_TOP_PAD = 10;
 export default function TabsLayout() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  // Static export prerenders this in Node, where useWindowDimensions falls
+  // back to a value no real browser matches — baking a different padding
+  // number into the static HTML than the client computes on first render.
+  // This tab bar renders on every single screen, so it's a candidate for
+  // the same hydration-mismatch class as MasonryGrid (see its comment).
+  // Not measured to be the actual trigger, but cheap and correct to fix
+  // the same way: use the real width only once mounted.
+  const [mounted, setMounted] = useState(Platform.OS !== 'web');
+  useEffect(() => { setMounted(true); }, []);
+  const effectiveWidth = mounted ? width : 0;
   // On web, pad the tab items inward so they stay in the same content column
   // as the rest of the page — full-width ink background is handled by tabBg.
-  const tabHPad = Platform.OS === 'web' ? Math.max(0, (width - CONTENT_MAX_WIDTH) / 2) : Spacing[5];
+  const tabHPad = Platform.OS === 'web' ? Math.max(0, (effectiveWidth - CONTENT_MAX_WIDTH) / 2) : Spacing[5];
 
   return (
     <Tabs
