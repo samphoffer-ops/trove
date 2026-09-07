@@ -41,7 +41,13 @@ export default function TabsLayout() {
             bottom:       insets.bottom + FLOAT_MARGIN,
             left:         insets.left + tabHPad + FLOAT_MARGIN,
             right:        insets.right + tabHPad + FLOAT_MARGIN,
-            paddingTop:   TAB_BAR_TOP_PAD,
+            paddingTop:    TAB_BAR_TOP_PAD,
+            // Explicit, equal to paddingTop — without this, react-navigation's
+            // own safe-area handling still pads the bottom by default (meant
+            // for a bar docked flush to the screen edge), which now double-
+            // counts against the floating `bottom` offset above and pushes
+            // the icons off-center toward the top of the pill.
+            paddingBottom: TAB_BAR_TOP_PAD,
           },
         ],
         tabBarBackground: () => <View style={styles.tabBg} />,
