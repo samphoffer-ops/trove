@@ -9,6 +9,8 @@ import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
 import { useProductsStore, getProducts } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useShareStore } from '@/store/useShareStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { fetchFollowedBrands } from '@/lib/social';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
@@ -49,14 +51,37 @@ const AUDIENCE_CATEGORY_IDS = new Set(['womens', 'mens']);
 const PAGE_SIZE = 30;
 const FILTER_MENU_WIDTH = 190;
 
+// The "just in" strip is personalized: new arrivals from brands the
+// viewer follows come first, backfilled with other recent products so
+// it always has enough to show even when they follow few (or no)
+// brands. Every other strip keeps its plain data-driven filter.
+function getStripItems(
+  strip: typeof EDITORIAL_STRIPS[number],
+  allProducts: Product[],
+  followedBrandIds: Set<string>,
+  limit?: number,
+): Product[] {
+  if (strip.title !== 'just in') {
+    const matched = allProducts.filter(strip.filter);
+    return limit ? matched.slice(0, limit) : matched;
+  }
+  const byNew = [...allProducts].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
+  const followed = byNew.filter(p => p.brand_id && followedBrandIds.has(p.brand_id));
+  const rest = byNew.filter(p => !(p.brand_id && followedBrandIds.has(p.brand_id)));
+  const combined = [...followed, ...rest];
+  return limit ? combined.slice(0, limit) : combined;
+}
+
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience, loaded: productsLoaded } = useProductsStore();
   const { boards } = useBoardStore();
+  const { user } = useAuthStore();
   const [activeChip, setActiveChip] = useState<ChipId>('explore');
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+  const [followedBrandIds, setFollowedBrandIds] = useState<Set<string>>(new Set());
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
@@ -112,12 +137,12 @@ export default function FeedScreen() {
   const editorialProductIds = useMemo(() => {
     const ids = new Set<string>();
     for (const strip of EDITORIAL_STRIPS) {
-      for (const p of allProducts.filter(strip.filter).slice(0, 10)) {
+      for (const p of getStripItems(strip, allProducts, followedBrandIds, 10)) {
         ids.add(p.id);
       }
     }
     return ids;
-  }, [allProducts]);
+  }, [allProducts, followedBrandIds]);
 
   const visibleProducts = useMemo(() => {
     let base = allProducts.filter(p => !notInterestedIds.has(p.id));
@@ -154,6 +179,10 @@ export default function FeedScreen() {
 
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip, activeCategory]);
   useEffect(() => { fetchInbox(); fetchProducts(); fetchTrendingCounts(); }, []);
+  useEffect(() => {
+    if (!user) return;
+    fetchFollowedBrands(user.id).then(brands => setFollowedBrandIds(new Set(brands.map(b => b.id))));
+  }, [user]);
 
   function handleScroll(e: any) {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
@@ -285,7 +314,7 @@ export default function FeedScreen() {
             <View style={{ width: 22 }} />
           </View>
           <MasonryGrid
-            items={allProducts.filter(viewingStrip.filter)}
+            items={getStripItems(viewingStrip, allProducts, followedBrandIds)}
             keyExtractor={p => p.id}
             renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
           />
@@ -301,7 +330,7 @@ export default function FeedScreen() {
         >
           {/* Editorial strips — explore mode only */}
           {activeChip === 'explore' && EDITORIAL_STRIPS.map((strip) => {
-            const items = allProducts.filter(strip.filter).slice(0, 10);
+            const items = getStripItems(strip, allProducts, followedBrandIds, 10);
             if (!items.length) return null;
             return (
               <View key={strip.title}>
@@ -334,7 +363,7 @@ export default function FeedScreen() {
           {activeChip === 'explore' && allProducts.length > 0 && (
             <View style={styles.gridDivider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerLabel}>everything</Text>
+              <Text style={styles.dividerLabel}>your trove</Text>
               <View style={styles.dividerLine} />
             </View>
           )}
