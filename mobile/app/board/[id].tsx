@@ -41,7 +41,10 @@ export default function BoardDetail() {
 
   const total = items.reduce((n, i) => n + i.product_data.price, 0);
   const collaborators = board.board_collaborators ?? [];
-  const canEdit = board.isOwner || collaborators.some(c => c.user_id === user?.id);
+  // Must match the editor-role boundary the backend actually enforces
+  // (board-cover storage policies, board_items insert/delete) — a viewer
+  // collaborator seeing these controls would just hit a permission error.
+  const canEdit = board.isOwner || collaborators.some(c => c.user_id === user?.id && c.role === 'editor');
 
   async function changeCoverImage() {
     if (!board) return;
