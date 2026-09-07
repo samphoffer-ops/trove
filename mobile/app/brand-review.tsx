@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
@@ -37,6 +37,7 @@ export default function BrandReview() {
   const [brands, setBrands] = useState<PendingBrand[]>([]);
   const [loading, setLoading] = useState(true);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
 
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
 
@@ -50,8 +51,9 @@ export default function BrandReview() {
 
   async function decide(brand: PendingBrand, decision: 'approve' | 'reject') {
     setDecidingId(brand.id);
+    const note = decision === 'reject' ? rejectNotes[brand.id]?.trim() : undefined;
     const { data, error } = await supabase.functions.invoke('catalog-intake', {
-      body: { action: 'review_decision', brand_id: brand.id, decision },
+      body: { action: 'review_decision', brand_id: brand.id, decision, note },
     });
     if (error) {
       const detail = await (error as any).context?.json?.().catch(() => null);
@@ -62,6 +64,7 @@ export default function BrandReview() {
       // Optimistic removal — this brand is decided, drop it from the list
       // rather than re-fetching the whole queue.
       setBrands(prev => prev.filter(b => b.id !== brand.id));
+      setRejectNotes(prev => { const next = { ...prev }; delete next[brand.id]; return next; });
     }
     setDecidingId(null);
   }
@@ -121,6 +124,14 @@ export default function BrandReview() {
                 )}
 
                 {brand.judge_reasoning && <Text style={styles.reasoning}>{brand.judge_reasoning}</Text>}
+
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Why not, if rejecting? (optional — steers future picks)"
+                  placeholderTextColor={Colors.textLight}
+                  value={rejectNotes[brand.id] ?? ''}
+                  onChangeText={text => setRejectNotes(prev => ({ ...prev, [brand.id]: text }))}
+                />
 
                 <View style={styles.actionRow}>
                   <Pressable
@@ -187,6 +198,12 @@ const styles = StyleSheet.create({
   chipText:  { ...Typography.label, color: Colors.textMuted },
 
   reasoning: { ...Typography.body, fontSize: 13, color: Colors.textMuted, marginTop: Spacing[3], lineHeight: 19 },
+
+  noteInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.full,
+    paddingHorizontal: 14, paddingVertical: 10, marginTop: Spacing[3],
+    ...Typography.body, fontSize: 13, color: Colors.text, backgroundColor: Colors.bg,
+  },
 
   actionRow: { flexDirection: 'row', gap: Spacing[3], marginTop: Spacing[4] },
   actionBtn: {

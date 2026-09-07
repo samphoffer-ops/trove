@@ -75,13 +75,21 @@ function buildTasteProfile(approved: { matched_categories?: string[] | null; mat
 // we've actually been rejecting for."
 async function summarizeRejectionPatterns(
   anthropicKey: string,
-  rejected: { name: string; judge_reasoning?: string | null }[],
+  rejected: { name: string; judge_reasoning?: string | null; rejection_note?: string | null }[],
 ): Promise<string> {
-  const withReasoning = rejected.filter(b => b.judge_reasoning);
+  // rejection_note is Sam's own reason for a manual override and takes
+  // priority — judge_reasoning on a brand that reached the review queue
+  // argues FOR it (an approve verdict), so using it as rejection signal on
+  // a brand Sam then rejected was actively backwards. Fall back to
+  // judge_reasoning only for brands the AI itself auto-rejected, where it's
+  // genuine anti-signal.
+  const withReasoning = rejected
+    .map(b => ({ name: b.name, reason: b.rejection_note || b.judge_reasoning }))
+    .filter((b): b is { name: string; reason: string } => !!b.reason);
   if (withReasoning.length === 0) return '';
 
   const sample = withReasoning.slice(0, 60)
-    .map(b => `${b.name}: ${b.judge_reasoning}`)
+    .map(b => `${b.name}: ${b.reason}`)
     .join('\n');
 
   const prompt = `Here are brands a curated shopping app's brand judge has rejected, with the reasoning given at the time:
@@ -655,13 +663,13 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const [{ data: allBrands }, { data: rejectedBrands }, { data: approvedBrands }, { data: handPickedBrands }] = await Promise.all([
       admin.from('brands').select('domain'),
-      admin.from('brands').select('name, judge_reasoning').eq('status', 'rejected').order('created_at', { ascending: false }).limit(100),
+      admin.from('brands').select('name, judge_reasoning, rejection_note').eq('status', 'rejected').order('created_at', { ascending: false }).limit(100),
       admin.from('brands').select('name, domain, matched_categories, matched_styles').eq('status', 'approved').limit(500),
       admin.from('brands').select('name, domain').eq('status', 'approved').eq('hand_picked', true),
     ]);
 
     const knownDomains = new Set((allBrands ?? []).map(b => cleanDomain(b.domain)));
-    const rejected = (rejectedBrands ?? []) as { name: string; judge_reasoning?: string | null }[];
+    const rejected = (rejectedBrands ?? []) as { name: string; judge_reasoning?: string | null; rejection_note?: string | null }[];
     const rejectedNames = rejected.map(b => b.name).filter(Boolean);
     const approved = (approvedBrands ?? []) as { name: string; domain: string; matched_categories?: string[] | null; matched_styles?: string[] | null }[];
     const handPicked = (handPickedBrands ?? []) as { name: string; domain: string }[];

@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
       const caller = await requireAdmin(req, admin);
       if (!caller) return respond({ error: 'Unauthorized' }, 403);
 
-      const { brand_id, decision } = body;
+      const { brand_id, decision, note } = body;
       if (!brand_id || (decision !== 'approve' && decision !== 'reject')) {
         return respond({ error: 'Provide brand_id and decision ("approve"|"reject")' }, 400);
       }
@@ -609,6 +609,10 @@ Deno.serve(async (req) => {
           status,
           approved_by: decision === 'approve' ? caller.id : null,
           approved_at: decision === 'approve' ? new Date().toISOString() : null,
+          // The real reason a human overrode the queue, distinct from
+          // judge_reasoning (the AI's own reasoning at judgment time, which
+          // for a queued/approve-verdict brand argues FOR it, not against).
+          rejection_note: decision === 'reject' && note ? String(note).slice(0, 500) : null,
         })
         .eq('id', brand_id)
         .eq('status', 'pending_review')
