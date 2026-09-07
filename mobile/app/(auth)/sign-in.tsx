@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
   fields: { width: '100%', gap: Spacing[2], marginBottom: Spacing[4] },
   input: {
     width:             '100%',
-    borderRadius:      Radius.card,
-    paddingHorizontal: 16,
+    borderRadius:      Radius.full,
+    paddingHorizontal: 20,
     paddingVertical:   14,
     ...Typography.body,
     fontSize:        14,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   btn: {
     width:           '100%',
     backgroundColor: Colors.ink,
-    borderRadius:    Radius.card,
+    borderRadius:    Radius.full,
     paddingVertical: 15,
     alignItems:      'center',
     marginBottom:    Spacing[5],
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent:  'center',
     gap:             10,
     paddingVertical: 12,
-    borderRadius:    Radius.card,
+    borderRadius:    Radius.full,
     borderWidth:     1,
     borderColor:     Colors.border,
     backgroundColor: Colors.surface,
