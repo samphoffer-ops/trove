@@ -283,10 +283,28 @@ async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
         const pageRes = await fetchWithTimeout(url, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
         if (!pageRes.ok) continue;
         const html = await pageRes.text();
-        const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-        if (!ldMatch) continue;
-        const ld = JSON.parse(ldMatch[1]);
-        if (ld['@type'] !== 'Product') continue;
+        // A page routinely carries several ld+json blocks (Organization,
+        // BreadcrumbList, WebSite, then Product) — matching only the first
+        // one (previously with no `g` flag) meant a Product block anywhere
+        // but first was silently missed. Also tolerate extra/reordered
+        // attributes on the script tag (id=, quote style) instead of
+        // requiring an exact `type="application/ld+json"` match, and unwrap
+        // `@graph` — common from SEO plugins — which wraps every entity on
+        // the page in one script block instead of emitting Product on its
+        // own.
+        const ldBlocks = [...html.matchAll(/<script[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+        let ld: any = null;
+        for (const block of ldBlocks) {
+          let parsed: any;
+          try { parsed = JSON.parse(block); } catch { continue; }
+          const nodes = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed]);
+          const found = nodes.find((n: any) => {
+            const type = n?.['@type'];
+            return type === 'Product' || (Array.isArray(type) && type.includes('Product'));
+          });
+          if (found) { ld = found; break; }
+        }
+        if (!ld) continue;
         const image = Array.isArray(ld.image) ? ld.image[0]?.contentUrl ?? ld.image[0] : ld.image?.contentUrl ?? ld.image;
         const price = parseFloat(ld.Offers?.price ?? ld.offers?.price ?? '0');
         if (!image || !price) continue;
