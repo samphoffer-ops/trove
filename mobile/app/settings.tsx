@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
-import { Colors, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   signOutText: { ...Typography.body, fontSize: 15, fontWeight: '600', color: Colors.destructive },
 
   adminHeading:    { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[3], letterSpacing: 0.5 },
-  adminBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.inkGhost, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, marginBottom: Spacing[3] },
+  adminBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.inkGhost, borderRadius: Radius.full, paddingVertical: 14, paddingHorizontal: 16, marginBottom: Spacing[3] },
   adminBtnDisabled:{ opacity: 0.5 },
   adminBtnText:    { ...Typography.body, fontSize: 14, color: Colors.text },
   adminStatus:     { ...Typography.caption, color: Colors.textMuted, marginTop: Spacing[2], lineHeight: 18 },

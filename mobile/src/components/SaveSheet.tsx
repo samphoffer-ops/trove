@@ -159,11 +159,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: Radius.input, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: Radius.full, paddingHorizontal: 16, paddingVertical: 12,
     ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.bg,
   },
   createBtn: {
-    backgroundColor: Colors.accentLime, borderRadius: Radius.input,
+    backgroundColor: Colors.accentLime, borderRadius: Radius.full,
     paddingHorizontal: 16, justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.35 },

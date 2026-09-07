@@ -124,13 +124,13 @@ const styles = StyleSheet.create({
   label:   { ...Typography.cardTitle, color: Colors.text, marginTop: Spacing[5], marginBottom: Spacing[3], textTransform: 'lowercase' },
   sublabel:{ ...Typography.caption, fontSize: 12.5, color: Colors.textMuted, marginBottom: Spacing[3], marginTop: -4, lineHeight: 17 },
   input: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
-  bioInput: { minHeight: 80, textAlignVertical: 'top' },
+  bioInput: { minHeight: 80, textAlignVertical: 'top', borderRadius: Radius.card },
   handleInputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input, backgroundColor: Colors.surface,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full, backgroundColor: Colors.surface,
     paddingLeft: 16,
   },
   handlePrefix: { ...Typography.cardTitle, fontSize: 15, color: Colors.textMuted },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -24,7 +25,12 @@ export default function SignIn() {
 
   return (
     <View style={styles.root}>
-      <Image source={require('../../assets/sign-in-background.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <LinearGradient
+        colors={['rgba(13,16,53,0.55)', 'rgba(13,16,53,0)']}
+        locations={[0, 0.28]}
+        style={StyleSheet.absoluteFill}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

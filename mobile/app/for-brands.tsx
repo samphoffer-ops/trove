@@ -103,10 +103,10 @@ const styles = StyleSheet.create({
   formHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 24, color: Colors.text, letterSpacing: -0.4, marginBottom: Spacing[6] },
   form: { gap: Spacing[3] },
   input: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
-  textArea: { minHeight: 90, textAlignVertical: 'top' },
+  textArea: { minHeight: 90, textAlignVertical: 'top', borderRadius: Radius.card },
   submitBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { ...Typography.headline, fontSize: 15, color: Colors.text, textAlign: 'center', paddingHorizontal: 12 },

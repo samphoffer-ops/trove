@@ -115,10 +115,10 @@ const styles = StyleSheet.create({
   newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
   newInput: {
-    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
-    paddingHorizontal: 14, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
+    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
+    paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
   },
-  createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.input, paddingHorizontal: 16, justifyContent: 'center' },
+  createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },

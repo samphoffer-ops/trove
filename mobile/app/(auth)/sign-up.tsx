@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth:       1.5,
     borderColor:       'rgba(253,252,249,0.22)',
-    borderRadius:      Radius.input,
+    borderRadius:      Radius.full,
     paddingHorizontal: 18,
     paddingVertical:   16,
     ...Typography.body,

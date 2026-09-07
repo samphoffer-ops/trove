@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   confidenceText: { ...Typography.caption, fontSize: 11, color: Colors.textMuted },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: Spacing[3] },
-  chip:      { backgroundColor: Colors.bg, borderRadius: Radius.badge, paddingHorizontal: 8, paddingVertical: 4 },
+  chip:      { backgroundColor: Colors.bg, borderRadius: Radius.full, paddingHorizontal: 8, paddingVertical: 4 },
   chipText:  { ...Typography.label, color: Colors.textMuted },
 
   reasoning: { ...Typography.body, fontSize: 13, color: Colors.textMuted, marginTop: Spacing[3], lineHeight: 19 },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: Spacing[3], marginTop: Spacing[4] },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: Radius.input, paddingVertical: 12,
+    borderRadius: Radius.full, paddingVertical: 12,
   },
   rejectBtn:  { backgroundColor: Colors.bg },
   approveBtn: { backgroundColor: Colors.accentLime },

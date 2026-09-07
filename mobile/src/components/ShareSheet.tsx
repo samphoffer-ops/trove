@@ -169,8 +169,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: Colors.border,
   },
   messageInput: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.input,
-    paddingHorizontal: 14, paddingVertical: 11,
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
+    paddingHorizontal: 16, paddingVertical: 11,
     ...Typography.body, fontSize: 14, color: Colors.text,
     backgroundColor: Colors.bg, minHeight: 44, maxHeight: 88,
   },
