@@ -106,6 +106,19 @@ export default function FeedScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeChip, allProducts]);
 
+  // Products already surfaced in the editorial strips above the grid
+  // (explore mode only) — kept out of the main grid so nothing appears
+  // twice on the same screen.
+  const editorialProductIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const strip of EDITORIAL_STRIPS) {
+      for (const p of allProducts.filter(strip.filter).slice(0, 10)) {
+        ids.add(p.id);
+      }
+    }
+    return ids;
+  }, [allProducts]);
+
   const visibleProducts = useMemo(() => {
     let base = allProducts.filter(p => !notInterestedIds.has(p.id));
     if (activeCategory !== 'all') {
@@ -130,9 +143,11 @@ export default function FeedScreen() {
       const score = (id: string) => trendingScoresRef.current.get(id) ?? 0;
       return [...base].sort((a, b) => score(b.id) - score(a.id));
     }
-    return base; // explore — store order (ranked by taste)
+    // explore — store order (ranked by taste), minus whatever's already
+    // shown in the editorial strips just above this grid
+    return base.filter(p => !editorialProductIds.has(p.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, trendingSnapshotTick]);
+  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, trendingSnapshotTick, editorialProductIds]);
 
   const pagedProducts = visibleProducts.slice(0, visibleCount);
   const hasMore = visibleCount < visibleProducts.length;
