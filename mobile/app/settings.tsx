@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -18,7 +18,40 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false);
   const [adminStatus, setAdminStatus] = useState<string | null>(null);
   const [adminRunning, setAdminRunning] = useState(false);
+  const [quickAddUrl, setQuickAddUrl] = useState('');
   const isAdmin = user?.email === ADMIN_EMAIL;
+
+  // Accepts a bare domain or a full pasted URL (with protocol, www, a path,
+  // query string...) and reduces it to what catalog-intake expects.
+  function extractDomain(input: string): string {
+    let s = input.trim().toLowerCase();
+    s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    s = s.split('/')[0].split('?')[0];
+    return s;
+  }
+
+  async function quickAddBrand() {
+    const domain = extractDomain(quickAddUrl);
+    if (!domain) return;
+    setAdminRunning(true);
+    setAdminStatus(`Adding ${domain}…`);
+    try {
+      // auto_approve, same as the hand-picked list below — this is Sam
+      // vouching for a specific brand himself, not something to run past
+      // the AI judge first. Also flips hand_picked on the row, so it feeds
+      // the hand-picked similarity search layer in discover-brands too.
+      const { data, error } = await supabase.functions.invoke('catalog-intake', {
+        body: { domains: [domain], auto_approve: true },
+      });
+      if (error) throw error;
+      const result = data?.results?.[0];
+      setAdminStatus(result ? `✓ ${domain}: ${result.action}` : `✓ ${domain} submitted`);
+      setQuickAddUrl('');
+    } catch (e: any) {
+      setAdminStatus(`✗ ${domain} failed: ${e?.message ?? String(e)}`);
+    }
+    setAdminRunning(false);
+  }
 
   async function runAdminAction(fn: string, body: Record<string, unknown>, label: string) {
     setAdminRunning(true);
@@ -212,6 +245,28 @@ export default function Settings() {
             <View style={styles.divider} />
             <Text style={styles.adminHeading}>Admin</Text>
 
+            <View style={styles.quickAddRow}>
+              <TextInput
+                style={styles.quickAddInput}
+                placeholder="Paste a brand's URL to add it"
+                placeholderTextColor={Colors.textMuted}
+                value={quickAddUrl}
+                onChangeText={setQuickAddUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                returnKeyType="done"
+                onSubmitEditing={quickAddBrand}
+              />
+              <Pressable
+                style={[styles.quickAddBtn, (!quickAddUrl.trim() || adminRunning) && styles.adminBtnDisabled]}
+                onPress={quickAddBrand}
+                disabled={!quickAddUrl.trim() || adminRunning}
+              >
+                <Text style={styles.quickAddBtnText}>Add</Text>
+              </Pressable>
+            </View>
+
             <Pressable style={styles.adminBtn} onPress={() => router.push('/brand-review')}>
               <Text style={styles.adminBtnText}>Review pending brands</Text>
             </Pressable>
@@ -266,6 +321,13 @@ const styles = StyleSheet.create({
   signOutText: { ...Typography.body, fontSize: 15, fontWeight: '600', color: Colors.destructive },
 
   adminHeading:    { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[3], letterSpacing: 0.5 },
+  quickAddRow:     { flexDirection: 'row', gap: Spacing[2], marginBottom: Spacing[4] },
+  quickAddInput: {
+    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
+    paddingHorizontal: 16, paddingVertical: 12, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
+  },
+  quickAddBtn:     { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 20, justifyContent: 'center' },
+  quickAddBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   adminBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.inkGhost, borderRadius: Radius.full, paddingVertical: 14, paddingHorizontal: 16, marginBottom: Spacing[3] },
   adminBtnDisabled:{ opacity: 0.5 },
   adminBtnText:    { ...Typography.body, fontSize: 14, color: Colors.text },
