@@ -58,30 +58,47 @@ export default function Settings() {
     'freepeople.com',           // Free People
     'freemanssportingclub.com', // Freeman's Sporting Club
     'freeagencynewyork.com',    // Free Agency New York
+    'houseoferrors.org',        // House of Errors
+    'omtcnyc.com',               // Original Madras Trading Company
+    'essexandthewhale.com',      // Essex and the Whale
+    'jpress.com',                 // J. Press
+    // 'Osh Manufacturing' -- couldn't confidently find a real domain for
+    // this one (only match was OshKosh B'gosh, an unrelated kids-apparel
+    // company), so it's left out until Sam confirms the actual site.
   ];
+
+  // Runs domains through catalog-intake in batches small enough to stay
+  // under the Edge Function's execution limit (MAX_DOMAINS_PER_RUN=15
+  // server-side) — sending more than that in one call used to mean
+  // anything past the first 15 was silently dropped with no indication,
+  // not queued, not retried, just gone. Both admin actions below hit this:
+  // the hand-picked list only avoided it by luck (fewer than 15 per fixed
+  // half), and "Discover new brands" hit it on nearly every real run,
+  // since discovery usually finds 30-70 candidates in one pass.
+  async function intakeInBatches(domains: string[], autoApprove: boolean, onProgress: (done: number, total: number) => void) {
+    const BATCH_SIZE = 10;
+    const allResults: any[] = [];
+    for (let i = 0; i < domains.length; i += BATCH_SIZE) {
+      const batch = domains.slice(i, i + BATCH_SIZE);
+      onProgress(i, domains.length);
+      const { data, error } = await supabase.functions.invoke('catalog-intake', {
+        body: { domains: batch, ...(autoApprove ? { auto_approve: true } : {}) },
+      });
+      if (error) {
+        const detail = await (error as any).context?.json?.().catch(() => null);
+        throw new Error(detail?.error ?? error.message);
+      }
+      allResults.push(...(data?.results ?? []));
+    }
+    return allResults;
+  }
 
   async function runHandPickedIntake() {
     setAdminRunning(true);
     try {
-      // Split into two batches to stay under the Edge Function timeout
-      const batch1 = HAND_PICKED_DOMAINS.slice(0, 10);
-      const batch2 = HAND_PICKED_DOMAINS.slice(10);
+      const allResults = await intakeInBatches(HAND_PICKED_DOMAINS, true, (done, total) =>
+        setAdminStatus(`Intaking ${done}/${total} brands…`));
 
-      setAdminStatus(`Intaking batch 1/2 (${batch1.length} brands)…`);
-      const { data: r1, error: e1 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch1, auto_approve: true } });
-      if (e1) {
-        const detail = await (e1 as any).context?.json?.().catch(() => null);
-        throw new Error(detail?.error ?? e1.message);
-      }
-
-      setAdminStatus(`Intaking batch 2/2 (${batch2.length} brands)…`);
-      const { data: r2, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains: batch2, auto_approve: true } });
-      if (e2) {
-        const detail = await (e2 as any).context?.json?.().catch(() => null);
-        throw new Error(detail?.error ?? e2.message);
-      }
-
-      const allResults = [...(r1?.results ?? []), ...(r2?.results ?? [])];
       const approved = allResults.filter((r: any) => r.action === 'auto_approved').length;
       const skipped = allResults.filter((r: any) => r.action?.startsWith('skipped')).length;
       const totalProducts = allResults.reduce((n: number, r: any) => n + (r.count ?? 0), 0);
@@ -109,16 +126,12 @@ export default function Settings() {
         return;
       }
 
-      setAdminStatus(`Step 2/2 — intaking ${domains.length} candidates…`);
-      const { data: intook, error: e2 } = await supabase.functions.invoke('catalog-intake', { body: { domains } });
-      if (e2) {
-        const detail = await (e2 as any).context?.json?.().catch(() => null);
-        throw new Error(detail?.error ?? e2.message);
-      }
+      const allResults = await intakeInBatches(domains, false, (done, total) =>
+        setAdminStatus(`Step 2/2 — intaking ${done}/${total} candidates…`));
 
-      const queued   = (intook?.results ?? []).filter((r: any) => r.action === 'queued_for_review').length;
-      const rejected = (intook?.results ?? []).filter((r: any) => r.action?.startsWith('rejected')).length;
-      setAdminStatus(`✓ Done — ${queued} queued for review, ${rejected} rejected`);
+      const queued   = allResults.filter((r: any) => r.action === 'queued_for_review').length;
+      const rejected = allResults.filter((r: any) => r.action?.startsWith('rejected')).length;
+      setAdminStatus(`✓ Done — ${queued} queued for review, ${rejected} rejected (${domains.length} total candidates)`);
     } catch (e: any) {
       setAdminStatus(`✗ Discovery failed: ${e?.message ?? String(e)}`);
     }
