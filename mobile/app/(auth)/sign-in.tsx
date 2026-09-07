@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
+import { GoogleIcon, AppleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
 
 export default function SignIn() {
+  const insets = useSafeAreaInsets();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -19,42 +23,64 @@ export default function SignIn() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
-      <View style={styles.inner}>
-        {/* Wordmark — white on coral */}
-        <Logo width={160} color={Colors.bg}  />
+    <View style={styles.root}>
+      <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
 
-        <View style={styles.headingWrap}>
-          <Text style={styles.heading}>Welcome back.</Text>
-          <Text style={styles.sub}>Sign in to your Trove.</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.frame, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+      >
+        <View style={styles.card}>
+          <Logo width={132} color={Colors.text} />
+
+          <View style={styles.headingWrap}>
+            <Text style={styles.heading}>Welcome back.</Text>
+            <Text style={styles.sub}>Sign in to your Trove.</Text>
+          </View>
+
+          <View style={styles.fields}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email address"
+              placeholderTextColor={Colors.textLight}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={Colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              textContentType="password"
+            />
+          </View>
+
+          <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={signIn} disabled={loading}>
+            <Text style={styles.btnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.oauthGroup}>
+            <Pressable style={styles.oauthBtn}>
+              <GoogleIcon size={16} />
+              <Text style={styles.oauthText}>Sign in with Google</Text>
+            </Pressable>
+            <Pressable style={styles.oauthBtn}>
+              <AppleIcon color={Colors.text} size={15} />
+              <Text style={styles.oauthText}>Sign in with Apple</Text>
+            </Pressable>
+          </View>
         </View>
-
-        {/* Inputs — dark-tinted glass, not white boxes */}
-        <View style={styles.fields}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email address"
-            placeholderTextColor="rgba(253,252,249,0.45)"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            textContentType="emailAddress"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="rgba(253,252,249,0.45)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="password"
-          />
-        </View>
-
-        <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={signIn} disabled={loading}>
-          <Text style={styles.btnText}>{loading ? 'Signing in…' : 'Sign in'}</Text>
-        </Pressable>
 
         <Link href="/(auth)/sign-up" asChild>
           <Pressable style={styles.link}>
@@ -63,61 +89,92 @@ export default function SignIn() {
             </Text>
           </Pressable>
         </Link>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.accent },
-  inner: {
+  root: { flex: 1, backgroundColor: Colors.ink },
+  frame: {
     flex:             1,
-    paddingHorizontal: 28,
-    justifyContent:   'center',
-    gap:              0,
+    paddingHorizontal: 24,
+    justifyContent:   'flex-end',
   },
-  headingWrap: { marginTop: Spacing[6], marginBottom: Spacing[6] },
+  card: {
+    backgroundColor: Colors.bg,
+    borderRadius:    28,
+    paddingHorizontal: 26,
+    paddingTop:      36,
+    paddingBottom:   28,
+    alignItems:      'center',
+    ...Shadows.phone,
+  },
+  headingWrap: { alignItems: 'center', marginTop: Spacing[4], marginBottom: Spacing[5] },
   heading: {
     fontFamily:    'Mulish_900Black',
-    fontSize:      34,
-    letterSpacing: -1,
-    lineHeight:    38,
-    color:         Colors.bg,
-    marginBottom:  Spacing[2],
+    fontSize:      26,
+    letterSpacing: -0.6,
+    lineHeight:    30,
+    color:         Colors.text,
+    marginBottom:  Spacing[1],
   },
   sub: {
     ...Typography.body,
-    fontSize: 16,
-    color:    'rgba(253,252,249,0.65)',
+    fontSize: 14,
+    color:    Colors.textMuted,
   },
-  fields: { gap: Spacing[3], marginBottom: Spacing[5] },
-  // Semi-transparent dark inputs — blends with coral rather than fighting it
+  fields: { width: '100%', gap: Spacing[2], marginBottom: Spacing[4] },
   input: {
-    borderWidth:       1.5,
-    borderColor:       'rgba(253,252,249,0.22)',
-    borderRadius:      Radius.input,
-    paddingHorizontal: 18,
-    paddingVertical:   16,
+    width:             '100%',
+    borderRadius:      Radius.card,
+    paddingHorizontal: 16,
+    paddingVertical:   14,
     ...Typography.body,
-    fontSize:   15,
-    color:      Colors.bg,
-    backgroundColor: 'rgba(13,16,53,0.18)',
+    fontSize:        14,
+    color:           Colors.text,
+    backgroundColor: Colors.stoneSoft,
   },
   btn: {
-    backgroundColor: Colors.accentLime,
-    borderRadius:    Radius.full,
-    paddingVertical: 17,
+    width:           '100%',
+    backgroundColor: Colors.ink,
+    borderRadius:    Radius.card,
+    paddingVertical: 15,
     alignItems:      'center',
-    marginBottom:    Spacing[4],
+    marginBottom:    Spacing[5],
   },
   btnDisabled: { opacity: 0.5 },
   btnText: {
     fontFamily:    'Mulish_800ExtraBold',
-    fontSize:      16,
-    color:         Colors.text,
-    letterSpacing: -0.2,
+    fontSize:      15,
+    color:         Colors.bg,
+    letterSpacing: -0.1,
   },
-  link:       { alignItems: 'center', paddingVertical: 8 },
-  linkText:   { ...Typography.body, fontSize: 14, color: 'rgba(253,252,249,0.65)' },
+  dividerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: Spacing[3], marginBottom: Spacing[4] },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { ...Typography.caption, fontSize: 12, color: Colors.textMuted },
+  oauthGroup: { width: '100%', gap: Spacing[2] },
+  oauthBtn: {
+    width:           '100%',
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:             10,
+    paddingVertical: 12,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  oauthText: { fontFamily: 'Mulish_700Bold', fontSize: 13.5, color: Colors.text },
+  link:       { alignItems: 'center', paddingTop: Spacing[5] },
+  linkText:   {
+    ...Typography.body,
+    fontSize: 14,
+    color:    'rgba(253,252,249,0.75)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
   linkAccent: { fontFamily: 'Mulish_700Bold', color: Colors.bg },
 });
