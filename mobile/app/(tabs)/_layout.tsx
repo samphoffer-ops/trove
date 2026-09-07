@@ -7,7 +7,7 @@ import { Colors, Radius, Shadows, Spacing, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
 
 const CONTENT_MAX_WIDTH = 1100;
-const TAB_BAR_HEIGHT = 62;
+const TAB_BAR_HEIGHT = 70;
 const TAB_BAR_TOP_PAD = 10;
 const FLOAT_MARGIN = 16;
 
