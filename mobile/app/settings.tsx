@@ -65,6 +65,14 @@ export default function Settings() {
     // 'Osh Manufacturing' -- couldn't confidently find a real domain for
     // this one (only match was OshKosh B'gosh, an unrelated kids-apparel
     // company), so it's left out until Sam confirms the actual site.
+    'beachwood.com',        // Beachwood
+    'morrisandking.com',    // Morris & King
+    'literarysport.com',    // Literary Sport
+    'wooden-sleepers.com',  // Wooden Sleepers
+    'ghiaiacashmere.com',   // Ghiaia Cashmere
+    'sonder.haus',          // Sønderhaus Studios (spelled "sonder.haus" — the ø doesn't appear in the domain)
+    'drakes.com',           // Drake's
+    'mutimer.co',           // Mutimer
   ];
 
   // Runs domains through catalog-intake in batches small enough to stay
