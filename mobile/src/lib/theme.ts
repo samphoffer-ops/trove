@@ -45,7 +45,7 @@ export const Radius = {
   // Legacy (screens still reference these)
   sm: 10, md: 18, full: 999,
   // Named scale
-  badge: 4, input: 12, card: 14, nav: 32, pill: 999, phone: 44,
+  badge: 4, input: 12, card: 5, nav: 32, pill: 999, phone: 44,
 };
 
 // Mulish weights in sync with useFonts() in app/_layout.tsx.
