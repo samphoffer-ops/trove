@@ -669,16 +669,24 @@ Deno.serve(async (req) => {
     const tasteProfile = buildTasteProfile(approved);
     const rejectionPatterns = anthropicKey ? await summarizeRejectionPatterns(anthropicKey, rejected) : '';
 
+    // { "only_hand_picked": true } skips every layer except layer 0 — for
+    // cheaply exploring what similarity search against just the hand-picked
+    // list finds, without also paying for (and having to filter out) the
+    // seed/editorial/keyword/nuuly layers' Exa + Anthropic calls.
+    const onlyHandPicked = !!body.only_hand_picked;
+
     // Layers 0, 1, 2 run every time; Layer 4 (Nuuly) was a one-time bootstrap
     // source, not meant to carry ongoing weight — only runs when explicitly
     // requested via { "include_nuuly": true }, not on every regular call.
     const [handPickedCandidates, seedCandidates, editorialCandidates, nuulyCandidates] = await Promise.all([
       discoverFromHandPicked(exaKey, handPicked, rejectedNames, rejectionPatterns, knownDomains),
-      discoverFromSeeds(exaKey, approved, rejectedNames, rejectionPatterns, tasteProfile, knownDomains),
-      anthropicKey
+      onlyHandPicked
+        ? Promise.resolve([] as Candidate[])
+        : discoverFromSeeds(exaKey, approved, rejectedNames, rejectionPatterns, tasteProfile, knownDomains),
+      !onlyHandPicked && anthropicKey
         ? discoverFromEditorial(exaKey, anthropicKey, knownDomains, rejectedNames, rejectionPatterns)
         : Promise.resolve([] as Candidate[]),
-      anthropicKey && body.include_nuuly
+      !onlyHandPicked && anthropicKey && body.include_nuuly
         ? discoverFromNuuly(exaKey, anthropicKey, knownDomains, rejectedNames, rejectionPatterns)
         : Promise.resolve([] as Candidate[]),
     ]);
@@ -691,7 +699,9 @@ Deno.serve(async (req) => {
       ...editorialCandidates.map(c => c.domain),
       ...nuulyCandidates.map(c => c.domain),
     ]);
-    const keywordCandidates = await discoverFromKeywords(exaKey, rejectedNames, rejectionPatterns, alreadyFound);
+    const keywordCandidates = onlyHandPicked
+      ? []
+      : await discoverFromKeywords(exaKey, rejectedNames, rejectionPatterns, alreadyFound);
 
     // Final dedup — hand-picked candidates first (highest signal, so they win any domain collision)
     const seenDomains = new Set<string>();
