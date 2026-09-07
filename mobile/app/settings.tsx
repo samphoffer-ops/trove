@@ -166,7 +166,7 @@ export default function Settings() {
   }
 
   return (
-    <WebFrame maxWidth={480}>
+    <WebFrame maxWidth={960}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => goBack('/(tabs)/profile')} hitSlop={8}>
