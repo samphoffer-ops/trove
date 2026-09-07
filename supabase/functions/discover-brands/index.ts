@@ -677,6 +677,20 @@ Deno.serve(async (req) => {
     const tasteProfile = buildTasteProfile(approved);
     const rejectionPatterns = anthropicKey ? await summarizeRejectionPatterns(anthropicKey, rejected) : '';
 
+    // { "custom_query": "..." } runs ONE ad-hoc themed Exa search — for
+    // cheaply testing a hunch about a specific aesthetic ("New England
+    // heritage prep") before deciding it's worth a permanent layer.
+    // Short-circuits everything else, same isolation idea as
+    // only_hand_picked, so a few exploratory pulls don't also pay for the
+    // seed/editorial/keyword layers every time.
+    if (typeof body.custom_query === 'string' && body.custom_query.trim()) {
+      const found = await searchExaStorefronts(exaKey, body.custom_query.trim(), rejectedNames, rejectionPatterns);
+      const candidates = found
+        .map(b => ({ ...b, domain: cleanDomain(b.domain), source: 'custom' as const }))
+        .filter(c => c.domain && !knownDomains.has(c.domain));
+      return respond({ found_new: candidates.length, breakdown: { custom: candidates.length }, candidates });
+    }
+
     // { "only_hand_picked": true } skips every layer except layer 0 — for
     // cheaply exploring what similarity search against just the hand-picked
     // list finds, without also paying for (and having to filter out) the
