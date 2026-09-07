@@ -24,7 +24,7 @@ export default function SignIn() {
 
   return (
     <View style={styles.root}>
-      <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={require('../../assets/sign-in-background.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
