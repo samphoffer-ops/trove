@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, Typography } from '@/lib/theme';
+import { Colors, Radius, Shadows, Spacing, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
 
 const CONTENT_MAX_WIDTH = 1100;
-const TAB_BAR_CONTENT_HEIGHT = 58;
+const TAB_BAR_HEIGHT = 62;
 const TAB_BAR_TOP_PAD = 10;
+const FLOAT_MARGIN = 16;
 
 export default function TabsLayout() {
   const { width } = useWindowDimensions();
@@ -33,14 +34,14 @@ export default function TabsLayout() {
         tabBarStyle: [
           styles.tabBar,
           {
-            // Same total thickness as before — TAB_BAR_TOP_PAD is carved out
-            // of the existing content height, not added on top of it, so the
-            // icons shift down within the same bar instead of growing it.
-            height:        TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-            paddingTop:    TAB_BAR_TOP_PAD,
-            paddingBottom: insets.bottom,
-            paddingLeft:   insets.left + tabHPad,
-            paddingRight:  insets.right + tabHPad,
+            // Floating island: fixed compact height, lifted off the bottom
+            // edge (and the home indicator) by FLOAT_MARGIN + the safe area,
+            // instead of stretching edge-to-edge and padding its own bottom.
+            height:       TAB_BAR_HEIGHT,
+            bottom:       insets.bottom + FLOAT_MARGIN,
+            left:         insets.left + tabHPad + FLOAT_MARGIN,
+            right:        insets.right + tabHPad + FLOAT_MARGIN,
+            paddingTop:   TAB_BAR_TOP_PAD,
           },
         ],
         tabBarBackground: () => <View style={styles.tabBg} />,
@@ -85,18 +86,14 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position:        'absolute',
-    left:            0,
-    right:           0,
-    bottom:          0,
-    height:          58,
-    borderTopWidth:  0.5,
-    borderTopColor:  'rgba(255,255,255,0.10)',
+    borderRadius:    Radius.nav,
     backgroundColor: 'transparent',
-    elevation:       0,
+    ...Shadows.elevated,
   },
   tabBg: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: Colors.ink,
+    borderRadius:    Radius.nav,
   },
   label: {
     ...Typography.caption,
