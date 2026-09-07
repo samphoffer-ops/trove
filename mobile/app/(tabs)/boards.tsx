@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TextInput } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, TextInput, Platform, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,11 +9,31 @@ import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
 
+// Desktop gets a wider grid (3 columns); phones and narrow web viewports
+// keep the original 2-column layout.
+const DESKTOP_BREAKPOINT = 700;
+const DESKTOP_COLUMNS = 3;
+const MOBILE_COLUMNS = 2;
+
 export default function BoardsScreen() {
   const insets = useSafeAreaInsets();
   const { boards, fetchBoards, createBoard } = useBoardStore();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const { width } = useWindowDimensions();
+  // Same hydration-mismatch guard as MasonryGrid/the tab bar: web's static
+  // export prerenders this in Node with no real window, so the column count
+  // must stay fixed until mount, then recompute against the real viewport.
+  const [mounted, setMounted] = useState(Platform.OS !== 'web');
+  useEffect(() => { setMounted(true); }, []);
+  const effectiveWidth = mounted ? width : 0;
+  const columns = effectiveWidth >= DESKTOP_BREAKPOINT ? DESKTOP_COLUMNS : MOBILE_COLUMNS;
+
+  const boardColumns = useMemo(() => {
+    const cols: Board[][] = Array.from({ length: columns }, () => []);
+    boards.forEach((board, i) => cols[i % columns].push(board));
+    return cols;
+  }, [boards, columns]);
 
   useEffect(() => { fetchBoards(); }, []);
 
@@ -62,7 +82,11 @@ export default function BoardsScreen() {
           </View>
         ) : (
           <View style={styles.grid}>
-            {boards.map(board => <BoardCard key={board.id} board={board} />)}
+            {boardColumns.map((col, i) => (
+              <View key={i} style={styles.gridColumn}>
+                {col.map(board => <BoardCard key={board.id} board={board} style={styles.gridCard} />)}
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -122,7 +146,9 @@ const styles = StyleSheet.create({
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
-  grid:      { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: Spacing[4] },
+  grid:       { flexDirection: 'row', gap: Spacing[4] },
+  gridColumn: { flex: 1, gap: Spacing[4] },
+  gridCard:   { width: '100%' },
   card:      { width: '48%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
   coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
