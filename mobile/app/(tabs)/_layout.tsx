@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Radius, Shadows, Spacing, Typography } from '@/lib/theme';
 import { GridIcon, BoardsIcon, SearchIcon, ProfileIcon } from '@/components/Icons';
@@ -50,7 +51,17 @@ export default function TabsLayout() {
             paddingBottom: TAB_BAR_TOP_PAD,
           },
         ],
-        tabBarBackground: () => <View style={styles.tabBg} />,
+        // Liquid glass: real blur of whatever's scrolling behind the bar
+        // (same recipe ProductModal already uses), an ink tint over it for
+        // legibility/brand color, and a bright hairline along the top edge
+        // to fake light catching the glass.
+        tabBarBackground: () => (
+          <View style={styles.tabBg}>
+            <BlurView intensity={45} tint="dark" style={StyleSheet.absoluteFillObject} />
+            <View style={styles.tabGlassTint} />
+            <View style={styles.tabGlassHighlight} />
+          </View>
+        ),
         tabBarActiveTintColor:   Colors.accentLime,
         tabBarInactiveTintColor: 'rgba(255,255,255,0.55)',
         tabBarLabelStyle: styles.label,
@@ -98,8 +109,18 @@ const styles = StyleSheet.create({
   },
   tabBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.ink,
-    borderRadius:    Radius.nav,
+    borderRadius: Radius.nav,
+    overflow:     'hidden', // clips the blur + tint to the pill's rounded corners
+  },
+  tabGlassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13,16,53,0.55)', // Colors.ink, translucent over the blur
+  },
+  tabGlassHighlight: {
+    position:        'absolute',
+    top: 0, left: 0, right: 0,
+    height:          1,
+    backgroundColor: 'rgba(255,255,255,0.35)',
   },
   label: {
     ...Typography.caption,
