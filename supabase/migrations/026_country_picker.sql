@@ -66,9 +66,6 @@ returns table (
 )
 language plpgsql
 stable
--- HNSW returns at most ef_search rows per scan (default 40), so the
--- 1,000-nearest candidate query below needs it raised for this call.
-set hnsw.ef_search = 1000
 as $$
 declare
   taste_vector          vector(1024);
@@ -124,6 +121,22 @@ begin
   from weighted_signals ws
   join public.products p on p.id = ws.product_id
   where p.embedding is not null;
+
+  -- HNSW returns at most ef_search rows per scan (default 40), so the
+  -- 1,000-nearest candidate query below needs it raised for this call.
+  -- Set at runtime, transaction-local: Supabase refuses it as a function
+  -- SET clause ("permission denied to set parameter"), since pgvector's
+  -- library isn't loaded at CREATE time. By this point a non-null
+  -- taste_vector means pgvector is loaded and the setting is an ordinary
+  -- user-settable one. If it's still refused, carry on with the default —
+  -- a smaller nearest-neighbour pool, not a failed feed.
+  if taste_vector is not null then
+    begin
+      perform set_config('hnsw.ef_search', '1000', true);
+    exception when others then
+      null;
+    end;
+  end if;
 
   return query
   with pool as (
