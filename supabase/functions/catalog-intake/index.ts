@@ -1,4 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// What createClient() returns for an untyped database. ReturnType<typeof
+// createClient> infers `unknown` for the schema, which types every table
+// row as `never` and made helpers taking the client fail to type-check.
+type AdminClient = SupabaseClient<any, 'public', 'public', any, any>;
 
 // Catalog intake: given a list of candidate brand domains, probes each for
 // scrapeability (Shopify products.json, or sitemap + ld+json), runs a cheap
@@ -235,7 +240,7 @@ async function fetchJson(url: string): Promise<any | null> {
 let fxCache: { rates: Record<string, number>; at: number } | null = null;
 const FX_MAX_AGE_MS = 20 * 60 * 60 * 1000;
 
-async function getUsdRates(admin: any): Promise<Record<string, number>> {
+async function getUsdRates(admin: AdminClient): Promise<Record<string, number>> {
   if (fxCache && Date.now() - fxCache.at < FX_MAX_AGE_MS) return fxCache.rates;
   const rates: Record<string, number> = { USD: 1 };
   let newest = 0;
@@ -587,7 +592,7 @@ async function probeLdJson(
 const PRODUCT_UPSERT_CHUNK = 100;
 const MIN_UPSERT_CHUNK = 10;
 
-async function upsertProducts(admin: any, rows: Record<string, unknown>[]): Promise<{ saved: number; error: string | null }> {
+async function upsertProducts(admin: AdminClient, rows: Record<string, unknown>[]): Promise<{ saved: number; error: string | null }> {
   let saved = 0;
   const queue: Record<string, unknown>[][] = [];
   for (let i = 0; i < rows.length; i += PRODUCT_UPSERT_CHUNK) queue.push(rows.slice(i, i + PRODUCT_UPSERT_CHUNK));
@@ -605,7 +610,7 @@ async function upsertProducts(admin: any, rows: Record<string, unknown>[]): Prom
   return { saved, error: null };
 }
 
-async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) {
+async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, number>) {
   const runStart = new Date().toISOString();
   const shopify = () => probeShopify(brand.domain, fx, { feedDomain: brand.feed_domain });
   const ld = () => probeLdJson(brand.domain, fx, { cursor: brand.scrape_cursor ?? 0 });
@@ -862,7 +867,7 @@ function isExcludedProduct(productName: string): boolean {
 // dashboard screenshot each time. Uses the service-role key internally, so
 // this bypasses RLS the same way writes already do — it's reachable with
 // just the anon key, same as the rest of this function.
-async function getSummary(admin: ReturnType<typeof createClient>) {
+async function getSummary(admin: AdminClient) {
   const { data } = await admin
     .from('brands')
     .select('name, domain, status, judge_confidence, judge_reasoning, matched_categories, matched_styles, created_at')
@@ -917,7 +922,7 @@ function respond(body: unknown, status = 200): Response {
 // session JWT against their actual email, via Supabase Auth, not a
 // client-supplied flag.
 const ADMIN_EMAIL = 'samphoffer@gmail.com';
-async function requireAdmin(req: Request, admin: ReturnType<typeof createClient>): Promise<{ id: string } | null> {
+async function requireAdmin(req: Request, admin: AdminClient): Promise<{ id: string } | null> {
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!jwt) return null;
   const { data, error } = await admin.auth.getUser(jwt);
@@ -1275,7 +1280,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
 
       const judgment = await judgeBrand(anthropicKey, domain, sample.products);
       const brandName = judgment.brand_name || domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
       // The judge's verdict used to be computed and thrown away — every brand
       // landed in pending_review regardless of whether the judge said approve,
