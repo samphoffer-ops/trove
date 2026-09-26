@@ -51,8 +51,11 @@ export default function BrandProfile() {
 
   if (!brand) return null;
 
+  // Default (wide) frame, like the feed: MasonryGrid picks its column
+  // count from the window width, so inside a 480px frame a desktop window
+  // got 5 columns of ~80px cards.
   return (
-    <WebFrame maxWidth={480}>
+    <WebFrame>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={8}><ChevronLeftIcon /></Pressable>
