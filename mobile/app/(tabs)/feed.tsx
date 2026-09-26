@@ -55,6 +55,31 @@ const FILTER_MENU_WIDTH = 190;
 // viewer follows come first, backfilled with other recent products so
 // it always has enough to show even when they follow few (or no)
 // brands. Every other strip keeps its plain data-driven filter.
+//
+// Brands are interleaved, one product per brand per pass. A plain
+// newest-first sort let whichever brand was scraped last fill the whole
+// strip — intake adds a brand's entire catalog in one go, so its products
+// all share essentially the same created_at.
+//
+// Brand order is shuffled with a seed fixed for the app session rather
+// than Math.random(): this is called more than once per render (the strip
+// itself, and the set of ids the main grid excludes), and both must agree,
+// without the strip reshuffling on every re-render. A new session (next
+// app open) gets a new mix.
+const JUST_IN_SESSION_SEED = Math.floor(Math.random() * 2 ** 31);
+const JUST_IN_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const JUST_IN_MIN_CANDIDATES = 40;
+
+function seededRank(key: string): number {
+  // FNV-1a over seed + key — cheap, stable, well-spread
+  let h = 2166136261 ^ JUST_IN_SESSION_SEED;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function getStripItems(
   strip: typeof EDITORIAL_STRIPS[number],
   allProducts: Product[],
@@ -66,9 +91,31 @@ function getStripItems(
     return limit ? matched.slice(0, limit) : matched;
   }
   const byNew = [...allProducts].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
-  const followed = byNew.filter(p => p.brand_id && followedBrandIds.has(p.brand_id));
-  const rest = byNew.filter(p => !(p.brand_id && followedBrandIds.has(p.brand_id)));
-  const combined = [...followed, ...rest];
+  // "Recent" relative to the newest product, not the wall clock, so a quiet
+  // stretch with no new intakes still shows something.
+  const newest = Date.parse(byNew[0]?.created_at ?? '') || Date.now();
+  let recent = byNew.filter(p => newest - (Date.parse(p.created_at ?? '') || 0) <= JUST_IN_WINDOW_MS);
+  if (recent.length < JUST_IN_MIN_CANDIDATES) recent = byNew.slice(0, 200);
+
+  const groups = new Map<string, Product[]>(); // each brand's products stay newest-first
+  for (const p of recent) {
+    const key = p.brand_id ?? p.brand;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  const isFollowed = (key: string) => followedBrandIds.has(key);
+  const brandKeys = [...groups.keys()].sort((a, b) =>
+    Number(isFollowed(b)) - Number(isFollowed(a)) || seededRank(a) - seededRank(b));
+
+  const combined: Product[] = [];
+  for (let round = 0; ; round++) {
+    let added = false;
+    for (const key of brandKeys) {
+      const next = groups.get(key)![round];
+      if (next) { combined.push(next); added = true; }
+    }
+    if (!added) break;
+  }
   return limit ? combined.slice(0, limit) : combined;
 }
 
