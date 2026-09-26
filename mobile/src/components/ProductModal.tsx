@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   card: {
     width: 460,
     maxWidth: '100%',
-    borderRadius: Radius.phone,
+    borderRadius: Radius.modal,
     overflow: 'hidden',
     backgroundColor: Colors.bg,
     ...Shadows.phone,
