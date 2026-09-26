@@ -81,8 +81,17 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       // see the Product type) since pulling it for the entire active catalog
       // was a meaningful chunk of why this used to be slow at scale.
       const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, image, images, ratio, url, category, styles, description, source, external_handle, status, first_seen_at, last_seen_at, price_history, removed_at, created_at, search_keywords, prices';
-      const unrankedQuery = () =>
-        supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false });
+      // Brand-balanced random sample of the whole catalog (migration 029).
+      // This used to be "the 1,000 newest products", which is whatever the
+      // last intake/backfill batch happened to be — after the alphabetical
+      // full-catalog backfill that meant only F/G brands. Falls back to the
+      // old query if the RPC isn't there (app shipped before the migration).
+      const unrankedQuery = async () => {
+        const browse = await supabase.rpc('browse_products');
+        if (!browse.error) return browse;
+        console.error('browse_products failed, falling back to newest products:', browse.error);
+        return supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false });
+      };
       const { data: { user } } = await supabase.auth.getUser();
 
       const sideQueries = Promise.all([
