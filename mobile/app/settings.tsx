@@ -106,6 +106,27 @@ export default function Settings() {
     'sonder.haus',          // Sønderhaus Studios (spelled "sonder.haus" — the ø doesn't appear in the domain)
     'drakes.com',           // Drake's
     'mutimer.co',           // Mutimer
+    'brakehouseshop.com',        // Brake House
+    'schottnyc.com',             // Schott NYC
+    'brut-clothing.us',          // Brut Archives (US store — brut-clothing.com is the EU one)
+    'selected.com',              // Selected (non-Shopify, no US storefront — GBP converted)
+    'aetherapparel.com',         // Aether (headless Shopify — products.json lives on shop.aetherapparel.com)
+    'emilydawnlong.com',         // Emily Dawn Long
+    'poolhousenewyork.com',      // Pool House New York
+    'sombra-sombras.com',        // Sombra Sombras
+    'winslowla.com',             // Winslow LA
+    'hanover-usa.com',           // Hanover (hanoverusa.com is unrelated)
+    'americanwaste.studio',      // American Waste Enterprise
+    'americantrench.com',        // American Trench
+    'colourplane.world',         // Colour Plane
+    'saltmurphy.com',            // Salt Murphy
+    'storymfg.com',              // Story mfg.
+    'benjaminbarkerstudios.com', // Benjamin Barker Studios
+    'informale.com.au',          // Informale
+    // Massimo Dutti — left out: massimodutti.com sits behind Akamai bot
+    // protection, so it can't be scraped without evading that. An affiliate
+    // product feed is the legitimate route if it's wanted.
+    // Carthage — couldn't identify the right brand/domain yet.
   ];
 
   // Runs domains through catalog-intake in batches small enough to stay

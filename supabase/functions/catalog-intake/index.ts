@@ -154,12 +154,26 @@ const REQUEST_DELAY_MS = 1500;
 interface ScrapedProduct {
   handle: string;
   name: string;
-  price: number;
+  price: number;                   // always USD — see migration 024
+  prices: Record<string, number>;  // real (non-converted) prices by currency code
   image: string;
   images?: string[];
   ratio: number;
   url: string;
   description?: string;
+}
+
+interface ScrapeResult {
+  products: ScrapedProduct[];
+  platform: 'shopify' | 'ld_json';
+  feedDomain: string | null;  // set when products.json lives on a different host than the brand domain
+  currency: string;           // the store's base currency
+  hasUsdPricing: boolean;     // store serves its own US-market prices (vs. us converting)
+  // Shopify: every page of products.json was read to the end, so anything
+  // not seen this run is genuinely gone from the store and safe to mark
+  // removed. Never true for ld_json, which only covers a window per run.
+  complete: boolean;
+  nextCursor: number;
 }
 
 function sleep(ms: number) {
@@ -201,128 +215,417 @@ async function isDisallowed(domain: string): Promise<boolean> {
   }
 }
 
-async function probeShopify(domain: string): Promise<ScrapedProduct[] | null> {
+const BOT_HEADERS = { 'User-Agent': 'TroveCatalogBot/1.0' };
+
+async function fetchJson(url: string): Promise<any | null> {
   try {
-    const res = await fetchWithTimeout(`https://${domain}/products.json?limit=250`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
+    const res = await fetchWithTimeout(url, { headers: BOT_HEADERS });
     if (!res.ok) return null;
-    const data = await res.json();
-    const products = data.products;
-    if (!Array.isArray(products) || products.length === 0) return null;
-    return products.map((p: any) => {
-      const img = p.images?.[0];
-      const ratio = img?.width && img?.height ? img.height / img.width : 1.25;
-      const allImages: string[] = (p.images ?? []).map((i: any) => i?.src).filter(Boolean);
-      return {
-        handle: p.handle,
-        name: p.title,
-        price: parseFloat(p.variants?.[0]?.price ?? '0'),
-        image: img?.src ?? '',
-        images: allImages.length > 1 ? allImages : undefined,
-        ratio,
-        url: `https://${domain}/products/${p.handle}`,
-        description: (p.body_html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300),
-      };
-    }).filter((p: ScrapedProduct) => p.image && p.price > 0);
+    return await res.json();
   } catch {
     return null;
   }
 }
 
-async function probeLdJson(domain: string): Promise<ScrapedProduct[] | null> {
-  try {
-    const sitemapRes = await fetchWithTimeout(`https://${domain}/sitemap.xml`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
-    if (!sitemapRes.ok) return null;
-    const sitemapText = await sitemapRes.text();
+// ── Currency ────────────────────────────────────────────────────────────
+// Daily ECB rates via frankfurter.dev (free, no key), cached in fx_rates so
+// the app can read the same numbers and so a frankfurter outage doesn't
+// stop scraping — yesterday's rate is fine, a missing rate is not.
+// rates[X] = units of X per 1 USD.
+let fxCache: { rates: Record<string, number>; at: number } | null = null;
+const FX_MAX_AGE_MS = 20 * 60 * 60 * 1000;
 
-    // Two sitemap shapes to handle: an index (points to child sitemaps) or
-    // a flat sitemap (lists pages directly). This used to only handle the
-    // index case, and only when a child sitemap's URL literally contained
-    // "product" — a Shopify-specific naming convention. Real stores on
-    // Squarespace/WooCommerce/custom stacks routinely have real product
-    // pages without naming a sitemap that way, so this silently failed the
-    // large majority of non-Shopify candidates (measured: 88% of a 135-
-    // candidate discovery batch never got past this check).
-    let rawUrls: string[];
-    const productSitemapMatch = sitemapText.match(/<loc>([^<]*product[^<]*sitemap[^<]*)<\/loc>/i);
-    if (productSitemapMatch) {
-      await sleep(500);
-      const productSitemapRes = await fetchWithTimeout(productSitemapMatch[1], { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
-      if (!productSitemapRes.ok) return null;
-      rawUrls = [...(await productSitemapRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
-    } else if (/<sitemapindex/i.test(sitemapText)) {
-      // Index with no obviously-named product child — small stores often
-      // have only one or two sitemap files total, so check the first few.
-      const childLocs = [...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]).slice(0, 3);
-      rawUrls = [];
-      for (const childUrl of childLocs) {
-        await sleep(500);
-        try {
-          const childRes = await fetchWithTimeout(childUrl, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
-          if (!childRes.ok) continue;
-          rawUrls.push(...[...(await childRes.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]));
-        } catch { /* skip this child sitemap, try the next */ }
-      }
+async function getUsdRates(admin: any): Promise<Record<string, number>> {
+  if (fxCache && Date.now() - fxCache.at < FX_MAX_AGE_MS) return fxCache.rates;
+  const rates: Record<string, number> = { USD: 1 };
+  let newest = 0;
+  const { data: stored } = await admin.from('fx_rates').select('currency, rate, updated_at');
+  for (const r of stored ?? []) {
+    rates[r.currency] = Number(r.rate);
+    newest = Math.max(newest, new Date(r.updated_at).getTime());
+  }
+  if (Date.now() - newest > FX_MAX_AGE_MS) {
+    const fresh = await fetchJson('https://api.frankfurter.dev/v1/latest?base=USD');
+    if (fresh?.rates) {
+      Object.assign(rates, fresh.rates);
+      const now = new Date().toISOString();
+      await admin.from('fx_rates').upsert(
+        Object.entries(fresh.rates).map(([currency, rate]) => ({ currency, rate, updated_at: now })),
+      );
+    }
+  }
+  fxCache = { rates, at: Date.now() };
+  return rates;
+}
+
+function toUsd(amount: number, currency: string, fx: Record<string, number>): number | null {
+  if (currency === 'USD') return amount;
+  const rate = fx[currency];
+  return rate ? Math.round((amount / rate) * 100) / 100 : null;
+}
+
+// ── Shopify ─────────────────────────────────────────────────────────────
+// products.json caps at 250 per page. This used to read only page one, so
+// every brand with a bigger catalog was silently truncated (106 of 190
+// approved brands, measured 2026-09-26) — and whatever the first page
+// happened to hold, including sold-out archive pieces.
+const SHOPIFY_PAGE_SIZE = 250;
+const SHOPIFY_MAX_PAGES = 8;
+const MAX_PRODUCTS_PER_BRAND = 1000;
+
+// Headless Shopify stores (custom front end, e.g. aetherapparel.com) 404 on
+// /products.json at the brand domain but still serve it from the Shopify
+// host behind the front end, conventionally a shop./store. subdomain.
+async function findShopifyFeedHost(domain: string, known: string | null): Promise<string | null> {
+  const hosts = [...new Set([known, domain, `shop.${domain}`, `store.${domain}`].filter(Boolean) as string[])];
+  for (const host of hosts) {
+    // limit=10, not 1 — some stores answer limit=1 with an empty list
+    // (saltmurphy.com does, presumably a hidden first product) while
+    // serving their full catalog on any larger page.
+    const data = await fetchJson(`https://${host}/products.json?limit=10`);
+    if (Array.isArray(data?.products) && data.products.length > 0) return host;
+  }
+  return null;
+}
+
+function mapShopifyProduct(p: any, domain: string) {
+  // First in-stock variant's price, not variants[0] — the first variant is
+  // often a sold-out size with a stale price.
+  const variants: any[] = p.variants ?? [];
+  const variant = variants.find(v => v.available !== false) ?? variants[0];
+  const img = p.images?.[0];
+  const allImages: string[] = (p.images ?? []).map((i: any) => i?.src).filter(Boolean);
+  return {
+    id: p.id as number,
+    inStock: variants.some(v => v.available !== false),
+    price: parseFloat(variant?.price ?? '0'),
+    product: {
+      handle: p.handle,
+      name: p.title,
+      image: img?.src ?? '',
+      images: allImages.length > 1 ? allImages : undefined,
+      ratio: img?.width && img?.height ? img.height / img.width : 1.25,
+      // Always the brand's own domain, never the feed host — a headless
+      // store's shop. subdomain is a backend, not where shoppers should land.
+      url: `https://${domain}/products/${p.handle}`,
+      description: (p.body_html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300),
+    },
+  };
+}
+
+async function readShopifyPages(host: string, currencyParam: string, maxPages: number) {
+  const raw: any[] = [];
+  let complete = false;
+  for (let page = 1; page <= maxPages; page++) {
+    if (page > 1) await sleep(500);
+    const data = await fetchJson(`https://${host}/products.json?limit=${SHOPIFY_PAGE_SIZE}&page=${page}${currencyParam}`);
+    if (!Array.isArray(data?.products)) return { raw, complete: false }; // a failed page means we can't vouch for what's missing
+    raw.push(...data.products);
+    if (data.products.length < SHOPIFY_PAGE_SIZE) { complete = true; break; }
+  }
+  return { raw, complete };
+}
+
+async function probeShopify(
+  domain: string,
+  fx: Record<string, number>,
+  opts: { feedDomain?: string | null; maxPages?: number } = {},
+): Promise<ScrapeResult | null> {
+  const host = await findShopifyFeedHost(domain, opts.feedDomain ?? null);
+  if (!host) return null;
+  const maxPages = opts.maxPages ?? SHOPIFY_MAX_PAGES;
+
+  // US site first, always. /meta.json gives the store's base currency; a
+  // store with Shopify Markets set up for the US answers /cart.js?currency=USD
+  // with "USD" and then serves its real US prices on ?currency=USD (which
+  // are often NOT a straight conversion — Story mfg.'s £370 piece is $409,
+  // not the ~$490 the exchange rate implies, since UK prices include VAT).
+  const meta = await fetchJson(`https://${host}/meta.json`);
+  const currency: string = (meta?.currency ?? 'USD').toUpperCase();
+  let hasUsdPricing = currency === 'USD';
+  if (!hasUsdPricing) {
+    const cart = await fetchJson(`https://${host}/cart.js?currency=USD`);
+    hasUsdPricing = cart?.currency === 'USD';
+  }
+
+  // Always name the currency explicitly, even the base one: with no
+  // ?currency= Shopify Markets picks one from the requester's geo/headers,
+  // so the same request returns GBP from one machine and USD from another.
+  const main = await readShopifyPages(host, `&currency=${hasUsdPricing ? 'USD' : currency}`, maxPages);
+  // Also keep the base-currency price for non-US stores, so the country
+  // picker can show e.g. a UK shopper the brand's real GBP price.
+  const basePrices = new Map<number, number>();
+  if (currency !== 'USD' && hasUsdPricing) {
+    const base = await readShopifyPages(host, `&currency=${currency}`, maxPages);
+    for (const p of base.raw) basePrices.set(p.id, mapShopifyProduct(p, domain).price);
+  }
+
+  const products: ScrapedProduct[] = [];
+  for (const p of main.raw) {
+    const m = mapShopifyProduct(p, domain);
+    if (!m.inStock || !m.product.image || !(m.price > 0)) continue;
+    let price: number | null;
+    const prices: Record<string, number> = {};
+    if (hasUsdPricing) {
+      price = m.price;
+      prices.USD = m.price;
+      const basePrice = basePrices.get(m.id);
+      if (currency !== 'USD' && basePrice) prices[currency] = basePrice;
     } else {
-      // Flat sitemap — page URLs directly.
-      rawUrls = [...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+      price = toUsd(m.price, currency, fx);
+      prices[currency] = m.price;
     }
+    if (price === null) continue; // no FX rate for this currency — never show an unconverted price as USD
+    products.push({ ...m.product, price, prices });
+    if (products.length >= MAX_PRODUCTS_PER_BRAND) break;
+  }
+  if (products.length === 0) return null;
 
-    // Prefer URLs that look like product pages when the sitemap mixes page
-    // types together. When nothing matches we're guessing blind across
-    // whatever pages exist (blog posts, collections, etc.) — cap that case
-    // tighter (15 vs 60) so one low-signal domain can't eat the batch's
-    // execution budget fetching mostly-non-product pages at 1.5s apiece.
-    const looksLikeProduct = (u: string) => /\/(products?|shop|item)\//i.test(u);
-    const filtered = rawUrls.filter(looksLikeProduct);
-    const productUrls = filtered.length > 0 ? filtered.slice(0, 60) : rawUrls.slice(0, 15);
+  return {
+    products,
+    platform: 'shopify',
+    feedDomain: host === domain ? null : host,
+    currency,
+    hasUsdPricing,
+    complete: main.complete,
+    nextCursor: 0,
+  };
+}
 
-    const products: ScrapedProduct[] = [];
-    for (const url of productUrls) {
-      await sleep(REQUEST_DELAY_MS);
-      try {
-        const pageRes = await fetchWithTimeout(url, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
-        if (!pageRes.ok) continue;
-        const html = await pageRes.text();
-        // A page routinely carries several ld+json blocks (Organization,
-        // BreadcrumbList, WebSite, then Product) — matching only the first
-        // one (previously with no `g` flag) meant a Product block anywhere
-        // but first was silently missed. Also tolerate extra/reordered
-        // attributes on the script tag (id=, quote style) instead of
-        // requiring an exact `type="application/ld+json"` match, and unwrap
-        // `@graph` — common from SEO plugins — which wraps every entity on
-        // the page in one script block instead of emitting Product on its
-        // own.
-        const ldBlocks = [...html.matchAll(/<script[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
-        let ld: any = null;
-        for (const block of ldBlocks) {
-          let parsed: any;
-          try { parsed = JSON.parse(block); } catch { continue; }
-          const nodes = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed]);
-          const found = nodes.find((n: any) => {
-            const type = n?.['@type'];
-            return type === 'Product' || (Array.isArray(type) && type.includes('Product'));
-          });
-          if (found) { ld = found; break; }
-        }
-        if (!ld) continue;
-        const image = Array.isArray(ld.image) ? ld.image[0]?.contentUrl ?? ld.image[0] : ld.image?.contentUrl ?? ld.image;
-        const price = parseFloat(ld.Offers?.price ?? ld.offers?.price ?? '0');
-        if (!image || !price) continue;
-        products.push({
-          handle: slugify(ld.name ?? url),
-          name: ld.name,
-          price,
-          image,
-          ratio: 1.0,
-          url,
-          description: (ld.description ?? '').slice(0, 300),
-        });
-      } catch { /* skip this one product, keep going */ }
-    }
-    return products.length > 0 ? products : null;
+// ── Sitemap + ld+json (non-Shopify) ─────────────────────────────────────
+// One page fetch per product, so a big catalog can't fit in one run. Each
+// run takes the next LD_PAGES_PER_RUN product URLs from brands.scrape_cursor,
+// so daily refreshes walk the whole catalog over several days.
+const LD_PAGES_PER_RUN = 40; // ~2s/page measured, keeps a run well inside the ~150s limit
+const LD_REQUEST_DELAY_MS = 1000;
+
+async function fetchText(url: string): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout(url, { headers: BOT_HEADERS });
+    return res.ok ? await res.text() : null;
   } catch {
     return null;
   }
+}
+
+const locs = (xml: string) => [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&'));
+
+// Prefer the US storefront's sitemap when a site publishes one per locale
+// (e.g. selected.com's /en-us/sitemap/root), then any English one.
+function rankLocale(url: string): number {
+  if (/[/_.-]en[-_]us\b|\/us\//i.test(url)) return 0;
+  if (/[/_.-]en[-_](gb|int|eu)\b|\/en\//i.test(url)) return 1;
+  if (/[/_.-][a-z]{2}[-_][a-z]{2}\b/i.test(url)) return 3; // some other locale
+  return 2; // no locale in the URL
+}
+
+async function collectSitemapUrls(domain: string): Promise<string[]> {
+  // robots.txt's Sitemap: lines first — plenty of stores (Selected included)
+  // don't serve anything at /sitemap.xml at all.
+  const robots = await fetchText(`https://${domain}/robots.txt`) ?? '';
+  const declared = [...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map(m => m[1]);
+  const roots = [...new Set([...declared, `https://${domain}/sitemap.xml`])]
+    .sort((a, b) => rankLocale(a) - rankLocale(b));
+
+  for (const root of roots.slice(0, 3)) {
+    const xml = await fetchText(root);
+    if (!xml) continue;
+    if (!/<sitemapindex/i.test(xml)) return locs(xml);
+    // Index: follow product-looking children first ("products", "pdp"), then
+    // whatever else, capped so a sprawling index can't eat the run.
+    const children = locs(xml).sort((a, b) =>
+      Number(!/product|pdp/i.test(a)) - Number(!/product|pdp/i.test(b)) || rankLocale(a) - rankLocale(b));
+    const urls: string[] = [];
+    for (const child of children.slice(0, 3)) {
+      await sleep(300);
+      const childXml = await fetchText(child);
+      if (!childXml) continue;
+      // One level deeper for index-of-indexes (locale index → type index)
+      if (/<sitemapindex/i.test(childXml)) {
+        const grand = locs(childXml).find(u => /product|pdp/i.test(u));
+        const grandXml = grand ? await fetchText(grand) : null;
+        if (grandXml) urls.push(...locs(grandXml));
+      } else {
+        urls.push(...locs(childXml));
+      }
+      if (urls.some(looksLikeProductUrl)) break;
+    }
+    if (urls.length > 0) return urls;
+  }
+  return [];
+}
+
+function looksLikeProductUrl(u: string): boolean {
+  return /\/(products?|product-page|shop|item|p)\//i.test(u); // product-page: Wix
+}
+
+// One entry per product rather than per colourway — /p/<slug>/<sku_color>
+// style URLs (Selected, lots of Salesforce Commerce stores) otherwise spend
+// the whole run fetching the same shirt in six colours.
+function productGroupKey(u: string): string {
+  const m = u.match(/^(.*\/p\/[^/]+)\/[^/]+\/?$/i);
+  return m ? m[1] : u;
+}
+
+function findLdProduct(html: string): any | null {
+  // A page routinely carries several ld+json blocks (Organization,
+  // BreadcrumbList, WebSite, then Product) — scan all of them, tolerate
+  // attribute order/quote style, and unwrap @graph (common from SEO plugins).
+  const blocks = [...html.matchAll(/<script[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+  let group: any = null;
+  for (const block of blocks) {
+    let parsed: any;
+    try { parsed = JSON.parse(block); } catch { continue; }
+    const nodes = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.['@graph']) ? parsed['@graph'] : [parsed]);
+    for (const n of nodes) {
+      const type = n?.['@type'];
+      const is = (t: string) => type === t || (Array.isArray(type) && type.includes(t));
+      if (is('Product')) return n;
+      if (is('ProductGroup') && !group) group = n;
+    }
+  }
+  // ProductGroup carries the name/description; price lives on its variants.
+  if (group) return { ...group, offers: group.offers ?? group.hasVariant?.[0]?.offers, image: group.image ?? group.hasVariant?.[0]?.image };
+  return null;
+}
+
+function ldOffer(ld: any): { price: number; currency: string } | null {
+  const raw = ld.offers ?? ld.Offers;
+  const offers: any[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  for (const o of offers) {
+    const price = parseFloat(o?.price ?? o?.lowPrice ?? o?.priceSpecification?.price ?? '0');
+    const currency = String(o?.priceCurrency ?? o?.priceSpecification?.priceCurrency ?? 'USD').toUpperCase();
+    if (price > 0) return { price, currency };
+  }
+  return null;
+}
+
+function ldImage(ld: any): string | null {
+  const img = Array.isArray(ld.image) ? ld.image[0] : ld.image;
+  return (typeof img === 'string' ? img : img?.contentUrl ?? img?.url) ?? null;
+}
+
+async function probeLdJson(
+  domain: string,
+  fx: Record<string, number>,
+  opts: { cursor?: number; maxPages?: number } = {},
+): Promise<ScrapeResult | null> {
+  const rawUrls = await collectSitemapUrls(domain);
+  // When the sitemap mixes page types, keep only product-looking URLs. When
+  // nothing matches we're guessing blind across whatever pages exist, so cap
+  // that case tighter.
+  const filtered = rawUrls.filter(looksLikeProductUrl);
+  const seen = new Set<string>();
+  const productUrls = (filtered.length > 0 ? filtered : rawUrls.slice(0, 15)).filter(u => {
+    const key = productGroupKey(u);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (productUrls.length === 0) return null;
+
+  const pageCount = Math.min(opts.maxPages ?? LD_PAGES_PER_RUN, productUrls.length);
+  const start = (opts.cursor ?? 0) < productUrls.length ? (opts.cursor ?? 0) : 0;
+  const window = [...productUrls.slice(start, start + pageCount), ...productUrls.slice(0, Math.max(0, start + pageCount - productUrls.length))];
+
+  const products: ScrapedProduct[] = [];
+  const currencies = new Map<string, number>();
+  for (const url of window) {
+    await sleep(LD_REQUEST_DELAY_MS);
+    const html = await fetchText(url);
+    if (!html) continue;
+    const ld = findLdProduct(html);
+    const offer = ld ? ldOffer(ld) : null;
+    const image = ld ? ldImage(ld) : null;
+    if (!ld || !offer || !image || !ld.name) continue;
+    const price = toUsd(offer.price, offer.currency, fx);
+    if (price === null) continue;
+    currencies.set(offer.currency, (currencies.get(offer.currency) ?? 0) + 1);
+    products.push({
+      handle: slugify(ld.productGroupID ?? ld.sku ?? ld.name ?? url),
+      name: ld.name,
+      price,
+      prices: { [offer.currency]: offer.price },
+      image,
+      ratio: 1.25,
+      url,
+      description: String(ld.description ?? '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    });
+  }
+  if (products.length === 0) return null;
+
+  const currency = [...currencies.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'USD';
+  return {
+    products,
+    platform: 'ld_json',
+    feedDomain: null,
+    currency,
+    hasUsdPricing: currency === 'USD',
+    complete: false,
+    nextCursor: (start + pageCount) % productUrls.length,
+  };
+}
+
+// Scrapes a brand's full current catalog and writes it in bulk.
+//
+// This used to embed (Voyage) and keyword (Anthropic) every product inline,
+// then upsert one row at a time — for a 250-product brand that's hundreds of
+// sequential round-trips, which routinely ran past the Edge Function's time
+// limit and got killed partway (Taylor Stitch had 45 of 2,000+ products,
+// Schott 2 of 439). Now products land in a few bulk upserts and leave
+// embedding / search_keywords empty; the backfill-catalog workflow (every
+// 20 min) fills those in, which it was already built to do. Omitted columns
+// aren't touched on conflict, so existing products keep theirs.
+const PRODUCT_UPSERT_CHUNK = 200;
+
+async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) {
+  const runStart = new Date().toISOString();
+  const shopify = () => probeShopify(brand.domain, fx, { feedDomain: brand.feed_domain });
+  const ld = () => probeLdJson(brand.domain, fx, { cursor: brand.scrape_cursor ?? 0 });
+  // Try the platform we last saw first, then the other — stores do migrate.
+  const scrape = brand.platform === 'ld_json' ? (await ld() ?? await shopify()) : (await shopify() ?? await ld());
+  if (!scrape) return { count: 0, removed: 0, error: 'unscrapeable' };
+
+  const now = new Date().toISOString();
+  const rows = new Map<string, Record<string, unknown>>();
+  for (const p of scrape.products) {
+    if (isExcludedProduct(p.name)) continue;
+    const id = `${slugify(brand.name)}-${slugify(p.handle)}`;
+    rows.set(id, { // Map, not array — a duplicate id within one upsert statement is a hard Postgres error
+      id, brand_id: brand.id, brand: brand.name, name: p.name, price: p.price, prices: p.prices,
+      image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
+      category: classifyCategory(p.name, brand.matched_categories?.[0] ?? null),
+      source: 'auto_scrape', status: 'active', removed_at: null, last_seen_at: now,
+    });
+  }
+  const all = [...rows.values()];
+  for (let i = 0; i < all.length; i += PRODUCT_UPSERT_CHUNK) {
+    const { error } = await admin.from('products').upsert(all.slice(i, i + PRODUCT_UPSERT_CHUNK), { onConflict: 'id' });
+    // Stop before the removal step — a half-written catalog must never be
+    // read as "everything else is gone".
+    if (error) return { count: i, removed: 0, error: error.message };
+  }
+
+  // Only a complete read of the store can say what's gone: sold out, or
+  // taken down. Products never used to be removed at all, so sold-out
+  // pieces stayed in the feed indefinitely.
+  let removed = 0;
+  if (scrape.complete) {
+    const { count } = await admin.from('products')
+      .update({ status: 'removed', removed_at: now }, { count: 'exact' })
+      .eq('brand_id', brand.id).eq('status', 'active').lt('last_seen_at', runStart);
+    removed = count ?? 0;
+  }
+
+  await admin.from('brands').update({
+    platform: scrape.platform,
+    feed_domain: scrape.feedDomain,
+    currency: scrape.currency,
+    has_usd_pricing: scrape.hasUsdPricing,
+    scrape_cursor: scrape.nextCursor,
+  }).eq('id', brand.id);
+
+  return { count: all.length, removed, currency: scrape.currency, usd_pricing: scrape.hasUsdPricing };
 }
 
 function passesPreFilter(domain: string, products: ScrapedProduct[]): boolean {
@@ -839,12 +1142,9 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
     if (!anthropicKey) {
       return respond({ error: 'ANTHROPIC_API_KEY secret not configured' }, 500);
     }
-    // Embeddings degrade gracefully, not a hard requirement — if VOYAGE_API_KEY
-    // isn't set yet, products still scrape/refresh fine, just without a vector
-    // (ranking's cold-start path already handles "no embedding" correctly).
-    const voyageKey = Deno.env.get('VOYAGE_API_KEY');
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const fx = await getUsdRates(admin);
     const results: Record<string, unknown>[] = [];
 
     for (const domain of domains.slice(0, MAX_DOMAINS_PER_RUN)) {
@@ -862,31 +1162,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       if (existing) {
         if (existing.status === 'approved') {
           // Re-scrape products for an already-approved brand — no LLM call, no new review.
-          const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
-          const products = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
-          if (products.length > 0) {
-            // One batched Voyage call for the whole brand's products, not one
-            // call per product — see generateEmbeddings' comment for why.
-            const embeddings = voyageKey
-              ? await generateEmbeddings(voyageKey, products.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
-              : products.map(() => null);
-            const keywordsList = await generateSearchKeywordsBatch(anthropicKey, existing.name, products);
-            for (let i = 0; i < products.length; i++) {
-              const p = products[i];
-              const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
-              const embedding = embeddings[i];
-              const searchKeywords = keywordsList[i];
-              await admin.from('products').upsert({
-                id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
-                image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
-                category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
-                search_keywords: searchKeywords,
-                ...(embedding ? { embedding: JSON.stringify(embedding) } : {}),
-                source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
-              });
-            }
-          }
-          results.push({ domain, action: 'refreshed_products', count: products.length });
+          results.push({ domain, action: 'refreshed_products', ...await refreshBrand(admin, existing, fx) });
           continue;
         }
         if (existing.status === 'rejected' && existing.rejected_until && new Date(existing.rejected_until) > new Date()) {
@@ -904,28 +1180,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
             results.push({ domain, action: 'db_error_promote', error: promoteError.message });
             continue;
           }
-          const rawProducts = existing.platform === 'shopify' ? await probeShopify(domain) : await probeLdJson(domain);
-          const autoProducts = (rawProducts ?? []).filter(p => !isExcludedProduct(p.name));
-          if (autoProducts.length > 0) {
-            const embeddings = voyageKey
-              ? await generateEmbeddings(voyageKey, autoProducts.map(p => `${existing.name} ${p.name} ${p.description ?? ''}`.trim()))
-              : autoProducts.map(() => null);
-            const keywordsList = await generateSearchKeywordsBatch(anthropicKey, existing.name, autoProducts);
-            for (let i = 0; i < autoProducts.length; i++) {
-              const p = autoProducts[i];
-              const id = `${slugify(existing.name)}-${slugify(p.handle)}`;
-              const searchKeywords = keywordsList[i];
-              await admin.from('products').upsert({
-                id, brand_id: existing.id, brand: existing.name, name: p.name, price: p.price,
-                image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
-                category: classifyCategory(p.name, existing.matched_categories?.[0] ?? null),
-                search_keywords: searchKeywords,
-                ...(embeddings[i] ? { embedding: JSON.stringify(embeddings[i]) } : {}),
-                source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
-              });
-            }
-          }
-          results.push({ domain, action: 'auto_approved', count: autoProducts.length });
+          results.push({ domain, action: 'auto_approved', ...await refreshBrand(admin, existing, fx) });
           continue;
         }
       }
@@ -935,20 +1190,19 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         continue;
       }
 
-      const shopifyProducts = await probeShopify(domain);
-      const products = shopifyProducts ?? await probeLdJson(domain);
-      const platform = shopifyProducts ? 'shopify' : 'ld_json';
-
-      if (!products || products.length === 0) {
+      // Judging only needs a sample, so a single page here — the full
+      // catalog is scraped by refreshBrand below once a brand is approved.
+      const sample = await probeShopify(domain, fx, { maxPages: 1 }) ?? await probeLdJson(domain, fx, { maxPages: 12 });
+      if (!sample) {
         results.push({ domain, action: 'skipped_unscrapeable' });
         continue;
       }
-      if (!passesPreFilter(domain, products)) {
+      if (!passesPreFilter(domain, sample.products)) {
         results.push({ domain, action: 'rejected_pre_filter' });
         continue;
       }
 
-      const judgment = await judgeBrand(anthropicKey, domain, products);
+      const judgment = await judgeBrand(anthropicKey, domain, sample.products);
       const brandName = judgment.brand_name || domain.replace(/\.(com|co|net|store)$/, '').replace(/[-_]/g, ' ')
         .replace(/\b\w/g, c => c.toUpperCase());
 
@@ -969,7 +1223,10 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         name: brandName,
         domain,
         status: finalStatus,
-        platform,
+        platform: sample.platform,
+        feed_domain: sample.feedDomain,
+        currency: sample.currency,
+        has_usd_pricing: sample.hasUsdPricing,
         judge_confidence: judgment.confidence ?? null,
         judge_reasoning: judgment.reasoning ?? null,
         matched_categories: judgment.matched_categories ?? [],
@@ -984,27 +1241,7 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       }
 
       if (body.auto_approve && brandRow) {
-        const filteredProducts = products.filter(p => !isExcludedProduct(p.name));
-        if (filteredProducts.length > 0) {
-          const embeddings = voyageKey
-            ? await generateEmbeddings(voyageKey, filteredProducts.map(p => `${brandRow.name} ${p.name} ${p.description ?? ''}`.trim()))
-            : filteredProducts.map(() => null);
-          const keywordsList = await generateSearchKeywordsBatch(anthropicKey, brandRow.name, filteredProducts);
-          for (let i = 0; i < filteredProducts.length; i++) {
-            const p = filteredProducts[i];
-            const id = `${slugify(brandRow.name)}-${slugify(p.handle)}`;
-            const searchKeywords = keywordsList[i];
-            await admin.from('products').upsert({
-              id, brand_id: brandRow.id, brand: brandRow.name, name: p.name, price: p.price,
-              image: p.image, images: p.images ?? [], ratio: p.ratio, url: p.url, description: p.description,
-              category: classifyCategory(p.name, brandRow.matched_categories?.[0] ?? null),
-              search_keywords: searchKeywords,
-              ...(embeddings[i] ? { embedding: JSON.stringify(embeddings[i]) } : {}),
-              source: 'auto_scrape', status: 'active', last_seen_at: new Date().toISOString(),
-            });
-          }
-        }
-        results.push({ domain, action: 'auto_approved', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id, count: filteredProducts.length });
+        results.push({ domain, action: 'auto_approved', verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow.id, ...await refreshBrand(admin, brandRow, fx) });
       } else {
         const action = finalStatus === 'rejected' ? 'auto_rejected' : 'queued_for_review';
         results.push({ domain, action, verdict: judgment.verdict, confidence: judgment.confidence, brand_id: brandRow?.id });
@@ -1016,4 +1253,3 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
     return respond({ error: String(err) }, 500);
   }
 });
-
