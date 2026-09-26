@@ -9,6 +9,7 @@ import { notify, confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
+import { useCountry } from '@/store/useCurrencyStore';
 
 const ADMIN_EMAIL = 'samphoffer@gmail.com';
 
@@ -16,6 +17,7 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const { signOut, deleteAccount, user } = useAuthStore();
   const [deleting, setDeleting] = useState(false);
+  const country = useCountry();
   const [adminStatus, setAdminStatus] = useState<string | null>(null);
   const [adminRunning, setAdminRunning] = useState(false);
   const [quickAddUrl, setQuickAddUrl] = useState('');
@@ -260,6 +262,10 @@ export default function Settings() {
         <Pressable style={styles.linkRow} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.linkText}>Edit profile</Text>
         </Pressable>
+        <Pressable style={[styles.linkRow, styles.valueRow]} onPress={() => router.push('/country')}>
+          <Text style={styles.linkText}>Country</Text>
+          <Text style={styles.valueText}>{country.name} · {country.currency}</Text>
+        </Pressable>
 
         <View style={styles.divider} />
 
@@ -363,6 +369,8 @@ const styles = StyleSheet.create({
   divider:     { height: 1, backgroundColor: Colors.border, marginVertical: Spacing[6] },
   linkRow:     { paddingVertical: Spacing[3] },
   linkText:    { ...Typography.body, fontSize: 15, color: Colors.text },
+  valueRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  valueText:   { ...Typography.body, fontSize: 14, color: Colors.textMuted },
   deleteBtn:   { paddingVertical: 14, alignItems: 'center', marginTop: Spacing[1] },
   deleteText:  { ...Typography.cardTitle, color: Colors.textMuted },
   signOutBtn:  { paddingVertical: 14, alignItems: 'center' },

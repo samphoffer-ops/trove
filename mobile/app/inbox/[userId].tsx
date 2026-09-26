@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
+import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { useShareStore } from '@/store/useShareStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,7 @@ export default function Conversation() {
   const { userId, name: paramName } = useLocalSearchParams<{ userId: string; name: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const formatPrice = usePriceFormatter();
   const { markRead, sendMessage } = useShareStore();
   const { isProductSaved } = useBoardStore();
   const [shares, setShares] = useState<Share[]>([]);
@@ -121,7 +123,7 @@ export default function Conversation() {
                       <View style={styles.productInfo}>
                         <Text style={styles.productBrand} numberOfLines={1}>{p.brand}</Text>
                         <Text style={styles.productName} numberOfLines={2}>{p.name}</Text>
-                        <Text style={styles.productPrice}>${p.price}</Text>
+                        <Text style={styles.productPrice}>{formatPrice(p)}</Text>
                       </View>
                       <Pressable style={styles.bookmarkBtn} onPress={() => setSaveTarget(p)} hitSlop={12}>
                         <BookmarkIcon color={saved ? Colors.accent : Colors.textMuted} filled={saved} size={20} />

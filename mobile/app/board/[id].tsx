@@ -4,6 +4,8 @@ import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
+import { usePriceFormatter, useCountry, useCurrencyStore } from '@/store/useCurrencyStore';
+import { formatMoney } from '@/lib/currency';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
@@ -20,6 +22,9 @@ export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const formatPrice = usePriceFormatter();
+  const { currency } = useCountry();
+  const rates = useCurrencyStore(s => s.rates);
   const { fetchBoardById, getBoardItems, setCoverImage, removeFromBoard, markPurchased, unmarkPurchased } = useBoardStore();
   const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
@@ -39,7 +44,11 @@ export default function BoardDetail() {
 
   if (!board) return null;
 
-  const total = items.reduce((n, i) => n + i.product_data.price, 0);
+  // Summed in the shopper's currency — each item's real price there when the
+  // store publishes one, else converted from USD. No rate loaded yet → USD.
+  const totalCurrency = currency === 'USD' || rates[currency] ? currency : 'USD';
+  const total = items.reduce((n, i) =>
+    n + (i.product_data.prices?.[totalCurrency] ?? i.product_data.price * (rates[totalCurrency] ?? 1)), 0);
   const collaborators = board.board_collaborators ?? [];
   // Must match the editor-role boundary the backend actually enforces
   // (board-cover storage policies, board_items insert/delete) — a viewer
@@ -107,7 +116,7 @@ export default function BoardDetail() {
         <View style={styles.coverBottom}>
           <Text style={styles.name}>{board.name}</Text>
           <Text style={styles.meta}>
-            {items.length} item{items.length !== 1 ? 's' : ''} · ${total.toLocaleString()} total
+            {items.length} item{items.length !== 1 ? 's' : ''} · {formatMoney(total, totalCurrency)} total
             {collaborators.length > 0 ? ` · Shared with ${collaborators.length}` : ''}
           </Text>
         </View>
@@ -139,7 +148,7 @@ export default function BoardDetail() {
                     <View style={styles.cardInfo}>
                       <Text style={styles.cardBrand}>{item.product_data.brand}</Text>
                       <Text style={styles.cardName} numberOfLines={2}>{item.product_data.name}</Text>
-                      <Text style={styles.cardPrice}>${item.product_data.price}</Text>
+                      <Text style={styles.cardPrice}>{formatPrice(item.product_data)}</Text>
                     </View>
                   </Pressable>
                 ))}

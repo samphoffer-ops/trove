@@ -9,6 +9,7 @@ export interface Profile {
   taste_styles: string[];
   taste_categories: string[];
   shop_for: string[];
+  country: string | null; // ISO 3166 alpha-2; null = not chosen (see useCurrencyStore)
   onboarding_completed_at: string | null;
 }
 
@@ -16,7 +17,8 @@ export interface Product {
   id: string;
   brand: string;
   name: string;
-  price: number;
+  price: number;                    // always USD
+  prices?: Record<string, number>;  // real per-currency prices, e.g. { USD: 409, GBP: 370 }
   image: string;
   images?: string[];   // additional product photos (scraper populates when available)
   ratio: number;

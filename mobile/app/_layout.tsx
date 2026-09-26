@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { ProductModal } from '@/components/ProductModal';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useCurrencyStore } from '@/store/useCurrencyStore';
 
 // Body font is Mulish (brand spec). Headers want "Freight Display Pro Bold" —
 // not applied yet, waiting on Sam to provide the licensed font files; headers
@@ -84,6 +85,9 @@ export default function RootLayout() {
     if (fontsLoaded) injectWebFont();
   }, [fontsLoaded]);
 
+  // Exchange rates + this device's saved country, for the country picker.
+  useEffect(() => { useCurrencyStore.getState().init(); }, []);
+
   // Native blocks first paint on custom fonts to avoid a system-font flash.
   // Web can't do that here: this same gate also runs during static export's
   // server-side render, where the async font fetch never resolves — blocking
@@ -108,6 +112,7 @@ export default function RootLayout() {
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />
         <Stack.Screen name="edit-profile" options={{ presentation: 'card' }} />
         <Stack.Screen name="settings"     options={{ presentation: 'card' }} />
+        <Stack.Screen name="country"      options={{ presentation: 'card' }} />
         <Stack.Screen name="brand-review" options={{ presentation: 'card' }} />
         <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
         <Stack.Screen name="terms"          options={{ presentation: 'card' }} />

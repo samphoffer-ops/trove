@@ -13,6 +13,7 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Product } from '@/types';
+import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { goBack, openProduct, openExternal } from '@/lib/navigation';
 
@@ -30,6 +31,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const { isProductSaved } = useBoardStore();
   const { user } = useAuthStore();
   const { loaded, fetchProducts } = useProductsStore();
+  const formatPrice = usePriceFormatter();
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [similar, setSimilar] = useState<Product[]>([]);
@@ -125,7 +127,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
           <Text style={styles.name}>{product.name}</Text>
 
           {/* Price — prominent but not louder than the name */}
-          <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+          <Text style={styles.price}>{formatPrice(product)}</Text>
 
           {/* Description */}
           <Text style={styles.desc}>{product.description ?? PLACEHOLDER_DESC}</Text>
@@ -161,7 +163,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
                   <View style={styles.similarInfo}>
                     <Text style={styles.similarBrand}>{p.brand}</Text>
                     <Text style={styles.similarName} numberOfLines={1}>{p.name}</Text>
-                    <Text style={styles.similarPrice}>${p.price}</Text>
+                    <Text style={styles.similarPrice}>{formatPrice(p)}</Text>
                   </View>
                 </Pressable>
               ))}

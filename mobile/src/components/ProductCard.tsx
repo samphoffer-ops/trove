@@ -2,6 +2,7 @@ import { View, Text, Pressable, StyleSheet, Platform, GestureResponderEvent } fr
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Product } from '@/types';
+import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
 import { BookmarkIcon, CloseIcon } from './Icons';
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function ProductCard({ product, saved, onSave, onNotInterested, onQuickActions }: Props) {
+  const formatPrice = usePriceFormatter();
   function handleLongPress(e: GestureResponderEvent) {
     if (!onQuickActions) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -60,7 +62,7 @@ export function ProductCard({ product, saved, onSave, onNotInterested, onQuickAc
           <Text style={styles.brand}>{product.brand}</Text>
         )}
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.price}>${product.price.toFixed(2)}</Text>
+        <Text style={styles.price}>{formatPrice(product)}</Text>
       </View>
     </Pressable>
   );

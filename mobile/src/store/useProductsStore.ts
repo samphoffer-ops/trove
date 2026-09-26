@@ -80,7 +80,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       // Excludes `embedding` (vector(1024), ~4KB/row, never read client-side —
       // see the Product type) since pulling it for the entire active catalog
       // was a meaningful chunk of why this used to be slow at scale.
-      const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, image, images, ratio, url, category, styles, description, source, external_handle, status, first_seen_at, last_seen_at, price_history, removed_at, created_at, search_keywords';
+      const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, image, images, ratio, url, category, styles, description, source, external_handle, status, first_seen_at, last_seen_at, price_history, removed_at, created_at, search_keywords, prices';
       const unrankedQuery = () =>
         supabase.from('products').select(PRODUCT_COLUMNS).eq('status', 'active').order('created_at', { ascending: false });
       const { data: { user } } = await supabase.auth.getUser();

@@ -7,6 +7,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
 import { useProductsStore, getProducts } from '@/store/useProductsStore';
+import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useShareStore } from '@/store/useShareStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -121,6 +122,7 @@ function getStripItems(
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
+  const formatPrice = usePriceFormatter();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience, loaded: productsLoaded } = useProductsStore();
@@ -396,7 +398,7 @@ export default function FeedScreen() {
                         <View style={styles.stripInfo}>
                           <Text style={styles.stripBrand} numberOfLines={1}>{p.brand}</Text>
                           <Text style={styles.stripName} numberOfLines={2}>{p.name}</Text>
-                          <Text style={styles.stripPrice}>${p.price}</Text>
+                          <Text style={styles.stripPrice}>{formatPrice(p)}</Text>
                         </View>
                       </Pressable>
                     ))}
