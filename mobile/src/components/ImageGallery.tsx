@@ -1,8 +1,32 @@
 import { useRef, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent, GestureResponderEvent } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { Colors } from '@/lib/theme';
+import { ChevronLeftIcon } from './Icons';
+
+// Arrows show on hover via real CSS :hover rather than JS hover state —
+// react-native-web doesn't deliver pointer enter/leave on a plain View, so
+// state-driven arrows never appeared. Touch browsers (hover: none) hide
+// them entirely; they can swipe.
+function injectGalleryArrowCss() {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  if (document.getElementById('trove-gallery-arrows')) return;
+  const style = document.createElement('style');
+  style.id = 'trove-gallery-arrows';
+  style.textContent = `
+    [data-trove-gallery-arrow] { opacity: 0; transition: opacity 0.15s ease; }
+    [data-trove-gallery]:hover [data-trove-gallery-arrow] { opacity: 1; }
+    @media (hover: none) { [data-trove-gallery-arrow] { display: none !important; } }
+  `;
+  document.head.appendChild(style);
+}
+
+// react-native-web renders `dataSet` as data-* attributes; RN's types don't
+// know the prop, hence the cast. No-op on native.
+function webData(data: Record<string, string>) {
+  return Platform.OS === 'web' ? ({ dataSet: data } as object) : {};
+}
 
 interface Props {
   images:      string[];     // at least 1; first is always the hero
@@ -25,9 +49,14 @@ export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
 
   // Deduplicate: scraper sometimes includes the hero twice
   const unique = Array.from(new Set(images.filter(Boolean)));
+  injectGalleryArrowCss();
   const multi  = unique.length > 1;
 
   const pageWidth = containerWidth || windowWidth;
+  // Tiny thumbnails (e.g. the brand page grid, ~80px) skip the arrows —
+  // a 32px button would cover half the photo, and tapping through to the
+  // product opens the full-size gallery anyway.
+  const showArrows = Platform.OS === 'web' && pageWidth >= 140;
 
   // Single image (the common case, most products) skips the ScrollView
   // entirely — an unvirtualized masonry grid mounts every card at once, and
@@ -56,13 +85,24 @@ export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
     setActiveIndex(idx);
   }
 
+  // Desktop web has no swipe, so it gets prev/next arrows on hover. The
+  // gallery usually sits inside a pressable card, so the arrow press must
+  // not bubble up and open the product.
+  function goTo(e: GestureResponderEvent, idx: number) {
+    e.stopPropagation();
+    e.preventDefault?.();
+    const next = Math.max(0, Math.min(unique.length - 1, idx));
+    scrollRef.current?.scrollTo({ x: next * pageWidth, animated: true });
+    setActiveIndex(next);
+  }
+
   function onLayout(e: LayoutChangeEvent) {
     const w = e.nativeEvent.layout.width;
     if (w > 0) setContainerWidth(w);
   }
 
   return (
-    <View style={styles.root} onLayout={onLayout}>
+    <View style={styles.root} onLayout={onLayout} {...webData({ troveGallery: '' })}>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -88,6 +128,31 @@ export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
         ))}
       </ScrollView>
 
+      {showArrows && activeIndex > 0 && (
+        <Pressable
+          {...webData({ troveGalleryArrow: '' })}
+          style={[styles.arrow, styles.arrowLeft]}
+          onPress={(e) => goTo(e, activeIndex - 1)}
+          accessibilityLabel="Previous photo"
+          hitSlop={6}
+        >
+          <ChevronLeftIcon size={16} />
+        </Pressable>
+      )}
+      {showArrows && activeIndex < unique.length - 1 && (
+        <Pressable
+          {...webData({ troveGalleryArrow: '' })}
+          style={[styles.arrow, styles.arrowRight]}
+          onPress={(e) => goTo(e, activeIndex + 1)}
+          accessibilityLabel="Next photo"
+          hitSlop={6}
+        >
+          <View style={{ transform: [{ rotate: '180deg' }] }}>
+            <ChevronLeftIcon size={16} />
+          </View>
+        </Pressable>
+      )}
+
       {/* Dot indicators — hidden when there's only one image */}
       {multi && (
         <View style={styles.dots}>
@@ -110,6 +175,20 @@ const styles = StyleSheet.create({
   root: { width: '100%', backgroundColor: Colors.stoneSoft },
   page: { overflow: 'hidden' },
   img:  { width: '100%', aspectRatio: 3 / 4, backgroundColor: Colors.stoneSoft },
+  arrow: {
+    position:        'absolute',
+    top:             '50%',
+    marginTop:       -16,
+    width:           32,
+    height:          32,
+    borderRadius:    16,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    boxShadow:       '0 1px 4px rgba(0,0,0,0.18)',
+  },
+  arrowLeft:  { left: 8 },
+  arrowRight: { right: 8 },
   dots: {
     position:       'absolute',
     bottom:         12,
