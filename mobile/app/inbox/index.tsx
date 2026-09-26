@@ -94,14 +94,17 @@ export default function InboxList() {
           filtered.map(convo => {
             const name = convo.profile?.display_name ?? convo.profile?.username ?? 'Someone';
             const initial = name[0].toUpperCase();
+            // product_data is null for text-only replies (migration 017), so
+            // the latest message isn't guaranteed to carry a product.
+            const product = convo.latest.product_data;
             const preview = convo.latest.message
               ? `"${convo.latest.message}"`
-              : `${convo.latest.product_data.brand} · ${convo.latest.product_data.name}`;
+              : product ? `${product.brand} · ${product.name}` : '';
             return (
               <Pressable
                 key={convo.senderId}
                 style={styles.row}
-                onPress={() => router.push({ pathname: `/inbox/${convo.senderId}`, params: { name } })}
+                onPress={() => router.push({ pathname: '/inbox/[userId]', params: { userId: convo.senderId, name } })}
               >
                 <View style={styles.avatar}>
                   {convo.profile?.avatar_url ? (
@@ -122,7 +125,7 @@ export default function InboxList() {
                     <Text style={styles.badgeText}>{convo.unread}</Text>
                   </View>
                 )}
-                <Image source={{ uri: convo.latest.product_data.image }} style={styles.thumb} contentFit="cover" />
+                {product && <Image source={{ uri: product.image }} style={styles.thumb} contentFit="cover" />}
               </Pressable>
             );
           })
