@@ -788,12 +788,32 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   beauty:      ['serum', 'cream', 'lotion', 'fragrance', 'perfume', 'cologne', 'skincare', 'cleanser', 'lip', 'balm', 'oil', 'shampoo', 'soap'],
 };
 
+// products.category has a check constraint (migration 006) allowing only
+// these six. The fallback is the judge's free-text matched_categories[0] —
+// "fashion", "shirting", "denim", "footwear", "outerwear / jackets"... —
+// which used to be written as-is, so every product that didn't hit a
+// keyword failed the constraint. The old one-row-at-a-time upsert never
+// checked its errors, so those products were silently dropped: a large
+// part of why brands like Schott sat at 2 products.
+const PRODUCT_CATEGORIES = new Set(['clothing', 'shoes', 'bags', 'accessories', 'home', 'beauty']);
+
+function normalizeBrandCategory(raw: string | null): string {
+  const lower = (raw ?? '').toLowerCase();
+  if (PRODUCT_CATEGORIES.has(lower)) return lower;
+  if (/foot|shoe|boot|sneaker/.test(lower)) return 'shoes';
+  if (/beauty|skin|fragrance|cosmetic/.test(lower)) return 'beauty';
+  if (/\bbag|leather goods/.test(lower)) return 'bags';
+  if (/home|ceramic|furniture|interior/.test(lower)) return 'home';
+  if (/access|eyewear|sunglass|jewel|hat|cap/.test(lower)) return 'accessories';
+  return 'clothing';
+}
+
 function classifyCategory(productName: string, fallback: string | null): string {
   const lower = productName.toLowerCase();
   for (const [category, words] of Object.entries(CATEGORY_KEYWORDS)) {
     if (words.some(w => lower.includes(w))) return category;
   }
-  return fallback ?? 'clothing';
+  return normalizeBrandCategory(fallback);
 }
 
 // Excludes two kinds of scraped "products" that aren't real catalog items:
