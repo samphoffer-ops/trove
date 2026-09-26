@@ -577,7 +577,33 @@ async function probeLdJson(
 // embedding / search_keywords empty; the backfill-catalog workflow (every
 // 20 min) fills those in, which it was already built to do. Omitted columns
 // aren't touched on conflict, so existing products keep theirs.
-const PRODUCT_UPSERT_CHUNK = 500;
+//
+// Chunks are small because an upsert that updates an existing row writes a
+// new row version into every index on products — including the pgvector
+// index on embedding, which is slow to insert into. 500-row chunks hit the
+// statement timeout on the first live backfill (Drake's, Cubitts, Anna
+// Sui...). 100 is the starting size; a chunk that still times out is split
+// in half and retried rather than failing the brand.
+const PRODUCT_UPSERT_CHUNK = 100;
+const MIN_UPSERT_CHUNK = 10;
+
+async function upsertProducts(admin: any, rows: Record<string, unknown>[]): Promise<{ saved: number; error: string | null }> {
+  let saved = 0;
+  const queue: Record<string, unknown>[][] = [];
+  for (let i = 0; i < rows.length; i += PRODUCT_UPSERT_CHUNK) queue.push(rows.slice(i, i + PRODUCT_UPSERT_CHUNK));
+  while (queue.length > 0) {
+    const chunk = queue.shift()!;
+    const { error } = await admin.from('products').upsert(chunk, { onConflict: 'id' });
+    if (!error) { saved += chunk.length; continue; }
+    if (/statement timeout/i.test(error.message) && chunk.length > MIN_UPSERT_CHUNK) {
+      const half = Math.ceil(chunk.length / 2);
+      queue.unshift(chunk.slice(0, half), chunk.slice(half));
+      continue;
+    }
+    return { saved, error: error.message };
+  }
+  return { saved, error: null };
+}
 
 async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) {
   const runStart = new Date().toISOString();
@@ -609,14 +635,12 @@ async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) 
     });
   }
   const all = [...rows.values()];
-  for (let i = 0; i < all.length; i += PRODUCT_UPSERT_CHUNK) {
-    const { error } = await admin.from('products').upsert(all.slice(i, i + PRODUCT_UPSERT_CHUNK), { onConflict: 'id' });
-    // Stop before the removal step — a half-written catalog must never be
-    // read as "everything else is gone".
-    if (error) {
-      await recordHealth(all.length, i, `upsert failed: ${error.message}`);
-      return { count: i, removed: 0, error: error.message };
-    }
+  const { saved, error } = await upsertProducts(admin, all);
+  // Stop before the removal step — a half-written catalog must never be
+  // read as "everything else is gone".
+  if (error) {
+    await recordHealth(all.length, saved, `upsert failed: ${error}`);
+    return { count: saved, removed: 0, error };
   }
 
   // Only a complete read of the store can say what's gone: sold out, or
