@@ -219,3 +219,15 @@ as $$
   order by pr.last_seen_at desc
   limit p_limit;
 $$;
+
+-- Tell PostgREST to pick up the new column and function signatures now
+-- rather than on its next periodic reload.
+notify pgrst, 'reload schema';
+
+-- Self-check: the editor should show one row reading "026 applied".
+select case
+  when exists (select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = 'profiles' and column_name = 'country')
+   and exists (select 1 from pg_indexes where indexname = 'products_active_created_idx')
+   and exists (select 1 from pg_proc where proname = 'search_products')
+  then '026 applied' else '026 NOT fully applied' end as status;
