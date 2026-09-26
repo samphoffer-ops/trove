@@ -25,9 +25,12 @@ interface Props {
   bottomInset?: number;
   // Set when rendered inside the desktop glass modal (ProductModal.tsx)
   onClose?: () => void;
+  // Caps the photo height. The modal sizes this from the window so the
+  // brand/name/price clear the sticky Shop now bar on open.
+  heroMaxHeight?: number;
 }
 
-export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose }: Props) {
+export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose, heroMaxHeight }: Props) {
   const { isProductSaved } = useBoardStore();
   const { user } = useAuthStore();
   const { loaded, fetchProducts } = useProductsStore();
@@ -94,7 +97,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
         {/* Hero gallery — full-bleed, paging dots for multiple images */}
         <View style={styles.hero}>
-          <ImageGallery images={galleryImages} maxHeight={onClose ? 460 : undefined} />
+          <ImageGallery images={galleryImages} maxHeight={heroMaxHeight ?? (onClose ? 460 : undefined)} />
 
           {/* Floating nav row over the image */}
           <View style={[styles.floatingRow, { top: topInset + 12 }]}>

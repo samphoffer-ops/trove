@@ -60,6 +60,13 @@ export function ProductModal() {
     ]).start(() => close());
   }
 
+  // A fixed 460px photo filled nearly the whole card on a laptop-height
+  // window, leaving the brand, name and price under the sticky Shop now
+  // bar. Size the photo from what's left after reserving room for them
+  // (~110px bar + ~170px for brand, a two-line name and price).
+  const cardMaxHeight = windowHeight * 0.88;
+  const heroMaxHeight = Math.round(Math.max(240, Math.min(460, cardMaxHeight - 280)));
+
   if (!openProductId) return null;
 
   return (
@@ -68,8 +75,8 @@ export function ProductModal() {
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
       </TouchableWithoutFeedback>
       <View style={styles.centerWrap} pointerEvents="box-none">
-        <Animated.View style={[styles.card, { maxHeight: windowHeight * 0.88, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-          <ProductDetailContent productId={openProductId} onClose={handleClose} />
+        <Animated.View style={[styles.card, { maxHeight: cardMaxHeight, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+          <ProductDetailContent productId={openProductId} onClose={handleClose} heroMaxHeight={heroMaxHeight} />
         </Animated.View>
       </View>
     </Modal>
