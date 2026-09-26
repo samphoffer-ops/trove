@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,15 @@ import { MasonryGrid } from '@/components/MasonryGrid';
 import { ProductCard } from '@/components/ProductCard';
 import { SaveSheet } from '@/components/SaveSheet';
 
+// Rendered in pages as you scroll, like the feed. The grid isn't
+// virtualized and every card with extra photos mounts its own swipeable
+// gallery, so rendering a full catalog at once — Schott is 438 products
+// since the full-catalog scrape — is enough to crash the app on a phone.
+const PAGE_SIZE = 30;
+// Everything a card needs; `*` also pulled each product's 1024-dim
+// embedding (~4KB/row), which the app never reads.
+const PRODUCT_COLUMNS = 'id, brand_id, brand, name, price, prices, image, images, ratio, url, category, styles, description, source, status, created_at, last_seen_at, search_keywords';
+
 export default function BrandProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -25,16 +34,29 @@ export default function BrandProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [productsLoaded, setProductsLoaded] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     supabase.from('brands').select('*').eq('id', id).single()
       .then(({ data }) => data && setBrand(data as Brand));
-    supabase.from('products').select('*').eq('brand_id', id).eq('status', 'active')
-      .then(({ data }) => setProducts((data ?? []) as Product[]));
+    setVisibleCount(PAGE_SIZE);
+    setProductsLoaded(false);
+    supabase.from('products').select(PRODUCT_COLUMNS).eq('brand_id', id).eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setProducts((data ?? []) as Product[]); setProductsLoaded(true); });
     fetchBrandFollowerCount(id).then(setFollowerCount);
     if (user) isBrandFollowed(user.id, id).then(setIsFollowing);
   }, [id, user]);
+
+  const hasMore = visibleCount < products.length;
+  function handleScroll(e: any) {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
+      setVisibleCount(c => c + PAGE_SIZE);
+    }
+  }
 
   async function toggleFollow() {
     if (!user || !id) return;
@@ -63,7 +85,7 @@ export default function BrandProfile() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={200}>
         <View style={styles.hero}>
           <Text style={styles.brandName}>{brand.name}</Text>
           <Pressable onPress={() => openExternal(`https://${brand.domain}`)}>
@@ -78,11 +100,15 @@ export default function BrandProfile() {
           </Pressable>
         </View>
 
-        {products.length === 0 ? (
+        {!productsLoaded ? (
+          // Used to fall straight through to "No products live yet." while
+          // the query was still in flight.
+          <ActivityIndicator style={{ marginTop: Spacing[6] }} color={Colors.textMuted} />
+        ) : products.length === 0 ? (
           <Text style={styles.empty}>No products live yet.</Text>
         ) : (
           <MasonryGrid
-            items={products}
+            items={products.slice(0, visibleCount)}
             keyExtractor={p => p.id}
             renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
           />
