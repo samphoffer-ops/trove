@@ -265,13 +265,15 @@ function toUsd(amount: number, currency: string, fx: Record<string, number>): nu
 }
 
 // ── Shopify ─────────────────────────────────────────────────────────────
-// products.json caps at 250 per page. This used to read only page one, so
-// every brand with a bigger catalog was silently truncated (106 of 190
-// approved brands, measured 2026-09-26) — and whatever the first page
-// happened to hold, including sold-out archive pieces.
+// products.json caps at 250 per page (Shopify's own maximum). This used to
+// read only page one, so every brand with a bigger catalog was silently
+// truncated (106 of 190 approved brands, measured 2026-09-26). Now it reads
+// every page — the largest approved store (Stag Provisions, 12,320 products,
+// 50 pages) takes ~42s. SHOPIFY_MAX_PAGES is only a runaway guard; a brand
+// that hits it is reported as incomplete in brand_coverage, not truncated
+// silently.
 const SHOPIFY_PAGE_SIZE = 250;
-const SHOPIFY_MAX_PAGES = 8;
-const MAX_PRODUCTS_PER_BRAND = 1000;
+const SHOPIFY_MAX_PAGES = 100;
 
 // Headless Shopify stores (custom front end, e.g. aetherapparel.com) 404 on
 // /products.json at the brand domain but still serve it from the Shopify
@@ -317,7 +319,7 @@ async function readShopifyPages(host: string, currencyParam: string, maxPages: n
   const raw: any[] = [];
   let complete = false;
   for (let page = 1; page <= maxPages; page++) {
-    if (page > 1) await sleep(500);
+    if (page > 1) await sleep(300);
     const data = await fetchJson(`https://${host}/products.json?limit=${SHOPIFY_PAGE_SIZE}&page=${page}${currencyParam}`);
     if (!Array.isArray(data?.products)) return { raw, complete: false }; // a failed page means we can't vouch for what's missing
     raw.push(...data.products);
@@ -377,7 +379,6 @@ async function probeShopify(
     }
     if (price === null) continue; // no FX rate for this currency — never show an unconverted price as USD
     products.push({ ...m.product, price, prices });
-    if (products.length >= MAX_PRODUCTS_PER_BRAND) break;
   }
   if (products.length === 0) return null;
 
@@ -576,7 +577,7 @@ async function probeLdJson(
 // embedding / search_keywords empty; the backfill-catalog workflow (every
 // 20 min) fills those in, which it was already built to do. Omitted columns
 // aren't touched on conflict, so existing products keep theirs.
-const PRODUCT_UPSERT_CHUNK = 200;
+const PRODUCT_UPSERT_CHUNK = 500;
 
 async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) {
   const runStart = new Date().toISOString();
@@ -584,7 +585,16 @@ async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) 
   const ld = () => probeLdJson(brand.domain, fx, { cursor: brand.scrape_cursor ?? 0 });
   // Try the platform we last saw first, then the other — stores do migrate.
   const scrape = brand.platform === 'ld_json' ? (await ld() ?? await shopify()) : (await shopify() ?? await ld());
-  if (!scrape) return { count: 0, removed: 0, error: 'unscrapeable' };
+  // Every outcome is recorded on the brand — brand_coverage (migration 025)
+  // reads these to flag approved brands whose products aren't making it in.
+  const recordHealth = (found: number, saved: number, error: string | null, extra: Record<string, unknown> = {}) =>
+    admin.from('brands').update({
+      last_scrape_at: new Date().toISOString(), last_scrape_found: found, last_scrape_saved: saved, last_scrape_error: error, ...extra,
+    }).eq('id', brand.id);
+  if (!scrape) {
+    await recordHealth(0, 0, 'unscrapeable');
+    return { count: 0, removed: 0, error: 'unscrapeable' };
+  }
 
   const now = new Date().toISOString();
   const rows = new Map<string, Record<string, unknown>>();
@@ -603,7 +613,10 @@ async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) 
     const { error } = await admin.from('products').upsert(all.slice(i, i + PRODUCT_UPSERT_CHUNK), { onConflict: 'id' });
     // Stop before the removal step — a half-written catalog must never be
     // read as "everything else is gone".
-    if (error) return { count: i, removed: 0, error: error.message };
+    if (error) {
+      await recordHealth(all.length, i, `upsert failed: ${error.message}`);
+      return { count: i, removed: 0, error: error.message };
+    }
   }
 
   // Only a complete read of the store can say what's gone: sold out, or
@@ -617,13 +630,14 @@ async function refreshBrand(admin: any, brand: any, fx: Record<string, number>) 
     removed = count ?? 0;
   }
 
-  await admin.from('brands').update({
+  const incomplete = scrape.platform === 'shopify' && !scrape.complete;
+  await recordHealth(all.length, all.length, incomplete ? 'products.json read stopped early (page error or page guard)' : null, {
     platform: scrape.platform,
     feed_domain: scrape.feedDomain,
     currency: scrape.currency,
     has_usd_pricing: scrape.hasUsdPricing,
     scrape_cursor: scrape.nextCursor,
-  }).eq('id', brand.id);
+  });
 
   return { count: all.length, removed, currency: scrape.currency, usd_pricing: scrape.hasUsdPricing };
 }
@@ -1116,6 +1130,19 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
         if (failed > 30) break;
       }
       return respond({ updated, failed }, 200);
+    }
+
+    // Approved brands whose products aren't all making it into the catalog —
+    // see brand_coverage in migration 025 for the rules. Checked at the end
+    // of the daily refresh workflow (fails the run so GitHub emails Sam) and
+    // from the admin section in Settings.
+    if (body.action === 'coverage_report') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const { data, error } = await admin.from('brand_coverage')
+        .select('name, domain, platform, active_count, last_scrape_found, last_scrape_at, problem')
+        .not('problem', 'is', null).order('name');
+      if (error) return respond({ error: error.message }, 500);
+      return respond({ flagged: data ?? [] });
     }
 
     // Convenience action: re-scrape currently-approved brands.

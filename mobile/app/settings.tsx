@@ -126,7 +126,6 @@ export default function Settings() {
     // Massimo Dutti — left out: massimodutti.com sits behind Akamai bot
     // protection, so it can't be scraped without evading that. An affiliate
     // product feed is the legitimate route if it's wanted.
-    // Carthage — couldn't identify the right brand/domain yet.
   ];
 
   // Runs domains through catalog-intake in batches small enough to stay
@@ -196,6 +195,25 @@ export default function Settings() {
       setAdminStatus(`✓ Done — ${queued} queued for review, ${rejected} rejected (${domains.length} total candidates)`);
     } catch (e: any) {
       setAdminStatus(`✗ Discovery failed: ${e?.message ?? String(e)}`);
+    }
+    setAdminRunning(false);
+  }
+
+  // Approved brands whose products aren't all making it in — same check the
+  // daily refresh workflow runs (brand_coverage view, migration 025).
+  async function checkCoverage() {
+    setAdminRunning(true);
+    setAdminStatus('Checking catalog coverage…');
+    try {
+      const { data, error } = await supabase.functions.invoke('catalog-intake', { body: { action: 'coverage_report' } });
+      if (error) throw error;
+      const flagged: any[] = data?.flagged ?? [];
+      setAdminStatus(flagged.length === 0
+        ? '✓ Every approved brand is fully covered'
+        : `${flagged.length} brand${flagged.length === 1 ? '' : 's'} need a look:\n` +
+          flagged.map(b => `• ${b.name} — ${b.problem}`).join('\n'));
+    } catch (e: any) {
+      setAdminStatus(`✗ Coverage check failed: ${e?.message ?? String(e)}`);
     }
     setAdminRunning(false);
   }
@@ -317,6 +335,15 @@ export default function Settings() {
             >
               {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
               <Text style={styles.adminBtnText}>Intake hand-picked brands</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.adminBtn, adminRunning && styles.adminBtnDisabled]}
+              onPress={checkCoverage}
+              disabled={adminRunning}
+            >
+              {adminRunning ? <ActivityIndicator size="small" color={Colors.text} /> : null}
+              <Text style={styles.adminBtnText}>Check catalog coverage</Text>
             </Pressable>
 
             {adminStatus && <Text style={styles.adminStatus}>{adminStatus}</Text>}

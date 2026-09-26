@@ -115,3 +115,26 @@ jobs:
           done
           echo ""
           echo "Total brands refreshed: $TOTAL"
+
+      # The catch for approved brands that are scrapeable but whose products
+      # aren't making it in (see brand_coverage, migration 025). Runs after
+      # the refresh so it judges today's scrape, and fails the job when
+      # anything is flagged — a red run is what gets GitHub to email Sam.
+      - name: Check catalog coverage
+        if: always()
+        run: |
+          curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" -d '{"action":"coverage_report"}' \
+            --max-time 60 -o coverage.json || true
+          if ! jq -e '.flagged' coverage.json > /dev/null 2>&1; then
+            echo "Coverage report failed:"; cat coverage.json 2>/dev/null || true
+            exit 1
+          fi
+          COUNT=$(jq '.flagged | length' coverage.json)
+          if [ "$COUNT" != "0" ]; then
+            echo "$COUNT approved brand(s) with coverage problems:"
+            jq -r '.flagged[] | "  \(.name) (\(.domain)): \(.problem)"' coverage.json
+            exit 1
+          fi
+          echo "All approved brands fully covered."
