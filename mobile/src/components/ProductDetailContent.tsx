@@ -16,6 +16,7 @@ import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { goBack, openProduct, openExternal } from '@/lib/navigation';
+import * as haptics from '@/lib/haptics';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -108,7 +109,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               <Pressable style={styles.floatBtn} onPress={() => setShareTarget(product)}>
                 <ShareIcon size={18} />
               </Pressable>
-              <Pressable style={styles.floatBtn} onPress={() => setSaveTarget(product)}>
+              <Pressable style={styles.floatBtn} onPress={() => { haptics.saveToBoard(); setSaveTarget(product); }}>
                 <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={18} />
               </Pressable>
             </View>
@@ -180,7 +181,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
         <Pressable style={styles.shopBtn} onPress={() => openExternal(getAffiliateUrl(product))}>
           <Text style={styles.shopBtnText}>Shop now</Text>
         </Pressable>
-        <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => setSaveTarget(product)}>
+        <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => { haptics.saveToBoard(); setSaveTarget(product); }}>
           <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={20} />
         </Pressable>
       </View>

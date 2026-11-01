@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
@@ -22,6 +21,7 @@ import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterI
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
+import * as haptics from '@/lib/haptics';
 
 const CHIPS = [
   { id: 'explore',  label: 'explore'  },
@@ -241,7 +241,6 @@ export default function FeedScreen() {
   }
 
   function handleSave(product: Product) {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSaveTarget(product);
   }
 
@@ -253,7 +252,7 @@ export default function FeedScreen() {
     {
       key: 'save', label: 'Save',
       icon: (color) => <BookmarkIcon color={color} size={18} />,
-      onPress: () => setSaveTarget(quickActions.product),
+      onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
     },
     {
       key: 'share', label: 'Share',
@@ -263,7 +262,7 @@ export default function FeedScreen() {
     {
       key: 'remove', label: 'Remove',
       icon: (color) => <CloseIcon color={color} size={14} />,
-      onPress: () => markNotInterested(quickActions.product),
+      onPress: () => { haptics.notForMe(); markNotInterested(quickActions.product); },
     },
   ] : [];
 

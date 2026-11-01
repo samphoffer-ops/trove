@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
+import * as haptics from '@/lib/haptics';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
@@ -39,7 +40,8 @@ export default function BoardsScreen() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await createBoard(newName.trim());
+    const board = await createBoard(newName.trim());
+    if (board) haptics.boardCreated();
     setNewName('');
     setCreating(false);
   }

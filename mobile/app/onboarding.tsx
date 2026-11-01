@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS } from '@/data/products';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import * as haptics from '@/lib/haptics';
 import { ChevronLeftIcon, CheckIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 
@@ -24,6 +25,7 @@ export default function Onboarding() {
   const isLastStep = stepIndex === ONBOARDING_STEPS.length - 1;
 
   function toggle(id: string) {
+    haptics.onboardingSelect();
     setSelections(prev => {
       const list = prev[field];
       const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id];
@@ -35,6 +37,7 @@ export default function Onboarding() {
     if (!isLastStep) { setStepIndex(i => i + 1); return; }
     setSubmitting(true);
     await completeOnboarding(selections);
+    haptics.onboardingComplete();
     router.replace('/(tabs)/feed');
   }
 

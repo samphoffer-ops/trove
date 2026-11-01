@@ -9,6 +9,7 @@ import { Product } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { CheckIcon, CloseIcon } from './Icons';
+import * as haptics from '@/lib/haptics';
 
 interface Props {
   product:  Product | null;
@@ -37,8 +38,10 @@ export function SaveSheet({ product, onClose }: Props) {
     const board = boards.find(b => b.id === boardId)!;
     const saved = (board.board_items ?? []).some(i => i.product_id === product.id);
     if (saved) {
+      haptics.onboardingSelect();
       await removeFromBoard(boardId, product.id);
     } else {
+      haptics.saveToBoard();
       await addToBoard(boardId, product);
       // Brief pause so the checkmark fill is visible before the sheet dismisses —
       // tapping a board is a complete "save" action, not a multi-select staging area.
@@ -48,7 +51,8 @@ export function SaveSheet({ product, onClose }: Props) {
 
   async function handleCreate() {
     if (!product || !newName.trim()) return;
-    await createBoard(newName.trim(), product);
+    const board = await createBoard(newName.trim(), product);
+    if (board) haptics.boardCreated();
     setNewName('');
   }
 
