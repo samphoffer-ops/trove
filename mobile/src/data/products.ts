@@ -1,9 +1,8 @@
 import { Product } from '@/types';
 
-// Onboarding steps, in order (docs/design-spec.md §7). The reveal isn't a data
-// step, it always follows the last one. Brand picks were dropped (#56, Sam:
-// "not brand centric"); a replacement first step slots in at the front of
-// this array plus a case in app/onboarding.tsx.
+// Onboarding steps, in order. The reveal isn't a data step, it always follows
+// the last one. Image-led per Sam's decision on #56, which replaces spec §7's
+// brand-picks first step: image yes/no, then never-show, then the reveal.
 //
 // Option ids are the exact values the catalog stores in products.styles and
 // products.category, so selections can be matched without a lookup table.
@@ -37,42 +36,10 @@ export type OnboardingStep = NeverShowStep | ImagePicksStep;
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    key: 'neverShow',
-    title: 'Never show me',
-    subtitle: 'Anything you\'d skip every time. Leave it blank if nothing.',
-    groups: [
-      {
-        field: 'styles',
-        label: 'Styles',
-        options: [
-          { id: 'minimalist',  label: 'Minimalist' },
-          { id: 'maximalist',  label: 'Maximalist' },
-          { id: 'streetwear',  label: 'Streetwear' },
-          { id: 'vintage',     label: 'Vintage' },
-          { id: 'coastal',     label: 'Coastal' },
-          { id: 'cottagecore', label: 'Cottagecore' },
-          { id: 'industrial',  label: 'Industrial' },
-          { id: 'boho',        label: 'Boho' },
-        ],
-      },
-      {
-        field: 'categories',
-        label: 'Categories',
-        options: [
-          { id: 'clothing',    label: 'Clothing' },
-          { id: 'shoes',       label: 'Shoes' },
-          { id: 'bags',        label: 'Bags' },
-          { id: 'accessories', label: 'Accessories' },
-          { id: 'home',        label: 'Home' },
-          { id: 'beauty',      label: 'Beauty' },
-        ],
-      },
-    ],
-  },
-  {
     key: 'imagePicks',
-    title: 'Yes or no?',
-    subtitle: 'Go with your gut.',
+    // The first screen after sign-in, so the title says what's happening.
+    title: 'Let\'s find your taste',
+    subtitle: 'Yes or no, one piece at a time. Go with your gut.',
     // Seeded catalog products (supabase/migrations/007_seed_products.sql),
     // images exactly as scraped. Spread across brands, categories and styles.
     products: [
@@ -125,6 +92,39 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
         id: 'gh-muse-lamp', brand: 'Tala', name: 'The Muse 2.0 Portable Lamp in Solid Brass',
         category: 'home', styles: ['industrial', 'minimalist'], ratio: 1,
         image: 'https://cdn.shopify.com/s/files/1/0720/5824/1345/files/Tala-Muse-Solid-Brass-packshot-7.jpg?v=1781626733',
+      },
+    ],
+  },
+  {
+    key: 'neverShow',
+    title: 'Never show me',
+    subtitle: 'Anything you\'d skip every time. Leave it blank if nothing.',
+    groups: [
+      {
+        field: 'styles',
+        label: 'Styles',
+        options: [
+          { id: 'minimalist',  label: 'Minimalist' },
+          { id: 'maximalist',  label: 'Maximalist' },
+          { id: 'streetwear',  label: 'Streetwear' },
+          { id: 'vintage',     label: 'Vintage' },
+          { id: 'coastal',     label: 'Coastal' },
+          { id: 'cottagecore', label: 'Cottagecore' },
+          { id: 'industrial',  label: 'Industrial' },
+          { id: 'boho',        label: 'Boho' },
+        ],
+      },
+      {
+        field: 'categories',
+        label: 'Categories',
+        options: [
+          { id: 'clothing',    label: 'Clothing' },
+          { id: 'shoes',       label: 'Shoes' },
+          { id: 'bags',        label: 'Bags' },
+          { id: 'accessories', label: 'Accessories' },
+          { id: 'home',        label: 'Home' },
+          { id: 'beauty',      label: 'Beauty' },
+        ],
       },
     ],
   },
