@@ -49,75 +49,77 @@ export const Radius = {
 };
 
 // Mulish weights in sync with useFonts() in app/_layout.tsx.
+// Hierarchy comes from size and placement, not weight: editorial headers are
+// oversized italics (displayXl is 4x body), everything else tops out at SemiBold.
 export const Typography: Record<string, TextStyle> = {
-  // Page-level masthead ("for you", "boards") — editorial impact
+  // Page masthead, onboarding reveal, editorial bento headers
   displayXl: {
-    fontFamily: 'Mulish_900Black',
-    fontSize: 40,
+    fontFamily: 'Mulish_400Regular_Italic',
+    fontSize: 64,
     letterSpacing: -1.6,
-    lineHeight: 42,
+    lineHeight: 62,
   },
-  // Section & content headings
+  // Step titles, board name on cover, empty-state headers
   display: {
-    fontFamily: 'Mulish_900Black',
-    fontSize: 26,
+    fontFamily: 'Mulish_500Medium_Italic',
+    fontSize: 40,
     letterSpacing: -0.8,
-    lineHeight: 30,
+    lineHeight: 40,
   },
+  // Product name on detail, sheet titles, section heads
   headline: {
-    fontFamily: 'Mulish_800ExtraBold',
-    fontSize: 17,
+    fontFamily: 'Mulish_500Medium',
+    fontSize: 22,
     letterSpacing: -0.2,
-    lineHeight: 22,
+    lineHeight: 28,
   },
+  // Button labels, board names, list-row titles
   cardTitle: {
-    fontFamily: 'Mulish_700Bold',
-    fontSize: 13,
-    lineHeight: 17,
+    fontFamily: 'Mulish_600SemiBold',
+    fontSize: 15,
+    lineHeight: 20,
   },
   body: {
     fontFamily: 'Mulish_400Regular',
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 23,
   },
+  // Counts, meta, helper text, product name on cards
   caption: {
-    fontFamily: 'Mulish_600SemiBold',
-    fontSize: 11,
-    lineHeight: 14,
+    fontFamily: 'Mulish_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
   },
+  // "Why it's in your edit", onboarding subtitles
   subhead: {
-    fontFamily: 'Mulish_300Light_Italic',
+    fontFamily: 'Mulish_400Regular_Italic',
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  // Brand on cards and detail, quiet section labels
+  label: {
+    fontFamily: 'Mulish_500Medium',
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 0.01,
   },
-  label: {
-    fontFamily: 'Mulish_900Black',
-    fontSize: 9,
-    letterSpacing: 0.16,
-    lineHeight: 11,
-    textTransform: 'uppercase',
-  },
+  // Wordmark, not a type role
   logo: {
     fontFamily: 'Mulish_900Black',
     fontSize: 22,
     letterSpacing: -0.6,
     lineHeight: 22,
   },
-  dmLabel: {
-    fontFamily: 'Mulish_800ExtraBold',
-    fontSize: 10,
-    letterSpacing: 0.04,
-    lineHeight: 12,
-  },
-  // Price — distinct enough from cardTitle so hierarchy reads at a glance
   price: {
-    fontFamily: 'Mulish_700Bold',
-    fontSize: 13,
-    lineHeight: 17,
-    letterSpacing: -0.1,
+    fontFamily: 'Mulish_500Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    fontVariant: ['tabular-nums'],
   },
 };
+
+// Text props for displayXl/display: body text scales freely with Dynamic Type,
+// editorial headers are capped so a 64pt masthead survives the largest sizes.
+export const DisplayScaling = { maxFontSizeMultiplier: 1.2 };
 
 export const Spacing = {
   1: 4,
@@ -126,6 +128,8 @@ export const Spacing = {
   4: 12,
   5: 18,
   6: 28,
+  screen: 24,   // outer screen margin
+  gutter: 8,    // masonry and board-grid gutter
   safeBottom: 34,
   dynamicIsland: 54,
 };

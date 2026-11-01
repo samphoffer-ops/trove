@@ -110,11 +110,11 @@ const styles = StyleSheet.create({
   },
   brand: {
     ...Typography.label,
-    color:        Colors.accentBlue,
+    color:        Colors.textMuted,
     marginBottom: 3,
   },
   name: {
-    ...Typography.cardTitle,
+    ...Typography.caption,
     color:        Colors.text,
     marginBottom: 3,
   },

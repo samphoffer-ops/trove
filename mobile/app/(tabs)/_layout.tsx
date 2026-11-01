@@ -123,8 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.35)',
   },
   label: {
-    ...Typography.caption,
-    fontSize:  10,
+    ...Typography.label,
     marginTop: -2,
   },
 });

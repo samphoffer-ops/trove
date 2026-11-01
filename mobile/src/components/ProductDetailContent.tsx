@@ -117,7 +117,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
         {/* Editorial body */}
         <View style={styles.body}>
-          {/* Brand — sky blue label, all-caps, tappable */}
+          {/* Brand — sky blue label, tappable */}
           {product.brand_id ? (
             <Pressable onPress={() => goToBrand(product.brand_id!)}>
               <Text style={styles.brand}>{product.brand}</Text>
@@ -126,10 +126,10 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
             <Text style={styles.brand}>{product.brand}</Text>
           )}
 
-          {/* Product name — big, bold, editorial */}
+          {/* Product name */}
           <Text style={styles.name}>{product.name}</Text>
 
-          {/* Price — prominent but not louder than the name */}
+          {/* Price — quiet, subordinate to the name */}
           <Text style={styles.price}>{formatPrice(product)}</Text>
 
           {/* Description */}
@@ -198,8 +198,8 @@ const styles = StyleSheet.create({
 
   floatingRow: {
     position:      'absolute',
-    left:          16,
-    right:         16,
+    left:          Spacing.screen,
+    right:         Spacing.screen,
     flexDirection: 'row',
     justifyContent:'space-between',
     alignItems:    'center',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     justifyContent:  'center',
   },
 
-  body: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: Spacing[3] },
+  body: { paddingHorizontal: Spacing.screen, paddingTop: 22, paddingBottom: Spacing[3] },
 
   brand: {
     ...Typography.label,
@@ -222,17 +222,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[3],
   },
   name: {
-    fontFamily:    'Mulish_900Black',
-    fontSize:      28,
-    letterSpacing: -0.7,
-    lineHeight:    32,
+    ...Typography.headline,
     color:         Colors.text,
     marginBottom:  Spacing[3],
   },
   price: {
-    fontFamily:    'Mulish_800ExtraBold',
-    fontSize:      20,
-    letterSpacing: -0.3,
+    ...Typography.price,
     color:         Colors.text,
     marginBottom:  Spacing[5],
   },
@@ -257,7 +252,7 @@ const styles = StyleSheet.create({
     flexDirection:  'row',
     alignItems:     'center',
     gap:            Spacing[3],
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     marginBottom:   Spacing[4],
   },
   similarAccentBar: {
@@ -266,8 +261,8 @@ const styles = StyleSheet.create({
     borderRadius:    2,
     backgroundColor: Colors.accent,
   },
-  similarTitle:   { ...Typography.headline, fontSize: 18, color: Colors.text },
-  similarScroll:  { paddingHorizontal: 20, gap: Spacing[3], paddingBottom: Spacing[3] },
+  similarTitle:   { ...Typography.headline, color: Colors.text },
+  similarScroll:  { paddingHorizontal: Spacing.screen, gap: Spacing.gutter, paddingBottom: Spacing[3] },
   similarCard:    {
     width:           132,
     borderRadius:    Radius.card,
@@ -276,9 +271,9 @@ const styles = StyleSheet.create({
   },
   similarImg:     { width: 132, height: 176 },
   similarInfo:    { padding: Spacing[3], backgroundColor: Colors.surface },
-  similarBrand:   { ...Typography.label, color: Colors.accentBlue, marginBottom: 3 },
-  similarName:    { ...Typography.cardTitle, fontSize: 12, color: Colors.text, marginBottom: 3 },
-  similarPrice:   { ...Typography.price, fontSize: 12, color: Colors.textMuted },
+  similarBrand:   { ...Typography.label, color: Colors.textMuted, marginBottom: 3 },
+  similarName:    { ...Typography.caption, color: Colors.text, marginBottom: 3 },
+  similarPrice:   { ...Typography.price, color: Colors.textMuted },
 
   // Sticky CTA
   actions: {
@@ -286,7 +281,7 @@ const styles = StyleSheet.create({
     bottom:           0, left: 0, right: 0,
     flexDirection:    'row',
     gap:              12,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     paddingTop:        14,
     backgroundColor:  'rgba(253,252,249,0.97)',
     borderTopWidth:    1,
@@ -299,7 +294,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems:      'center',
   },
-  shopBtnText: { ...Typography.headline, fontSize: 15, color: Colors.text },
+  shopBtnText: { ...Typography.cardTitle, color: Colors.text },
   saveBtn: {
     width:  52, height: 52, borderRadius: 26,
     borderWidth: 1.5, borderColor: Colors.border,
