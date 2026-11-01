@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.text, borderColor: Colors.text },
   chipText:   { ...Typography.cardTitle, fontSize: 13.5, color: Colors.textMuted },
   chipTextActive: { color: Colors.accentLime },
-  saveBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: Spacing[6] },
+  saveBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: Spacing[6] },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { ...Typography.headline, fontSize: 16, color: Colors.text },
 });

@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { Spacing } from '@/lib/theme';
 
 // Mobile-first 2-column masonry, same as before — but on a wide web viewport,
 // fixing the column count at 2 is what made cards balloon to ~900px wide.
@@ -18,7 +19,7 @@ interface Props<T> {
   gap?: number;
 }
 
-export function MasonryGrid<T>({ items, keyExtractor, renderItem, horizontalPadding = 16, gap = 12 }: Props<T>) {
+export function MasonryGrid<T>({ items, keyExtractor, renderItem, horizontalPadding = Spacing.screen, gap = Spacing.gutter }: Props<T>) {
   const { width } = useWindowDimensions();
   // Web's static export prerenders this in Node (no real window), where
   // useWindowDimensions falls back to a value that never matches a real

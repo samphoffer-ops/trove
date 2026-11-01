@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { GoogleIcon, AppleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
@@ -40,7 +40,7 @@ export default function SignIn() {
           <Logo width={132} color={Colors.text} />
 
           <View style={styles.headingWrap}>
-            <Text style={styles.heading}>Welcome back.</Text>
+            <Text {...DisplayScaling} style={styles.heading}>Welcome back.</Text>
             <Text style={styles.sub}>Sign in to your Trove.</Text>
           </View>
 
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ink },
   frame: {
     flex:             1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.screen,
     justifyContent:   'flex-end',
   },
   card: {
@@ -118,16 +118,12 @@ const styles = StyleSheet.create({
   },
   headingWrap: { alignItems: 'center', marginTop: Spacing[4], marginBottom: Spacing[5] },
   heading: {
-    fontFamily:    'Mulish_900Black',
-    fontSize:      26,
-    letterSpacing: -0.6,
-    lineHeight:    30,
+    ...Typography.display,
     color:         Colors.text,
     marginBottom:  Spacing[1],
   },
   sub: {
     ...Typography.body,
-    fontSize: 14,
     color:    Colors.textMuted,
   },
   fields: { width: '100%', gap: Spacing[2], marginBottom: Spacing[4] },
@@ -137,7 +133,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical:   14,
     ...Typography.body,
-    fontSize:        14,
     color:           Colors.text,
     backgroundColor: Colors.stoneSoft,
   },
@@ -151,14 +146,12 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   btnText: {
-    fontFamily:    'Mulish_800ExtraBold',
-    fontSize:      15,
-    color:         Colors.bg,
-    letterSpacing: -0.1,
+    ...Typography.cardTitle,
+    color: Colors.bg,
   },
   dividerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: Spacing[3], marginBottom: Spacing[4] },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerText: { ...Typography.caption, fontSize: 12, color: Colors.textMuted },
+  dividerText: { ...Typography.caption, color: Colors.textMuted },
   oauthGroup: { width: '100%', gap: Spacing[2] },
   oauthBtn: {
     width:           '100%',
@@ -172,15 +165,14 @@ const styles = StyleSheet.create({
     borderColor:     Colors.border,
     backgroundColor: Colors.surface,
   },
-  oauthText: { fontFamily: 'Mulish_700Bold', fontSize: 13.5, color: Colors.text },
+  oauthText: { ...Typography.cardTitle, color: Colors.text },
   link:       { alignItems: 'center', paddingTop: Spacing[5] },
   linkText:   {
     ...Typography.body,
-    fontSize: 14,
     color:    'rgba(253,252,249,0.75)',
     textShadowColor: 'rgba(0,0,0,0.35)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  linkAccent: { fontFamily: 'Mulish_700Bold', color: Colors.bg },
+  linkAccent: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.bg },
 });

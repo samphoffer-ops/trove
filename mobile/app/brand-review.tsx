@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full, paddingVertical: 12,
   },
   rejectBtn:  { backgroundColor: Colors.bg },
-  approveBtn: { backgroundColor: Colors.accentLime },
+  approveBtn: { backgroundColor: Colors.accent },
   actionText: { ...Typography.cardTitle, fontSize: 13, color: Colors.text },
 
   footnote: { ...Typography.caption, color: Colors.textLight, textAlign: 'center', marginTop: Spacing[3] },

@@ -11,7 +11,7 @@ import { SaveSheet } from '@/components/SaveSheet';
 import { InviteSheet } from '@/components/InviteSheet';
 import { ActionSheet } from '@/components/ActionSheet';
 import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon, CheckIcon } from '@/components/Icons';
-import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack, openProduct } from '@/lib/navigation';
@@ -114,7 +114,7 @@ export default function BoardDetail() {
           </View>
         </View>
         <View style={styles.coverBottom}>
-          <Text style={styles.name}>{board.name}</Text>
+          <Text {...DisplayScaling} style={styles.name}>{board.name}</Text>
           <Text style={styles.meta}>
             {items.length} item{items.length !== 1 ? 's' : ''} · {formatMoney(total, totalCurrency)} total
             {collaborators.length > 0 ? ` · Shared with ${collaborators.length}` : ''}
@@ -125,7 +125,7 @@ export default function BoardDetail() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {items.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nothing saved here yet</Text>
+            <Text {...DisplayScaling} style={styles.emptyTitle}>Nothing saved here yet</Text>
             <Text style={styles.emptyBody}>Save items from your feed and choose this board.</Text>
           </View>
         ) : (
@@ -184,23 +184,23 @@ const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: Colors.bg },
   cover:      { width: '100%', aspectRatio: 16/9, backgroundColor: Colors.stoneSoft, justifyContent: 'space-between' },
   coverScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,12,29,0.28)' },
-  coverTopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
+  coverTopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingTop: 8 },
   coverIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
-  coverBottom: { paddingHorizontal: 20, paddingBottom: 16 },
+  coverBottom: { paddingHorizontal: Spacing.screen, paddingBottom: 16 },
   name:       { ...Typography.display, color: '#fff' },
   meta:       { ...Typography.body, color: 'rgba(255,255,255,0.85)', marginTop: Spacing[1] },
-  content:    { paddingHorizontal: 16, paddingVertical: Spacing[4], paddingBottom: 100 },
-  grid:       { flexDirection: 'row', gap: Spacing[4] },
+  content:    { paddingHorizontal: Spacing.screen, paddingVertical: Spacing[4], paddingBottom: 100 },
+  grid:       { flexDirection: 'row', gap: Spacing.gutter },
   col:        { flex: 1 },
-  card:       { borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: Spacing[4], position: 'relative', ...Shadows.card },
+  card:       { borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: Spacing.gutter, position: 'relative', ...Shadows.card },
   img:        { width: '100%', aspectRatio: 4/5, backgroundColor: Colors.stoneSoft },
   menuBtn:    { position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   purchasedBadge: { position: 'absolute', bottom: 8, left: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center' },
   cardInfo:   { padding: Spacing[3] },
   cardBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
-  cardName:   { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
-  cardPrice:  { ...Typography.cardTitle, color: Colors.accentBlue },
+  cardName:   { ...Typography.caption, color: Colors.text, marginBottom: Spacing[1] },
+  cardPrice:  { ...Typography.price, color: Colors.accentBlue },
   empty:      { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { ...Typography.headline, color: Colors.text, marginBottom: Spacing[3] },
+  emptyTitle: { ...Typography.display, color: Colors.text, textAlign: 'center', marginBottom: Spacing[3] },
   emptyBody:  { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
 });

@@ -128,8 +128,8 @@ const styles = StyleSheet.create({
   tagline:  { fontFamily: Typography.label.fontFamily, fontSize: 14, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
   headline: { fontFamily: Typography.display.fontFamily, fontSize: 44, color: Colors.text, letterSpacing: -1, lineHeight: 50 },
   sub:      { ...Typography.body, fontSize: 17, color: Colors.textMuted, lineHeight: 26, maxWidth: 460 },
-  heroCta:  { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'flex-start', marginTop: 8 },
-  heroCtaCentered: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'center', marginTop: 8 },
+  heroCta:  { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'flex-start', marginTop: 8 },
+  heroCtaCentered: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 28, paddingVertical: 16, alignSelf: 'center', marginTop: 8 },
   heroCtaText: { ...Typography.headline, color: Colors.text },
   heroVisual: { flex: 1, minWidth: 240, alignItems: 'center' },
 
