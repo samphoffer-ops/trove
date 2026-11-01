@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   name: {
-    ...Typography.cardTitle,
+    ...Typography.caption,
     color:        Colors.text,
     marginBottom: 3,
   },

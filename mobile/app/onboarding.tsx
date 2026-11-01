@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS } from '@/data/products';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { ChevronLeftIcon, CheckIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 
@@ -65,7 +65,7 @@ export default function Onboarding() {
         </Pressable>
       </View>
 
-      <Text style={styles.title}>{step.title}</Text>
+      <Text {...DisplayScaling} style={styles.title}>{step.title}</Text>
       <Text style={styles.subtitle}>{step.subtitle}</Text>
 
       <FlatList
@@ -111,18 +111,18 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.bg },
-  topBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 8 },
+  topBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, marginBottom: 8 },
   dots:    { flexDirection: 'row', gap: 6 },
   dot:     { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.border },
   dotActive: { backgroundColor: Colors.accent, width: 20 },
   skipText: { ...Typography.caption, color: Colors.textMuted },
-  title:    { fontFamily: 'Mulish_900Black', fontSize: 30, letterSpacing: -0.8, lineHeight: 34, color: Colors.text, paddingHorizontal: 20, marginTop: Spacing[3] },
-  subtitle: { ...Typography.body, color: Colors.textMuted, paddingHorizontal: 20, marginTop: Spacing[2], marginBottom: Spacing[4] },
-  grid:     { paddingHorizontal: 16, paddingBottom: 16 },
-  row:      { gap: 12 },
+  title:    { ...Typography.display, color: Colors.text, paddingHorizontal: Spacing.screen, marginTop: Spacing[3] },
+  subtitle: { ...Typography.subhead, color: Colors.textMuted, paddingHorizontal: Spacing.screen, marginTop: Spacing[2], marginBottom: Spacing[4] },
+  grid:     { paddingHorizontal: Spacing.screen, paddingBottom: 16 },
+  row:      { gap: Spacing.gutter },
   tile:     {
     flex: 1, aspectRatio: 1, borderRadius: Radius.card, overflow: 'hidden',
-    backgroundColor: Colors.stoneSoft, marginBottom: 12, justifyContent: 'flex-end',
+    backgroundColor: Colors.stoneSoft, marginBottom: Spacing.gutter, justifyContent: 'flex-end',
   },
   tileOverlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,16,53,0.22)' },
   tileOverlayActive: { backgroundColor: 'rgba(214,232,73,0.35)' },
@@ -131,10 +131,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
   },
   tileLabelWrap: { padding: Spacing[4] },
-  tileLabel:     { ...Typography.headline, fontSize: 13, color: '#fff' },
-  footer:  { paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: Colors.border },
+  tileLabel:     { ...Typography.cardTitle, color: '#fff' },
+  footer:  { paddingHorizontal: Spacing.screen, paddingTop: 14, borderTopWidth: 1, borderTopColor: Colors.border },
   // Coral is the primary action color — onboarding "continue" is the most important tap in the whole app
   continueBtn:        { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 17, alignItems: 'center' },
   continueBtnDisabled:{ opacity: 0.35 },
-  continueText:       { fontFamily: 'Mulish_800ExtraBold', fontSize: 16, color: Colors.text, letterSpacing: -0.2 },
+  continueText:       { ...Typography.cardTitle, color: Colors.text },
 });
