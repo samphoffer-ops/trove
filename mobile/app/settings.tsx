@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 12, ...Typography.body, color: Colors.text, backgroundColor: Colors.surface,
   },
-  quickAddBtn:     { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 20, justifyContent: 'center' },
+  quickAddBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 20, justifyContent: 'center' },
   quickAddBtnText: { ...Typography.cardTitle, color: Colors.text },
   adminBtn:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.inkGhost, borderRadius: Radius.full, paddingVertical: 14, paddingHorizontal: 16, marginBottom: Spacing[3] },
   adminBtnDisabled:{ opacity: 0.5 },

@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
   tileLabelWrap: { padding: Spacing[4] },
   tileLabel:     { ...Typography.cardTitle, color: '#fff' },
   footer:  { paddingHorizontal: Spacing.screen, paddingTop: 14, borderTopWidth: 1, borderTopColor: Colors.border },
-  // Coral is THE primary action — onboarding "continue" is the most important tap in the whole app
-  continueBtn:        { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 17, alignItems: 'center' },
+  // Coral is the primary action color — onboarding "continue" is the most important tap in the whole app
+  continueBtn:        { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 17, alignItems: 'center' },
   continueBtnDisabled:{ opacity: 0.35 },
   continueText:       { ...Typography.cardTitle, color: Colors.text },
 });

@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     ...Typography.body, color: Colors.text, backgroundColor: Colors.bg,
   },
   createBtn: {
-    backgroundColor: Colors.accentLime, borderRadius: Radius.full,
+    backgroundColor: Colors.accent, borderRadius: Radius.full,
     paddingHorizontal: 16, justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.35 },
