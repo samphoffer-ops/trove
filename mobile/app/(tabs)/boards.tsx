@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
   },
-  createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
+  createBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
   createBtnDisabled: { opacity: 0.35 },
   createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
   content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },

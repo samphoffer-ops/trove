@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   shopBtn: {
     flex:            1,
-    backgroundColor: Colors.accentLime,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.full,
     paddingVertical: 16,
     alignItems:      'center',
