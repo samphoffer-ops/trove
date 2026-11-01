@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, LayoutChangeEvent, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, LayoutChangeEvent, Share, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -19,7 +19,6 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
 import { SaveSheet } from '@/components/SaveSheet';
-import { ShareSheet } from '@/components/ShareSheet';
 import { ImageGallery } from '@/components/ImageGallery';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
@@ -55,22 +54,26 @@ interface Props {
   onDismissed?: () => void;
 }
 
-// "Why it's in your edit" (spec §7), from the onboarding taste profile.
-// Hidden when nothing in the profile explains the product.
+// "Why it's in your edit" (spec §7), from the onboarding taste profile's
+// style and category signals. Hidden when nothing in the profile explains
+// the product. Onboarding has no brand-picks step (#56), so no brand variant.
 function whyInYourEdit(product: Product, profile: Profile | null): string | null {
   if (!profile) return null;
   const has = (list: string[] | undefined, value: string | undefined) =>
     !!value && (list ?? []).some(v => v.toLowerCase() === value.toLowerCase());
 
-  if (has(profile.taste_brands, product.brand) || has(profile.taste_brands, product.brand_id)) {
-    return `You picked ${product.brand} when you set up your edit.`;
-  }
   const style = product.styles?.find(s => has(profile.taste_styles, s));
   if (style) return `Matches the ${style.toLowerCase()} side of your taste.`;
   if (has(profile.taste_categories, product.category)) {
     return `From the ${product.category} you said you wear.`;
   }
   return null;
+}
+
+// Native share sheet with the product's page on the brand's site. The old
+// ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
+function shareProduct(product: Product) {
+  Share.share({ message: `${product.name} by ${product.brand}`, url: product.url });
 }
 
 export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose, heroMaxHeight, source = null, onDismissed }: Props) {
@@ -81,7 +84,6 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const { width: windowWidth } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
-  const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [fallbackProduct, setFallbackProduct] = useState<Product | null>(null);
 
   // Transition state. `progress` runs 0 (card / invisible) → 1 (detail).
@@ -264,7 +266,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               )}
               <Text style={styles.name}>{product.name}</Text>
               <Text style={styles.price}>{formatPrice(product)}</Text>
-              {why && <Text style={styles.why}>{why}</Text>}
+              {why && <Text style={styles.why} numberOfLines={1}>{why}</Text>}
               <Text style={styles.desc}>{product.description ?? PLACEHOLDER_DESC}</Text>
             </Animated.View>
           </Animated.ScrollView>
@@ -275,7 +277,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               <ChevronLeftIcon size={20} />
             </GlassButton>
             <View style={styles.headerActions}>
-              <GlassButton label="Share" onPress={() => setShareTarget(product)}>
+              <GlassButton label="Share" onPress={() => shareProduct(product)}>
                 <ShareIcon size={18} />
               </GlassButton>
               <GlassButton label={saved ? 'Saved to a board' : 'Save to board'} onPress={() => { haptics.saveToBoard(); setSaveTarget(product); }}>
@@ -293,7 +295,6 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
         </Animated.View>
 
         <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
-        <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
       </View>
     </GestureDetector>
   );
