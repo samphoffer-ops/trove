@@ -1,79 +1,44 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
-import { Image } from 'expo-image';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import Animated, { useAnimatedRef, useScrollOffset } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
-import { useProductsStore, getProducts } from '@/store/useProductsStore';
-import { usePriceFormatter } from '@/store/useCurrencyStore';
+import { EDITS } from '@/data/products';
+import { useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useShareStore } from '@/store/useShareStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { fetchFollowedBrands } from '@/lib/social';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
+import { EditorialBento } from '@/components/EditorialBento';
 import { SaveSheet } from '@/components/SaveSheet';
-import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Logo } from '@/components/Logo';
-import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterIcon, CheckIcon } from '@/components/Icons';
+import { InboxIcon, BookmarkIcon, CloseIcon } from '@/components/Icons';
 import { Product } from '@/types';
-import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
-import { openProduct } from '@/lib/navigation';
+import { Colors, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
 
-const CHIPS = [
-  { id: 'explore',  label: 'explore'  },
-  { id: 'new',      label: 'new'      },
-  { id: 'trending', label: 'trending' },
-] as const;
-
-type ChipId = typeof CHIPS[number]['id'];
-
-// 'womens'/'mens' filter on brand audience (see brandAudience in
-// useProductsStore); everything else filters on the product's own
-// category. 'all' is the default, no filtering applied.
-const CATEGORY_CHIPS = [
-  { id: 'all',         label: 'all'         },
-  { id: 'womens',      label: "women's"     },
-  { id: 'mens',        label: "men's"       },
-  { id: 'clothing',    label: 'clothing'    },
-  { id: 'shoes',       label: 'shoes'       },
-  { id: 'bags',        label: 'bags'        },
-  { id: 'accessories', label: 'accessories' },
-  { id: 'home',        label: 'home'        },
-  { id: 'beauty',      label: 'beauty'      },
-] as const;
-
-type CategoryId = typeof CATEGORY_CHIPS[number]['id'];
-const AUDIENCE_CATEGORY_IDS = new Set(['womens', 'mens']);
-
+// A bento block follows each grid segment; segment lengths cycle through
+// this list so blocks land every 8–12 cards (docs/design-spec.md §7 Feed)
+// without a mechanical beat.
+const SEGMENT_LENGTHS = [10, 8, 12, 9, 11];
+const BENTO_SIZE = 3;
+// Grid cards rendered per page; bentos ride along with their segment.
 const PAGE_SIZE = 30;
-const FILTER_MENU_WIDTH = 190;
 
-// The "just in" strip is personalized: new arrivals from brands the
-// viewer follows come first, backfilled with other recent products so
-// it always has enough to show even when they follow few (or no)
-// brands. Every other strip keeps its plain data-driven filter.
-//
-// Brands are interleaved, one product per brand per pass. A plain
-// newest-first sort let whichever brand was scraped last fill the whole
-// strip — intake adds a brand's entire catalog in one go, so its products
-// all share essentially the same created_at.
-//
-// Brand order is shuffled with a seed fixed for the app session rather
-// than Math.random(): this is called more than once per render (the strip
-// itself, and the set of ids the main grid excludes), and both must agree,
-// without the strip reshuffling on every re-render. A new session (next
-// app open) gets a new mix.
-const JUST_IN_SESSION_SEED = Math.floor(Math.random() * 2 ** 31);
+// Brand order in "Just in" and the "New from [Brand]" edits is shuffled with
+// a seed fixed for the app session rather than Math.random(), so the layout
+// doesn't reshuffle on every re-render. A new session gets a new mix.
+const FEED_SESSION_SEED = Math.floor(Math.random() * 2 ** 31);
 const JUST_IN_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const JUST_IN_MIN_CANDIDATES = 40;
 
 function seededRank(key: string): number {
   // FNV-1a over seed + key — cheap, stable, well-spread
-  let h = 2166136261 ^ JUST_IN_SESSION_SEED;
+  let h = 2166136261 ^ FEED_SESSION_SEED;
   for (let i = 0; i < key.length; i++) {
     h ^= key.charCodeAt(i);
     h = Math.imul(h, 16777619);
@@ -81,17 +46,18 @@ function seededRank(key: string): number {
   return h >>> 0;
 }
 
-function getStripItems(
-  strip: typeof EDITORIAL_STRIPS[number],
-  allProducts: Product[],
-  followedBrandIds: Set<string>,
-  limit?: number,
-): Product[] {
-  if (strip.title !== 'just in') {
-    const matched = allProducts.filter(strip.filter);
-    return limit ? matched.slice(0, limit) : matched;
-  }
-  const byNew = [...allProducts].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
+const brandKey = (p: Product) => p.brand_id ?? p.brand;
+const newestFirst = (a: Product, b: Product) => (b.created_at ?? '').localeCompare(a.created_at ?? '');
+
+// "Just in" is personalized: new arrivals from brands the viewer follows
+// come first, backfilled with other recent products.
+//
+// Brands are interleaved, one product per brand per pass. A plain
+// newest-first sort let whichever brand was scraped last fill the whole
+// edit — intake adds a brand's entire catalog in one go, so its products
+// all share essentially the same created_at.
+function justInItems(allProducts: Product[], followedBrandIds: Set<string>): Product[] {
+  const byNew = [...allProducts].sort(newestFirst);
   // "Recent" relative to the newest product, not the wall clock, so a quiet
   // stretch with no new intakes still shows something.
   const newest = Date.parse(byNew[0]?.created_at ?? '') || Date.now();
@@ -100,7 +66,7 @@ function getStripItems(
 
   const groups = new Map<string, Product[]>(); // each brand's products stay newest-first
   for (const p of recent) {
-    const key = p.brand_id ?? p.brand;
+    const key = brandKey(p);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(p);
   }
@@ -117,28 +83,91 @@ function getStripItems(
     }
     if (!added) break;
   }
-  return limit ? combined.slice(0, limit) : combined;
+  return combined;
+}
+
+interface ResolvedEdit { key: string; title: string; items: () => Product[] }
+
+// The queue of mini-edits, in the order bentos use them. "New from [Brand]"
+// expands to one edit per brand.
+function resolveEdits(products: Product[], followedBrandIds: Set<string>): ResolvedEdit[] {
+  const edits: ResolvedEdit[] = [];
+  for (const edit of EDITS) {
+    if (edit.kind === 'just-in') {
+      edits.push({ key: edit.id, title: edit.title, items: () => justInItems(products, followedBrandIds) });
+    } else if (edit.kind === 'filter' && edit.filter) {
+      edits.push({ key: edit.id, title: edit.title, items: () => products.filter(edit.filter!) });
+    } else if (edit.kind === 'new-from-brand') {
+      const byBrand = new Map<string, Product[]>();
+      for (const p of products) {
+        const key = brandKey(p);
+        if (!byBrand.has(key)) byBrand.set(key, []);
+        byBrand.get(key)!.push(p);
+      }
+      const keys = [...byBrand.keys()].sort((a, b) => seededRank(a) - seededRank(b));
+      for (const key of keys) {
+        const items = byBrand.get(key)!;
+        if (items.length < BENTO_SIZE) continue;
+        edits.push({ key: `${edit.id}-${key}`, title: `${edit.title} ${items[0].brand}`, items: () => [...items].sort(newestFirst) });
+      }
+    }
+  }
+  return edits;
+}
+
+type FeedBlock =
+  | { type: 'grid';  key: string; items: Product[] }
+  | { type: 'bento'; key: string; title: string; items: Product[] };
+
+// Ranked products cut into grid segments with a bento after each. Nothing
+// appears twice: bento picks skip anything already placed, and the grid
+// skips anything a bento took. Once the edits run out the grid just continues.
+function buildFeed(products: Product[], followedBrandIds: Set<string>): FeedBlock[] {
+  const edits = resolveEdits(products, followedBrandIds);
+  const used = new Set<string>();
+  const blocks: FeedBlock[] = [];
+  let next = 0;
+
+  for (let seg = 0; ; seg++) {
+    const length = SEGMENT_LENGTHS[seg % SEGMENT_LENGTHS.length];
+    const items: Product[] = [];
+    while (items.length < length && next < products.length) {
+      const p = products[next++];
+      if (!used.has(p.id)) { used.add(p.id); items.push(p); }
+    }
+    if (!items.length) break;
+
+    const last = blocks[blocks.length - 1];
+    if (last?.type === 'grid') last.items.push(...items);
+    else blocks.push({ type: 'grid', key: `grid-${seg}`, items });
+    if (items.length < length) break; // out of products; never end on a bento
+
+    while (edits.length) {
+      const edit = edits.shift()!;
+      const picks = edit.items().filter(p => !used.has(p.id)).slice(0, BENTO_SIZE);
+      if (picks.length < BENTO_SIZE) continue;
+      picks.forEach(p => used.add(p.id));
+      blocks.push({ type: 'bento', key: `bento-${edit.key}`, title: edit.title, items: picks });
+      break;
+    }
+  }
+  return blocks;
 }
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
-  const formatPrice = usePriceFormatter();
   const { isProductSaved, fetchBoards } = useBoardStore();
   const { unreadCount, fetchInbox } = useShareStore();
-  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience, loaded: productsLoaded } = useProductsStore();
-  const { boards } = useBoardStore();
+  const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, loading: productsLoading } = useProductsStore();
   const { user } = useAuthStore();
-  const [activeChip, setActiveChip] = useState<ChipId>('explore');
-  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [followedBrandIds, setFollowedBrandIds] = useState<Set<string>>(new Set());
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
-  const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [firstFetchDone, setFirstFetchDone] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [viewingStrip, setViewingStrip] = useState<typeof EDITORIAL_STRIPS[number] | null>(null);
-  const [filterAnchor, setFilterAnchor] = useState<{ x: number; y: number } | null>(null);
-  const { width: screenWidth } = useWindowDimensions();
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scrollRef);
 
   // Ink masthead needs light status bar icons; other tabs sit on Colors.bg
   // and use the dark default set in the root layout.
@@ -149,85 +178,42 @@ export default function FeedScreen() {
     }, [])
   );
 
-  // Board save counts — used to rank Trending
-  const saveCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const board of boards) {
-      for (const item of board.board_items ?? []) {
-        counts.set(item.product_id, (counts.get(item.product_id) ?? 0) + 1);
+  // Store order is the ranked feed.
+  const feedProducts = useMemo(
+    () => allProducts.filter(p => !notInterestedIds.has(p.id)),
+    [allProducts, notInterestedIds],
+  );
+  const blocks = useMemo(() => buildFeed(feedProducts, followedBrandIds), [feedProducts, followedBrandIds]);
+
+  // Render whole blocks until PAGE_SIZE-many grid cards are on screen.
+  const pagedBlocks = useMemo(() => {
+    const out: FeedBlock[] = [];
+    let shown = 0;
+    for (const block of blocks) {
+      if (shown >= visibleCount) break;
+      if (block.type === 'grid') {
+        const items = block.items.slice(0, visibleCount - shown);
+        shown += items.length;
+        out.push(items.length === block.items.length ? block : { ...block, items });
+      } else {
+        out.push(block);
       }
     }
-    return counts;
-  }, [boards]);
+    return out;
+  }, [blocks, visibleCount]);
+  const totalGridCards = useMemo(
+    () => blocks.reduce((n, b) => n + (b.type === 'grid' ? b.items.length : 0), 0),
+    [blocks],
+  );
+  const hasMore = visibleCount < totalGridCards;
 
-  // Trending order is a snapshot, not a live recompute: it's taken when the
-  // tab is (re-)entered or the underlying product set changes, but NOT on
-  // every saveCounts/trendingCounts tick. Sorting live off `boards` meant
-  // bookmarking a single product re-ranked the entire grid on every tap —
-  // since MasonryGrid buckets items into columns by array-index parity, a
-  // re-sort scatters cards into different columns/positions mid-scroll,
-  // which reads as the page jumping/refreshing.
-  const trendingScoresRef = useRef<Map<string, number>>(new Map());
-  const [trendingSnapshotTick, setTrendingSnapshotTick] = useState(0);
+  const isLoading = !firstFetchDone || (productsLoading && feedProducts.length === 0);
+  const isEmpty = !isLoading && feedProducts.length === 0;
+
   useEffect(() => {
-    if (activeChip !== 'trending') return;
-    const scores = new Map<string, number>();
-    for (const p of allProducts) {
-      scores.set(p.id, (trendingCounts.get(p.id) ?? 0) + (saveCounts.get(p.id) ?? 0) * 2);
-    }
-    trendingScoresRef.current = scores;
-    setTrendingSnapshotTick(t => t + 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChip, allProducts]);
-
-  // Products already surfaced in the editorial strips above the grid
-  // (explore mode only) — kept out of the main grid so nothing appears
-  // twice on the same screen.
-  const editorialProductIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const strip of EDITORIAL_STRIPS) {
-      for (const p of getStripItems(strip, allProducts, followedBrandIds, 10)) {
-        ids.add(p.id);
-      }
-    }
-    return ids;
-  }, [allProducts, followedBrandIds]);
-
-  const visibleProducts = useMemo(() => {
-    let base = allProducts.filter(p => !notInterestedIds.has(p.id));
-    if (activeCategory !== 'all') {
-      base = AUDIENCE_CATEGORY_IDS.has(activeCategory)
-        // 'womens'/'mens' include 'unisex' brands too — a unisex item is
-        // relevant to both, not neither.
-        ? base.filter(p => {
-            const audience = p.brand_id ? brandAudience.get(p.brand_id) : undefined;
-            return audience === activeCategory || audience === 'unisex';
-          })
-        : base.filter(p => p.category === activeCategory);
-    }
-    if (activeChip === 'new') {
-      return [...base].sort((a, b) =>
-        (b.created_at ?? '').localeCompare(a.created_at ?? '')
-      );
-    }
-    if (activeChip === 'trending') {
-      // Blend: platform-wide saves (global popularity) + personal saves × 2
-      // (your taste amplifies the signal). As more users join, the global
-      // count becomes increasingly meaningful on its own.
-      const score = (id: string) => trendingScoresRef.current.get(id) ?? 0;
-      return [...base].sort((a, b) => score(b.id) - score(a.id));
-    }
-    // explore — store order (ranked by taste), minus whatever's already
-    // shown in the editorial strips just above this grid
-    return base.filter(p => !editorialProductIds.has(p.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allProducts, notInterestedIds, activeCategory, brandAudience, activeChip, trendingSnapshotTick, editorialProductIds]);
-
-  const pagedProducts = visibleProducts.slice(0, visibleCount);
-  const hasMore = visibleCount < visibleProducts.length;
-
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip, activeCategory]);
-  useEffect(() => { fetchInbox(); fetchProducts(); fetchTrendingCounts(); }, []);
+    fetchInbox();
+    fetchProducts().finally(() => setFirstFetchDone(true));
+  }, []);
   useEffect(() => {
     if (!user) return;
     fetchFollowedBrands(user.id).then(brands => setFollowedBrandIds(new Set(brands.map(b => b.id))));
@@ -236,7 +222,8 @@ export default function FeedScreen() {
   function handleScroll(e: any) {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
     if (hasMore && layoutMeasurement.height + contentOffset.y >= contentSize.height - 600) {
-      setVisibleCount(c => c + PAGE_SIZE);
+      // onScroll fires every frame (parallax needs it); only grow once per render
+      setVisibleCount(c => c === visibleCount ? c + PAGE_SIZE : c);
     }
   }
 
@@ -255,12 +242,7 @@ export default function FeedScreen() {
       onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
     },
     {
-      key: 'share', label: 'Share',
-      icon: (color) => <ShareIcon color={color} size={18} />,
-      onPress: () => setShareTarget(quickActions.product),
-    },
-    {
-      key: 'remove', label: 'Remove',
+      key: 'not-for-me', label: 'Not for me',
       icon: (color) => <CloseIcon color={color} size={14} />,
       onPress: () => { haptics.notForMe(); markNotInterested(quickActions.product); },
     },
@@ -290,156 +272,62 @@ export default function FeedScreen() {
             )}
           </Pressable>
         </View>
-
-        {/* Feed mode chips + category filter, one row */}
-        <View style={styles.chipsRow}>
-          <View style={styles.chips}>
-            {CHIPS.map(chip => (
-              <Pressable
-                key={chip.id}
-                style={[styles.chip, activeChip === chip.id && styles.chipActive]}
-                onPress={() => setActiveChip(chip.id)}
-              >
-                <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
-                  {chip.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Pressable
-            style={[styles.filterBtn, activeCategory !== 'all' && styles.chipActive]}
-            onPress={(e) => setFilterAnchor({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
-          >
-            <FilterIcon color={activeCategory !== 'all' ? Colors.ink : 'rgba(255,255,255,0.58)'} size={13} />
-            <Text style={[styles.chipText, activeCategory !== 'all' && styles.chipTextActive]} numberOfLines={1}>
-              {activeCategory === 'all' ? 'filter' : CATEGORY_CHIPS.find(c => c.id === activeCategory)?.label}
-            </Text>
-          </Pressable>
-        </View>
         </View>
       </View>
 
-      {/* Category filter dropdown — anchored to wherever the filter button was tapped */}
-      <Modal transparent visible={!!filterAnchor} animationType="none" onRequestClose={() => setFilterAnchor(null)}>
-        <TouchableWithoutFeedback onPress={() => setFilterAnchor(null)}>
-          <View style={StyleSheet.absoluteFill} />
-        </TouchableWithoutFeedback>
-        {filterAnchor && (
-          <View
-            style={[
-              styles.filterMenu,
-              {
-                top: filterAnchor.y + 10,
-                left: Math.min(Math.max(filterAnchor.x - FILTER_MENU_WIDTH + 24, 12), screenWidth - FILTER_MENU_WIDTH - 12),
-              },
-            ]}
-          >
-            {CATEGORY_CHIPS.map(cat => (
-              <Pressable
-                key={cat.id}
-                style={styles.filterMenuRow}
-                onPress={() => { setActiveCategory(cat.id); setFilterAnchor(null); }}
-              >
-                <Text style={[styles.filterMenuRowText, activeCategory === cat.id && styles.filterMenuRowTextActive]}>
-                  {cat.label}
-                </Text>
-                {activeCategory === cat.id && <CheckIcon color={Colors.accentLime} size={14} />}
-              </Pressable>
+      <Animated.ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        scrollsToTop={true}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+        contentContainerStyle={isEmpty ? styles.contentEmpty : styles.content}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {isLoading ? (
+          // Quiet first load: no coral spinner, no gray boxes
+          <ActivityIndicator color={Colors.textLight} style={styles.firstLoad} />
+        ) : isEmpty ? (
+          <View style={styles.empty}>
+            <Text {...DisplayScaling} style={styles.emptyTitle} accessibilityRole="header">That's everything, for now</Text>
+            <Text style={styles.emptyBody}>New pieces land as brands restock. Pull down to refresh.</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.gridTop} />
+            {/* Each block is a direct child of the scroll content: bentos read their own y for parallax */}
+            {pagedBlocks.map(block => block.type === 'grid' ? (
+              <MasonryGrid
+                key={block.key}
+                items={block.items}
+                keyExtractor={p => p.id}
+                renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onQuickActions={handleQuickActions} />}
+              />
+            ) : (
+              <EditorialBento
+                key={block.key}
+                title={block.title}
+                products={block.items}
+                scrollY={scrollY}
+                isSaved={isProductSaved}
+                onSave={handleSave}
+                onQuickActions={handleQuickActions}
+              />
             ))}
-          </View>
-        )}
-      </Modal>
 
-      {/* Expanded strip view (explore only) */}
-      {viewingStrip ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-          <View style={[styles.expandedHeader, { backgroundColor: viewingStrip.bg }]}>
-            <Pressable onPress={() => setViewingStrip(null)} hitSlop={8}>
-              <ChevronLeftIcon color={viewingStrip.fg} size={22} />
-            </Pressable>
-            <Text style={[styles.expandedTitle, { color: viewingStrip.fg }]}>{viewingStrip.title}</Text>
-            <View style={{ width: 22 }} />
-          </View>
-          <MasonryGrid
-            items={getStripItems(viewingStrip, allProducts, followedBrandIds)}
-            keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
-          />
-        </ScrollView>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          scrollsToTop={true}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          onScroll={handleScroll}
-          scrollEventThrottle={200}
-        >
-          {/* Editorial strips — explore mode only */}
-          {activeChip === 'explore' && EDITORIAL_STRIPS.map((strip) => {
-            const items = getStripItems(strip, allProducts, followedBrandIds, 10);
-            if (!items.length) return null;
-            return (
-              <View key={strip.title}>
-                <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
-                  <View style={styles.editorialCardContent}>
-                    <Text {...DisplayScaling} style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
-                    <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
-                    <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
-                  </View>
-                </Pressable>
-                <View style={styles.stripWrapper}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripScroll} scrollsToTop={false}>
-                    {items.map(p => (
-                      <Pressable key={p.id} style={styles.stripCard} onPress={() => openProduct(p.id)}>
-                        <Image source={{ uri: p.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                        <View style={styles.stripInfo}>
-                          <Text style={styles.stripBrand} numberOfLines={1}>{p.brand}</Text>
-                          <Text style={styles.stripName} numberOfLines={2}>{p.name}</Text>
-                          <Text style={styles.stripPrice}>{formatPrice(p)}</Text>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            );
-          })}
-
-          {/* Divider before main grid */}
-          {activeChip === 'explore' && allProducts.length > 0 && (
-            <View style={styles.gridDivider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerLabel}>your trove</Text>
-              <View style={styles.dividerLine} />
-            </View>
-          )}
-
-          {/* Main masonry grid */}
-          <MasonryGrid
-            items={pagedProducts}
-            keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
-          />
-
-          {hasMore
-            ? <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />
-            : pagedProducts.length > 0
-              ? <View style={styles.caughtUp}>
+            {hasMore
+              ? <ActivityIndicator color={Colors.textLight} style={styles.pageLoad} />
+              : <View style={styles.caughtUp}>
                   <View style={styles.caughtUpLine} />
                   <Text style={styles.caughtUpText}>you're all caught up</Text>
                   <View style={styles.caughtUpLine} />
                 </View>
-              : !productsLoaded
-                ? <ActivityIndicator color={Colors.accent} style={{ marginTop: 40 }} />
-                : null
-          }
-        </ScrollView>
-      )}
+            }
+          </>
+        )}
+      </Animated.ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
-      <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
       <QuickActionsMenu
         anchor={quickActions?.anchor ?? null}
         actions={quickActionsList}
@@ -469,56 +357,33 @@ const styles = StyleSheet.create({
   },
   badgeText: { ...Typography.label, color: '#fff' },
 
-  chipsRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
+  content:      { paddingBottom: 100 },
+  contentEmpty: { flexGrow: 1 },
+  gridTop:      { height: Spacing.screen },
+
+  firstLoad: { marginTop: Spacing[6] * 2 },
+  pageLoad:  { marginTop: Spacing[3], marginBottom: Spacing[5] },
+
+  // Designed empty state: full-bleed coral, no product imagery (§2, §9).
+  // Header sits low and left, in the thumb zone, not centered.
+  empty: {
+    flex:              1,
+    justifyContent:    'flex-end',
+    backgroundColor:   Colors.accent,
     paddingHorizontal: Spacing.screen,
-    paddingTop:        2,
-    paddingBottom:     16,
-    gap:               Spacing[3],
+    paddingBottom:     Spacing[6] * 4,
   },
-  chips: { flexDirection: 'row', gap: Spacing[3] },
-  chip:  {
-    paddingHorizontal: 16,
-    paddingVertical:   Spacing[2],
-    borderRadius:      Radius.full,
-    borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.22)',
+  emptyTitle: {
+    ...Typography.displayXl,
+    color:        Colors.bg,
+    marginBottom: Spacing[5],
+    marginLeft:   -2,   // optical: italic overhang
   },
-  chipActive:     { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
-  chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
-  chipTextActive: { color: Colors.ink },
-
-  filterBtn: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               6,
-    paddingHorizontal: 14,
-    paddingVertical:   Spacing[2],
-    borderRadius:      Radius.full,
-    borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.22)',
-    maxWidth:          130,
+  emptyBody: {
+    ...Typography.body,
+    color:    Colors.ink,   // warm white body text on coral fails contrast
+    maxWidth: 300,
   },
-
-  filterMenu: {
-    position:        'absolute',
-    width:            FILTER_MENU_WIDTH,
-    backgroundColor:  Colors.surface,
-    borderRadius:     Radius.card,
-    paddingVertical:  Spacing[2],
-    ...Shadows.elevated,
-  },
-  filterMenuRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    paddingHorizontal: 16,
-    paddingVertical:   10,
-  },
-  filterMenuRowText:       { ...Typography.body, color: Colors.text },
-  filterMenuRowTextActive: { fontFamily: Typography.cardTitle.fontFamily },
 
   caughtUp: {
     flexDirection:  'row',
@@ -530,74 +395,4 @@ const styles = StyleSheet.create({
   },
   caughtUpLine: { flex: 1, height: 0.5, backgroundColor: Colors.border },
   caughtUpText: { ...Typography.label, color: Colors.textMuted },
-
-  // Expanded strip view header
-  expandedHeader: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    paddingHorizontal: Spacing.screen,
-    paddingVertical:   20,
-  },
-  expandedTitle: { ...Typography.headline },
-
-  // Editorial section cards — background bleeds full-width
-  editorialCard: {
-    marginTop: 24,
-  },
-  // Inner content constrained to the same column as the header logo
-  editorialCardContent: {
-    maxWidth:          1100,
-    alignSelf:         'center',
-    width:             '100%',
-    paddingHorizontal: Spacing.screen,
-    paddingTop:        28,
-    paddingBottom:     24,
-  },
-  editorialTitle: {
-    ...Typography.displayXl,
-    marginBottom:  10,
-  },
-  editorialSub: {
-    ...Typography.body,
-    marginBottom:  20,
-    opacity:       0.72,
-  },
-  editorialLink: {
-    ...Typography.label,
-    opacity:       0.8,
-  },
-
-  // Product rail below each editorial section
-  stripWrapper: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
-  stripScroll: { paddingLeft: Spacing.screen, paddingRight: Spacing.screen, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
-  stripCard: {
-    width:           160,
-    height:          213,
-    borderRadius:    Radius.card,
-    overflow:        'hidden',
-    backgroundColor: Colors.stoneSoft,
-  },
-  stripInfo: {
-    position:   'absolute',
-    bottom:     0, left: 0, right: 0,
-    padding:    Spacing[3],
-    paddingTop: Spacing[5],
-    backgroundColor: 'rgba(13,16,53,0.58)',
-  },
-  stripBrand: { ...Typography.label, color: Colors.accentBlueSoft, marginBottom: 3 },
-  stripName:  { ...Typography.caption, color: '#fff', marginBottom: 4 },
-  stripPrice: { ...Typography.price, color: 'rgba(255,255,255,0.7)' },
-
-  // Divider before main grid
-  gridDivider: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    paddingHorizontal: Spacing.screen,
-    marginTop:      32,
-    marginBottom:   16,
-    gap:            12,
-  },
-  dividerLine:  { flex: 1, height: 0.5, backgroundColor: Colors.border },
-  dividerLabel: { ...Typography.label, color: Colors.textMuted },
 });
