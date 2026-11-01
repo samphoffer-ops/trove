@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { logEvent } from '@/lib/events';
 import { Board, BoardItem, Product } from '@/types';
 
 // board_collaborators has two FKs to profiles (invited_by, user_id) — the
@@ -71,6 +72,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       .single();
     if (error || !board) return null;
     if (product) {
+      logEvent('save', product.id, { boardId: board.id });
       await supabase.from('board_items').insert({
         board_id: board.id, product_id: product.id, product_data: product,
       });
@@ -84,6 +86,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     // upsert + cover-update + refetch round trip resolves.
     const existing = get().boards.find(b => b.id === boardId);
     const needsCover = !!existing && !existing.cover_product_id;
+    logEvent('save', product.id, { boardId });
 
     set(state => ({
       boards: state.boards.map(b => {

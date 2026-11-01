@@ -16,6 +16,7 @@ import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { goBack, openProduct, openExternal } from '@/lib/navigation';
+import { logEvent } from '@/lib/events';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
@@ -177,7 +178,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
       {/* Sticky CTA bar — coral action button */}
       <View style={[styles.actions, { paddingBottom: bottomInset + 16 }]}>
-        <Pressable style={styles.shopBtn} onPress={() => openExternal(getAffiliateUrl(product))}>
+        <Pressable style={styles.shopBtn} onPress={() => { const url = getAffiliateUrl(product); logEvent('click_out', product.id, { properties: { url } }); openExternal(url); }}>
           <Text style={styles.shopBtnText}>Shop now</Text>
         </Pressable>
         <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => setSaveTarget(product)}>
