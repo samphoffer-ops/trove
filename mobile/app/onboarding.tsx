@@ -1,112 +1,154 @@
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList } from 'react-native';
-import { Image } from 'expo-image';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ONBOARDING_STEPS } from '@/data/products';
+import Animated, { FadeIn, FadeOut, FadeInLeft, FadeInRight, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
+import { ONBOARDING_STEPS, type OnboardingStep } from '@/data/products';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
-import { ChevronLeftIcon, CheckIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
+import { StepHeader } from '@/components/onboarding/StepHeader';
+import { NeverShowStep } from '@/components/onboarding/NeverShowStep';
+import { ImagePicksStep } from '@/components/onboarding/ImagePicksStep';
+import { Reveal } from '@/components/onboarding/Reveal';
 
-type Selections = { brands: string[]; styles: string[]; categories: string[] };
+// Everything the user answers, kept whole so #25 can persist all of it.
+// Today only the positive signals reach the profile; see toTasteProfile().
+type Selections = {
+  neverShow: { styles: string[]; categories: string[] };
+  imageAnswers: Record<string, boolean>; // product id → yes/no
+};
+
+const EMPTY: Selections = { neverShow: { styles: [], categories: [] }, imageAnswers: {} };
+
+// The current profile columns only take positive brands/styles/categories, so
+// they're derived from the "yes" image picks, minus anything never-shown.
+// Never-show and the "no" answers are dropped until #25 adds a place for them.
+function toTasteProfile({ neverShow, imageAnswers }: Selections) {
+  const liked = imageProducts().filter(p => imageAnswers[p.id]);
+  const styles = new Set(liked.flatMap(p => p.styles));
+  const categories = new Set(liked.map(p => p.category));
+  neverShow.styles.forEach(s => styles.delete(s));
+  neverShow.categories.forEach(c => categories.delete(c));
+  return { brands: [], styles: [...styles], categories: [...categories] };
+}
+
+function imageProducts() {
+  const step = ONBOARDING_STEPS.find(s => s.key === 'imagePicks');
+  return step?.key === 'imagePicks' ? step.products : [];
+}
 
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
   const { completeOnboarding } = useAuthStore();
   const [stepIndex, setStepIndex] = useState(0);
-  const [selections, setSelections] = useState<Selections>({ brands: [], styles: [], categories: [] });
-  const [submitting, setSubmitting] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [selections, setSelections] = useState<Selections>(EMPTY);
+  const [revealing, setRevealing] = useState(false);
+  const saving = useRef<Promise<void> | undefined>(undefined);
 
-  const step = ONBOARDING_STEPS[stepIndex];
-  const field = step.key as keyof Selections;
-  const selected = selections[field];
-  const isLastStep = stepIndex === ONBOARDING_STEPS.length - 1;
+  // Warm the image-pick photos while the earlier steps are answered.
+  useEffect(() => { Image.prefetch(imageProducts().map(p => p.image)); }, []);
 
-  function toggle(id: string) {
+  const step: OnboardingStep = ONBOARDING_STEPS[stepIndex];
+  const within = step.key === 'imagePicks' ? imageIndex / step.products.length : 0;
+  const progress = revealing ? 1 : (stepIndex + within) / ONBOARDING_STEPS.length;
+  const canGoBack = stepIndex > 0 || (step.key === 'imagePicks' && imageIndex > 0);
+
+  function goTo(index: number) {
+    setDirection(index > stepIndex ? 1 : -1);
+    setStepIndex(index);
+  }
+
+  function next() {
+    if (stepIndex < ONBOARDING_STEPS.length - 1) { goTo(stepIndex + 1); return; }
+    finish(selections);
+  }
+
+  // Write while the reveal plays; the feed waits for it so index.tsx's
+  // onboarding_completed_at check doesn't bounce the user back here.
+  function finish(final: Selections) {
+    saving.current = completeOnboarding(toTasteProfile(final));
+    setRevealing(true);
+  }
+
+  function back() {
+    if (step.key === 'imagePicks' && imageIndex > 0) { setImageIndex(i => i - 1); return; }
+    goTo(stepIndex - 1);
+  }
+
+  function toggleNeverShow(field: keyof Selections['neverShow'], id: string) {
     haptics.onboardingSelect();
     setSelections(prev => {
-      const list = prev[field];
-      const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id];
-      return { ...prev, [field]: next };
+      const list = prev.neverShow[field];
+      const nextList = list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+      return { ...prev, neverShow: { ...prev.neverShow, [field]: nextList } };
     });
   }
 
-  async function advance() {
-    if (!isLastStep) { setStepIndex(i => i + 1); return; }
-    setSubmitting(true);
-    await completeOnboarding(selections);
-    haptics.onboardingComplete();
+  function answerImage(yes: boolean) {
+    if (step.key !== 'imagePicks') return;
+    haptics.onboardingSelect();
+    const product = step.products[imageIndex];
+    const imageAnswers = { ...selections.imageAnswers, [product.id]: yes };
+    setSelections(prev => ({ ...prev, imageAnswers }));
+    if (imageIndex < step.products.length - 1) { setImageIndex(i => i + 1); return; }
+    if (stepIndex < ONBOARDING_STEPS.length - 1) { goTo(stepIndex + 1); return; }
+    finish({ ...selections, imageAnswers });
+  }
+
+  async function enterFeed() {
+    await saving.current;
     router.replace('/(tabs)/feed');
   }
 
-  async function skipAll() {
-    setSubmitting(true);
-    await completeOnboarding({ brands: [], styles: [], categories: [] });
-    router.replace('/(tabs)/feed');
-  }
+  // Steps that confirm with Continue; image picks advance on each answer.
+  const showContinue = step.key === 'neverShow';
+
+  const entering = reduceMotion
+    ? FadeIn.duration(Animation.standard).reduceMotion(ReduceMotion.Never)
+    : (direction === 1 ? FadeInRight : FadeInLeft).duration(Animation.standard);
+  const exiting = FadeOut.duration(Animation.micro).reduceMotion(ReduceMotion.Never);
 
   return (
     <WebFrame maxWidth={480}>
-    <View style={[styles.root, { paddingTop: insets.top + 12 }]}>
-      <View style={styles.topBar}>
-        {stepIndex > 0 ? (
-          <Pressable onPress={() => setStepIndex(i => i - 1)} hitSlop={8}>
-            <ChevronLeftIcon />
-          </Pressable>
-        ) : (
-          <View style={{ width: 22 }} />
-        )}
-        <View style={styles.dots}>
-          {ONBOARDING_STEPS.map((_, i) => (
-            <View key={i} style={[styles.dot, i === stepIndex && styles.dotActive]} />
-          ))}
-        </View>
-        <Pressable onPress={skipAll} hitSlop={8}>
-          <Text style={styles.skipText}>skip</Text>
-        </Pressable>
-      </View>
-
-      <Text {...DisplayScaling} style={styles.title}>{step.title}</Text>
-      <Text style={styles.subtitle}>{step.subtitle}</Text>
-
-      <FlatList
-        key={step.key}
-        data={step.options}
-        keyExtractor={o => o.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.grid}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => {
-          const active = selected.includes(item.id);
-          return (
-            <Pressable style={styles.tile} onPress={() => toggle(item.id)}>
-              <Image source={{ uri: item.img }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              <View style={[styles.tileOverlay, active && styles.tileOverlayActive]} />
-              {active && (
-                <View style={styles.checkBadge}>
-                  <CheckIcon color={Colors.text} />
-                </View>
-              )}
-              <View style={styles.tileLabelWrap}>
-                <Text style={styles.tileLabel}>{item.label}</Text>
-              </View>
-            </Pressable>
-          );
-        }}
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StepHeader
+        number={stepIndex + 1}
+        title={step.title}
+        subtitle={step.subtitle}
+        progress={progress}
+        onBack={canGoBack && !revealing ? back : undefined}
       />
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          style={[styles.continueBtn, (selected.length === 0 || submitting) && styles.continueBtnDisabled]}
-          onPress={advance}
-          disabled={selected.length === 0 || submitting}
-        >
-          <Text style={styles.continueText}>{isLastStep ? 'start exploring' : 'continue'}</Text>
-        </Pressable>
-      </View>
+      <Animated.View key={step.key} entering={entering} exiting={exiting} style={styles.body}>
+        {step.key === 'neverShow' && (
+          <NeverShowStep step={step} excluded={selections.neverShow} onToggle={toggleNeverShow} />
+        )}
+        {step.key === 'imagePicks' && (
+          <ImagePicksStep
+            products={step.products}
+            index={imageIndex}
+            answers={selections.imageAnswers}
+            onAnswer={answerImage}
+            bottomInset={insets.bottom}
+          />
+        )}
+      </Animated.View>
+
+      {showContinue && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          <Pressable style={styles.continueBtn} onPress={next} accessibilityRole="button">
+            <Text style={styles.continueText}>continue</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {revealing && <Reveal onDone={enterFeed} />}
     </View>
     </WebFrame>
   );
@@ -114,30 +156,9 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.bg },
-  topBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, marginBottom: 8 },
-  dots:    { flexDirection: 'row', gap: 6 },
-  dot:     { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.accent, width: 20 },
-  skipText: { ...Typography.caption, color: Colors.textMuted },
-  title:    { ...Typography.display, color: Colors.text, paddingHorizontal: Spacing.screen, marginTop: Spacing[3] },
-  subtitle: { ...Typography.subhead, color: Colors.textMuted, paddingHorizontal: Spacing.screen, marginTop: Spacing[2], marginBottom: Spacing[4] },
-  grid:     { paddingHorizontal: Spacing.screen, paddingBottom: 16 },
-  row:      { gap: Spacing.gutter },
-  tile:     {
-    flex: 1, aspectRatio: 1, borderRadius: Radius.card, overflow: 'hidden',
-    backgroundColor: Colors.stoneSoft, marginBottom: Spacing.gutter, justifyContent: 'flex-end',
-  },
-  tileOverlay:       { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,16,53,0.22)' },
-  tileOverlayActive: { backgroundColor: 'rgba(214,232,73,0.35)' },
-  checkBadge: {
-    position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13,
-    backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
-  },
-  tileLabelWrap: { padding: Spacing[4] },
-  tileLabel:     { ...Typography.cardTitle, color: '#fff' },
+  body:    { flex: 1 },
   footer:  { paddingHorizontal: Spacing.screen, paddingTop: 14, borderTopWidth: 1, borderTopColor: Colors.border },
   // Coral is the primary action color — onboarding "continue" is the most important tap in the whole app
-  continueBtn:        { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 17, alignItems: 'center' },
-  continueBtnDisabled:{ opacity: 0.35 },
-  continueText:       { ...Typography.cardTitle, color: Colors.text },
+  continueBtn:  { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 17, alignItems: 'center' },
+  continueText: { ...Typography.cardTitle, color: Colors.text },
 });
