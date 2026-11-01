@@ -16,6 +16,7 @@ import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Product, Profile } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import * as haptics from '@/lib/haptics';
 import { SearchIcon, CloseIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
 
@@ -94,7 +95,7 @@ export default function SearchScreen() {
     {
       key: 'save', label: 'Save',
       icon: (color) => <BookmarkIcon color={color} size={18} />,
-      onPress: () => setSaveTarget(quickActions.product),
+      onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
     },
     {
       key: 'share', label: 'Share',
@@ -104,7 +105,7 @@ export default function SearchScreen() {
     {
       key: 'remove', label: 'Remove',
       icon: (color) => <CloseIcon color={color} size={14} />,
-      onPress: () => markNotInterested(quickActions.product),
+      onPress: () => { haptics.notForMe(); markNotInterested(quickActions.product); },
     },
   ] : [];
 
