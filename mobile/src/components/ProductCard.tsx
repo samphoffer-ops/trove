@@ -4,6 +4,7 @@ import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
+import { sharedTransitionSource } from '@/lib/sharedTransition';
 import * as haptics from '@/lib/haptics';
 import { BookmarkIcon, CloseIcon } from './Icons';
 import { ImageGallery } from './ImageGallery';
@@ -35,7 +36,7 @@ export function ProductCard({ product, saved, onSave, onNotInterested, onQuickAc
       delayLongPress={350}
     >
       {/* Image IS the card — no white box wrapper */}
-      <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
+      <View style={[styles.media, { aspectRatio: 1 / product.ratio }]} {...sharedTransitionSource(product.id)}>
         <ImageGallery images={photos} aspectRatio={1 / product.ratio} />
 
         <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => { haptics.saveToBoard(); onSave(product); }} hitSlop={12}>
