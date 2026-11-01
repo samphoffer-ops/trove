@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     ...Typography.body, fontSize: 14, color: Colors.text,
     backgroundColor: Colors.bg, minHeight: 44, maxHeight: 88,
   },
-  sendBtn:   { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
+  sendBtn:   { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 15, alignItems: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
   sendBtnText:     { ...Typography.headline, fontSize: 15, color: Colors.text },
 });

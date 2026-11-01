@@ -1,5 +1,5 @@
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
-import { Colors } from '@/lib/theme';
+import { Colors, Typography } from '@/lib/theme';
 
 // System tab bar (UITabBarController via react-native-screens), so iOS 26+
 // renders the real Liquid Glass bar. Deliberately no backgroundColor,
@@ -10,7 +10,10 @@ import { Colors } from '@/lib/theme';
 // Profile and settings are reached from the header (GlassHeader).
 export default function TabsLayout() {
   return (
-    <NativeTabs tintColor={Colors.text}>
+    <NativeTabs
+      tintColor={Colors.text}
+      labelStyle={{ fontFamily: Typography.label.fontFamily, fontSize: Typography.label.fontSize }}
+    >
       <NativeTabs.Trigger name="feed">
         <Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} />
         <Label>Feed</Label>

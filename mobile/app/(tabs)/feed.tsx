@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,8 +17,9 @@ import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterIcon, CheckIcon } from '@/components/Icons';
 import { Product } from '@/types';
-import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
+import * as haptics from '@/lib/haptics';
 
 const CHIPS = [
   { id: 'explore',  label: 'explore'  },
@@ -232,7 +232,6 @@ export default function FeedScreen() {
   }
 
   function handleSave(product: Product) {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSaveTarget(product);
   }
 
@@ -244,7 +243,7 @@ export default function FeedScreen() {
     {
       key: 'save', label: 'Save',
       icon: (color) => <BookmarkIcon color={color} size={18} />,
-      onPress: () => setSaveTarget(quickActions.product),
+      onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
     },
     {
       key: 'share', label: 'Share',
@@ -254,7 +253,7 @@ export default function FeedScreen() {
     {
       key: 'remove', label: 'Remove',
       icon: (color) => <CloseIcon color={color} size={14} />,
-      onPress: () => markNotInterested(quickActions.product),
+      onPress: () => { haptics.notForMe(); markNotInterested(quickActions.product); },
     },
   ] : [];
 
@@ -359,7 +358,7 @@ export default function FeedScreen() {
               <View key={strip.title}>
                 <Pressable style={[styles.editorialCard, { backgroundColor: strip.bg }]} onPress={() => setViewingStrip(strip)}>
                   <View style={styles.editorialCardContent}>
-                    <Text style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
+                    <Text {...DisplayScaling} style={[styles.editorialTitle, { color: strip.fg }]}>{strip.title}</Text>
                     <Text style={[styles.editorialSub, { color: strip.fg }]}>{strip.subtitle}</Text>
                     <Text style={[styles.editorialLink, { color: strip.fg }]}>see all →</Text>
                   </View>
@@ -436,7 +435,7 @@ const styles = StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     paddingBottom:     16,
     gap:               Spacing[3],
   },
@@ -479,29 +478,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical:   10,
   },
-  filterMenuRowText:       { ...Typography.body, fontSize: 14, color: Colors.text },
-  filterMenuRowTextActive: { fontFamily: 'Mulish_800ExtraBold' },
+  filterMenuRowText:       { ...Typography.body, color: Colors.text },
+  filterMenuRowTextActive: { fontFamily: Typography.cardTitle.fontFamily },
 
   caughtUp: {
     flexDirection:  'row',
     alignItems:     'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.screen,
     marginTop:      24,
     marginBottom:   40,
     gap:            12,
   },
   caughtUpLine: { flex: 1, height: 0.5, backgroundColor: Colors.border },
-  caughtUpText: { ...Typography.label, color: Colors.textMuted, letterSpacing: 0.4 },
+  caughtUpText: { ...Typography.label, color: Colors.textMuted },
 
   // Expanded strip view header
   expandedHeader: {
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     paddingVertical:   20,
   },
-  expandedTitle: { fontFamily: 'Mulish_900Black', fontSize: 20, letterSpacing: -0.5 },
+  expandedTitle: { ...Typography.headline },
 
   // Editorial section cards — background bleeds full-width
   editorialCard: {
@@ -512,34 +511,27 @@ const styles = StyleSheet.create({
     maxWidth:          1100,
     alignSelf:         'center',
     width:             '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     paddingTop:        28,
     paddingBottom:     24,
   },
   editorialTitle: {
-    fontFamily:    'Mulish_900Black',
-    fontSize:      52,
-    letterSpacing: -2.2,
-    lineHeight:    52,
+    ...Typography.displayXl,
     marginBottom:  10,
   },
   editorialSub: {
     ...Typography.body,
-    fontSize:      15,
-    lineHeight:    22,
     marginBottom:  20,
     opacity:       0.72,
   },
   editorialLink: {
-    ...Typography.caption,
-    fontSize:      11,
-    letterSpacing: 0.4,
+    ...Typography.label,
     opacity:       0.8,
   },
 
   // Product rail below each editorial section
   stripWrapper: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
-  stripScroll: { paddingLeft: 20, paddingRight: 16, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
+  stripScroll: { paddingLeft: Spacing.screen, paddingRight: Spacing.screen, paddingTop: 16, paddingBottom: 4, gap: Spacing[3] },
   stripCard: {
     width:           160,
     height:          213,
@@ -555,18 +547,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,16,53,0.58)',
   },
   stripBrand: { ...Typography.label, color: Colors.accentBlueSoft, marginBottom: 3 },
-  stripName:  { ...Typography.cardTitle, fontSize: 12, color: '#fff', marginBottom: 4, lineHeight: 16 },
-  stripPrice: { ...Typography.label, fontSize: 11, letterSpacing: 0.1, color: 'rgba(255,255,255,0.7)' },
+  stripName:  { ...Typography.caption, color: '#fff', marginBottom: 4 },
+  stripPrice: { ...Typography.price, color: 'rgba(255,255,255,0.7)' },
 
   // Divider before main grid
   gridDivider: {
     flexDirection:  'row',
     alignItems:     'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.screen,
     marginTop:      32,
     marginBottom:   16,
     gap:            12,
   },
   dividerLine:  { flex: 1, height: 0.5, backgroundColor: Colors.border },
-  dividerLabel: { ...Typography.label, color: Colors.textMuted, letterSpacing: 0.5 },
+  dividerLabel: { ...Typography.label, color: Colors.textMuted },
 });

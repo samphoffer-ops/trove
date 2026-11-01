@@ -1,10 +1,10 @@
-import { View, Text, Pressable, StyleSheet, Platform, GestureResponderEvent } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, Pressable, StyleSheet, GestureResponderEvent } from 'react-native';
 import { router } from 'expo-router';
 import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
+import * as haptics from '@/lib/haptics';
 import { BookmarkIcon, CloseIcon } from './Icons';
 import { ImageGallery } from './ImageGallery';
 
@@ -20,7 +20,7 @@ export function ProductCard({ product, saved, onSave, onNotInterested, onQuickAc
   const formatPrice = usePriceFormatter();
   function handleLongPress(e: GestureResponderEvent) {
     if (!onQuickActions) return;
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    haptics.quickActionsOpen();
     const { pageX, pageY } = e.nativeEvent;
     onQuickActions(product, { x: pageX, y: pageY });
   }
@@ -38,12 +38,12 @@ export function ProductCard({ product, saved, onSave, onNotInterested, onQuickAc
       <View style={[styles.media, { aspectRatio: 1 / product.ratio }]}>
         <ImageGallery images={photos} aspectRatio={1 / product.ratio} />
 
-        <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => onSave(product)} hitSlop={12}>
+        <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => { haptics.saveToBoard(); onSave(product); }} hitSlop={12}>
           <BookmarkIcon color={saved ? Colors.accent : '#fff'} filled={saved} size={14} />
         </Pressable>
 
         {onNotInterested && (
-          <Pressable style={styles.dismissBtn} onPress={() => onNotInterested(product)} hitSlop={10}>
+          <Pressable style={styles.dismissBtn} onPress={() => { haptics.notForMe(); onNotInterested(product); }} hitSlop={10}>
             <CloseIcon color="rgba(255,255,255,0.8)" size={10} />
           </Pressable>
         )}
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   name: {
-    ...Typography.cardTitle,
+    ...Typography.caption,
     color:        Colors.text,
     marginBottom: 3,
   },

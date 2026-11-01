@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, ...Typography.body, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface,
   },
   textArea: { minHeight: 90, textAlignVertical: 'top', borderRadius: Radius.card },
-  submitBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  submitBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { ...Typography.headline, fontSize: 15, color: Colors.text, textAlign: 'center', paddingHorizontal: 12 },
   successBox: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.card, padding: 24 },

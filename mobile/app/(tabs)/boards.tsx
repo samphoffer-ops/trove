@@ -4,7 +4,8 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
-import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
+import * as haptics from '@/lib/haptics';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
@@ -39,7 +40,8 @@ export default function BoardsScreen() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await createBoard(newName.trim());
+    const board = await createBoard(newName.trim());
+    if (board) haptics.boardCreated();
     setNewName('');
     setCreating(false);
   }
@@ -48,7 +50,7 @@ export default function BoardsScreen() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + GLASS_HEADER_HEIGHT }]} showsVerticalScrollIndicator={false} scrollsToTop={true}>
         <View style={styles.titleRow}>
-          <Text style={styles.pageLabel}>boards</Text>
+          <Text {...DisplayScaling} style={styles.pageLabel}>boards</Text>
           <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
             <PlusIcon color={Colors.text} size={20} />
           </Pressable>
@@ -74,7 +76,7 @@ export default function BoardsScreen() {
 
         {boards.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No boards yet</Text>
+            <Text {...DisplayScaling} style={styles.emptyTitle}>No boards yet</Text>
             <Text style={styles.emptyBody}>Save products from your feed to start organizing them.</Text>
           </View>
         ) : (
@@ -133,20 +135,21 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  titleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[1], paddingBottom: Spacing[3] },
-  pageLabel: { ...Typography.label, color: Colors.textMuted },
-  newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  // Content is already inset by Spacing.screen, so the title row adds none.
+  titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: Spacing[3] },
+  pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
+  newBoardBtn: { marginTop: Spacing[4], width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingBottom: Spacing[3] },
   newInput: {
     flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
-    paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
+    paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, color: Colors.text, backgroundColor: Colors.surface,
   },
-  createBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
+  createBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
   createBtnDisabled: { opacity: 0.35 },
-  createBtnText: { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
-  content:   { paddingHorizontal: 16, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
-  grid:       { flexDirection: 'row', gap: Spacing[4] },
-  gridColumn: { flex: 1, gap: Spacing[4] },
+  createBtnText: { ...Typography.cardTitle, color: Colors.text },
+  content:   { paddingHorizontal: Spacing.screen, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
+  grid:       { flexDirection: 'row', gap: Spacing.gutter },
+  gridColumn: { flex: 1, gap: Spacing.gutter },
   gridCard:   { width: '100%' },
   card:      { width: '48%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
   cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
@@ -162,6 +165,6 @@ const styles = StyleSheet.create({
   name:      { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
   count:     { ...Typography.caption, color: Colors.textMuted },
   empty:     { flex: 1, alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle:{ ...Typography.headline, color: Colors.text, marginBottom: Spacing[3] },
+  emptyTitle:{ ...Typography.display, color: Colors.text, textAlign: 'center', marginBottom: Spacing[3] },
   emptyBody: { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
 });

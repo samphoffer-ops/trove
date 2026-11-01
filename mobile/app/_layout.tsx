@@ -5,9 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
-  Mulish_300Light_Italic,
   Mulish_400Regular,
+  Mulish_400Regular_Italic,
   Mulish_500Medium,
+  Mulish_500Medium_Italic,
   Mulish_600SemiBold,
   Mulish_700Bold,
   Mulish_800ExtraBold,
@@ -18,9 +19,8 @@ import { ProductModal } from '@/components/ProductModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCurrencyStore } from '@/store/useCurrencyStore';
 
-// Body font is Mulish (brand spec). Headers want "Freight Display Pro Bold" —
-// not applied yet, waiting on Sam to provide the licensed font files; headers
-// fall back to the system bold font in the meantime via fontWeight as before.
+// Mulish is the only typeface (docs/design-spec.md §2). Editorial headers use
+// the italic weights; see Typography in src/lib/theme.ts.
 //
 // RN's Text/TextInput can't take a global default font via defaultProps —
 // React 19 dropped defaultProps support for function components, so that
@@ -44,9 +44,10 @@ function injectWebFont() {
 export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
   const [fontsLoaded] = useFonts({
-    Mulish_300Light_Italic,
     Mulish_400Regular,
+    Mulish_400Regular_Italic,
     Mulish_500Medium,
+    Mulish_500Medium_Italic,
     Mulish_600SemiBold,
     Mulish_700Bold,
     Mulish_800ExtraBold,
