@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
+    paddingHorizontal: Spacing.screen, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   title: { ...Typography.headline, color: Colors.text },
@@ -159,21 +159,21 @@ const styles = StyleSheet.create({
   },
   newRow: {
     flexDirection: 'row', gap: Spacing[3],
-    padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    paddingVertical: 16, paddingHorizontal: Spacing.screen, borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
   input: {
     flex: 1, borderWidth: 1, borderColor: Colors.border,
     borderRadius: Radius.full, paddingHorizontal: 16, paddingVertical: 12,
-    ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.bg,
+    ...Typography.body, color: Colors.text, backgroundColor: Colors.bg,
   },
   createBtn: {
-    backgroundColor: Colors.accentLime, borderRadius: Radius.full,
+    backgroundColor: Colors.accent, borderRadius: Radius.full,
     paddingHorizontal: 16, justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.35 },
-  createBtnText:     { ...Typography.cardTitle, fontSize: 14, color: Colors.text },
-  list:   { paddingHorizontal: 20 },
-  empty:  { ...Typography.body, fontSize: 14, color: Colors.textMuted, paddingVertical: 16 },
+  createBtnText:     { ...Typography.cardTitle, color: Colors.text },
+  list:   { paddingHorizontal: Spacing.screen },
+  empty:  { ...Typography.body, color: Colors.textMuted, paddingVertical: 16 },
   boardRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   boardCoverEmpty: { flex: 1, backgroundColor: Colors.stoneSoft },
   boardInfo:  { flex: 1 },
-  boardName:  { ...Typography.cardTitle, fontSize: 15, color: Colors.text },
+  boardName:  { ...Typography.cardTitle, color: Colors.text },
   boardCount: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
   check: {
     width: 22, height: 22, borderRadius: 11,

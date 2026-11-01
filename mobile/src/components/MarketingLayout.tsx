@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   navLinkActiveCombined: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   loginLink: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
-  signUpBtn: { backgroundColor: Colors.accentLime, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
+  signUpBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
   signUpBtnText: { ...Typography.headline, fontSize: 14.5, color: Colors.text },
   scrollContent: { flexGrow: 1, alignItems: 'center' },
   content:  { width: '100%', alignSelf: 'center', paddingHorizontal: 24 },

@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13,16,53,0.18)',
   },
   btn: {
-    backgroundColor: Colors.accentLime,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.full,
     paddingVertical: 17,
     alignItems:      'center',
