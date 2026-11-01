@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     ...Typography.label,
-    color:        Colors.textMuted,
+    color:        Colors.accentBlue,
     marginBottom: 3,
   },
   name: {

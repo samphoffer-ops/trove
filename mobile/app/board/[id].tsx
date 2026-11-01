@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   cardInfo:   { padding: Spacing[3] },
   cardBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
   cardName:   { ...Typography.caption, color: Colors.text, marginBottom: Spacing[1] },
-  cardPrice:  { ...Typography.price, color: Colors.textMuted },
+  cardPrice:  { ...Typography.price, color: Colors.accentBlue },
   empty:      { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
   emptyTitle: { ...Typography.display, color: Colors.text, textAlign: 'center', marginBottom: Spacing[3] },
   emptyBody:  { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },

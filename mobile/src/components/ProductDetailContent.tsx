@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   },
   similarImg:     { width: 132, height: 176 },
   similarInfo:    { padding: Spacing[3], backgroundColor: Colors.surface },
-  similarBrand:   { ...Typography.label, color: Colors.textMuted, marginBottom: 3 },
+  similarBrand:   { ...Typography.label, color: Colors.accentBlue, marginBottom: 3 },
   similarName:    { ...Typography.caption, color: Colors.text, marginBottom: 3 },
   similarPrice:   { ...Typography.price, color: Colors.textMuted },
 

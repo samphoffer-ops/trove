@@ -135,7 +135,7 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
   titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingBottom: Spacing[3] },
-  pageLabel: { ...Typography.displayXl, color: Colors.text },
+  pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
   newBoardBtn: { marginTop: Spacing[4], width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: Spacing.screen, paddingBottom: Spacing[3] },
   newInput: {
