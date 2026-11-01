@@ -2,14 +2,12 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Platform, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
-import { setStatusBarStyle } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ONBOARDING_STEPS, EDITORIAL_STRIPS } from '@/data/products';
 import { useProductsStore, getProducts } from '@/store/useProductsStore';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { useBoardStore } from '@/store/useBoardStore';
-import { useShareStore } from '@/store/useShareStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { fetchFollowedBrands } from '@/lib/social';
 import { ProductCard } from '@/components/ProductCard';
@@ -17,8 +15,8 @@ import { MasonryGrid } from '@/components/MasonryGrid';
 import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
-import { Logo } from '@/components/Logo';
-import { InboxIcon, ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterIcon, CheckIcon } from '@/components/Icons';
+import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
+import { ChevronLeftIcon, BookmarkIcon, ShareIcon, CloseIcon, FilterIcon, CheckIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
@@ -124,7 +122,6 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const formatPrice = usePriceFormatter();
   const { isProductSaved, fetchBoards } = useBoardStore();
-  const { unreadCount, fetchInbox } = useShareStore();
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, trendingCounts, fetchTrendingCounts, brandAudience, loaded: productsLoaded } = useProductsStore();
   const { boards } = useBoardStore();
   const { user } = useAuthStore();
@@ -140,14 +137,8 @@ export default function FeedScreen() {
   const [filterAnchor, setFilterAnchor] = useState<{ x: number; y: number } | null>(null);
   const { width: screenWidth } = useWindowDimensions();
 
-  // Ink masthead needs light status bar icons; other tabs sit on Colors.bg
-  // and use the dark default set in the root layout.
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
-    }, [])
-  );
+  // Content starts below the floating glass header, then scrolls under it.
+  const headerInset = insets.top + GLASS_HEADER_HEIGHT;
 
   // Board save counts — used to rank Trending
   const saveCounts = useMemo(() => {
@@ -227,7 +218,7 @@ export default function FeedScreen() {
   const hasMore = visibleCount < visibleProducts.length;
 
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeChip, activeCategory]);
-  useEffect(() => { fetchInbox(); fetchProducts(); fetchTrendingCounts(); }, []);
+  useEffect(() => { fetchProducts(); fetchTrendingCounts(); }, []);
   useEffect(() => {
     if (!user) return;
     fetchFollowedBrands(user.id).then(brands => setFollowedBrandIds(new Set(brands.map(b => b.id))));
@@ -271,56 +262,12 @@ export default function FeedScreen() {
     setRefreshing(true);
     // fetchProducts() no-ops once already loaded (see useProductsStore), so
     // this is just the retry path for a feed that failed to load initially.
-    await Promise.all([fetchBoards(), fetchInbox(), fetchProducts()]);
+    await Promise.all([fetchBoards(), fetchProducts()]);
     setRefreshing(false);
   }, []);
 
   return (
     <View style={styles.root}>
-      {/* Ink masthead */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View style={styles.headerContent}>
-        <View style={styles.titleRow}>
-          <Logo width={84} color={Colors.bg} />
-          <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
-            <InboxIcon size={22} color={Colors.bg} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Feed mode chips + category filter, one row */}
-        <View style={styles.chipsRow}>
-          <View style={styles.chips}>
-            {CHIPS.map(chip => (
-              <Pressable
-                key={chip.id}
-                style={[styles.chip, activeChip === chip.id && styles.chipActive]}
-                onPress={() => setActiveChip(chip.id)}
-              >
-                <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
-                  {chip.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Pressable
-            style={[styles.filterBtn, activeCategory !== 'all' && styles.chipActive]}
-            onPress={(e) => setFilterAnchor({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
-          >
-            <FilterIcon color={activeCategory !== 'all' ? Colors.ink : 'rgba(255,255,255,0.58)'} size={13} />
-            <Text style={[styles.chipText, activeCategory !== 'all' && styles.chipTextActive]} numberOfLines={1}>
-              {activeCategory === 'all' ? 'filter' : CATEGORY_CHIPS.find(c => c.id === activeCategory)?.label}
-            </Text>
-          </Pressable>
-        </View>
-        </View>
-      </View>
-
       {/* Category filter dropdown — anchored to wherever the filter button was tapped */}
       <Modal transparent visible={!!filterAnchor} animationType="none" onRequestClose={() => setFilterAnchor(null)}>
         <TouchableWithoutFeedback onPress={() => setFilterAnchor(null)}>
@@ -354,7 +301,7 @@ export default function FeedScreen() {
 
       {/* Expanded strip view (explore only) */}
       {viewingStrip ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: headerInset, paddingBottom: 100 }}>
           <View style={[styles.expandedHeader, { backgroundColor: viewingStrip.bg }]}>
             <Pressable onPress={() => setViewingStrip(null)} hitSlop={8}>
               <ChevronLeftIcon color={viewingStrip.fg} size={22} />
@@ -372,11 +319,38 @@ export default function FeedScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           scrollsToTop={true}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} progressViewOffset={headerInset} />}
           contentContainerStyle={{ paddingBottom: 100 }}
           onScroll={handleScroll}
           scrollEventThrottle={200}
         >
+          {/* Feed mode chips + category filter, one row — scrolls with the feed */}
+          <View style={[styles.chipsRow, { paddingTop: headerInset }]}>
+            <View style={styles.chips}>
+              {CHIPS.map(chip => (
+                <Pressable
+                  key={chip.id}
+                  style={[styles.chip, activeChip === chip.id && styles.chipActive]}
+                  onPress={() => setActiveChip(chip.id)}
+                >
+                  <Text style={[styles.chipText, activeChip === chip.id && styles.chipTextActive]}>
+                    {chip.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable
+              style={[styles.filterBtn, activeCategory !== 'all' && styles.chipActive]}
+              onPress={(e) => setFilterAnchor({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY })}
+            >
+              <FilterIcon color={activeCategory !== 'all' ? Colors.ink : Colors.textMuted} size={13} />
+              <Text style={[styles.chipText, activeCategory !== 'all' && styles.chipTextActive]} numberOfLines={1}>
+                {activeCategory === 'all' ? 'filter' : CATEGORY_CHIPS.find(c => c.id === activeCategory)?.label}
+              </Text>
+            </Pressable>
+          </View>
+
           {/* Editorial strips — explore mode only */}
           {activeChip === 'explore' && EDITORIAL_STRIPS.map((strip) => {
             const items = getStripItems(strip, allProducts, followedBrandIds, 10);
@@ -439,6 +413,9 @@ export default function FeedScreen() {
         </ScrollView>
       )}
 
+      {/* After the scroll views so it draws on top of the content */}
+      <GlassHeader />
+
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
       <QuickActionsMenu
@@ -452,30 +429,14 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
-  header: { backgroundColor: Colors.ink, zIndex: 10 },
-  headerContent: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
-
-  titleRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    paddingHorizontal: 20,
-    paddingTop:        16,
-    paddingBottom:     14,
-  },
-  inboxBtn: { padding: 4 },
-  badge: {
-    position: 'absolute', top: -4, right: -6, minWidth: 17, height: 17, borderRadius: 8.5,
-    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
-  },
-  badgeText: { ...Typography.caption, fontSize: 10, color: '#fff' },
-
   chipsRow: {
+    maxWidth:          1100,
+    alignSelf:         'center',
+    width:             '100%',
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
     paddingHorizontal: 20,
-    paddingTop:        2,
     paddingBottom:     16,
     gap:               Spacing[3],
   },
@@ -485,10 +446,10 @@ const styles = StyleSheet.create({
     paddingVertical:   Spacing[2],
     borderRadius:      Radius.full,
     borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.22)',
+    borderColor:       Colors.border,
   },
   chipActive:     { backgroundColor: Colors.accentLime, borderColor: Colors.accentLime },
-  chipText:       { ...Typography.caption, color: 'rgba(255,255,255,0.58)' },
+  chipText:       { ...Typography.caption, color: Colors.textMuted },
   chipTextActive: { color: Colors.ink },
 
   filterBtn: {
@@ -499,7 +460,7 @@ const styles = StyleSheet.create({
     paddingVertical:   Spacing[2],
     borderRadius:      Radius.full,
     borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.22)',
+    borderColor:       Colors.border,
     maxWidth:          130,
   },
 

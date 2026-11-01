@@ -7,7 +7,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing, Shadows } from '@/lib/theme';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
-import { Logo } from '@/components/Logo';
+import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 
 // Desktop gets a wider grid (3 columns); phones and narrow web viewports
 // keep the original 2-column layout.
@@ -46,35 +46,32 @@ export default function BoardsScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
-        <View>
-          <Logo width={72} color={Colors.text} onPress={() => router.push('/(tabs)/feed')} />
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + GLASS_HEADER_HEIGHT }]} showsVerticalScrollIndicator={false} scrollsToTop={true}>
+        <View style={styles.titleRow}>
           <Text style={styles.pageLabel}>boards</Text>
-        </View>
-        <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
-          <PlusIcon color={Colors.text} size={20} />
-        </Pressable>
-      </View>
-
-      {creating && (
-        <View style={styles.newRow}>
-          <TextInput
-            style={styles.newInput}
-            placeholder="New board name"
-            placeholderTextColor={Colors.textMuted}
-            value={newName}
-            onChangeText={setNewName}
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={handleCreate}
-          />
-          <Pressable style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]} onPress={handleCreate} disabled={!newName.trim()}>
-            <Text style={styles.createBtnText}>Create</Text>
+          <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
+            <PlusIcon color={Colors.text} size={20} />
           </Pressable>
         </View>
-      )}
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} scrollsToTop={true}>
+        {creating && (
+          <View style={styles.newRow}>
+            <TextInput
+              style={styles.newInput}
+              placeholder="New board name"
+              placeholderTextColor={Colors.textMuted}
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleCreate}
+            />
+            <Pressable style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]} onPress={handleCreate} disabled={!newName.trim()}>
+              <Text style={styles.createBtnText}>Create</Text>
+            </Pressable>
+          </View>
+        )}
+
         {boards.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No boards yet</Text>
@@ -90,6 +87,8 @@ export default function BoardsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <GlassHeader />
     </View>
   );
 }
@@ -134,10 +133,10 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
-  pageLabel: { ...Typography.label, color: Colors.textMuted, marginTop: 6 },
+  titleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing[1], paddingBottom: Spacing[3] },
+  pageLabel: { ...Typography.label, color: Colors.textMuted },
   newBoardBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
-  newRow:    { flexDirection: 'row', gap: Spacing[3], paddingHorizontal: 16, paddingBottom: Spacing[3] },
+  newRow:    { flexDirection: 'row', gap: Spacing[3], paddingBottom: Spacing[3] },
   newInput: {
     flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, fontSize: 14, color: Colors.text, backgroundColor: Colors.surface,
