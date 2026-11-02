@@ -61,7 +61,7 @@ export const Typography: Record<string, TextStyle> = {
   },
   // Step titles, board name on cover, empty-state headers
   display: {
-    fontFamily: 'Mulish_500Medium_Italic',
+    fontFamily: 'Mulish_400Regular_Italic',
     fontSize: 40,
     letterSpacing: -0.8,
     lineHeight: 40,
