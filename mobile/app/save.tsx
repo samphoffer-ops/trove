@@ -57,31 +57,36 @@ export default function SaveSheet() {
   if (!product) return null;
 
   return (
-    <View style={styles.root}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>Save to board</Text>
-        <Pressable onPress={close} hitSlop={10} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
-          <CloseIcon color={Colors.textMuted} size={16} />
-        </Pressable>
-      </View>
+    // react-native-screens lays out a form sheet holding a scroll view from
+    // exactly two direct children, header then ScrollView; collapsable keeps
+    // the header from being flattened away.
+    <>
+      <View collapsable={false}>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Save to board</Text>
+          <Pressable onPress={close} hitSlop={10} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
+            <CloseIcon color={Colors.textMuted} size={16} />
+          </Pressable>
+        </View>
 
-      <View style={styles.newRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="New board name"
-          placeholderTextColor={Colors.textMuted}
-          value={newName}
-          onChangeText={setNewName}
-          returnKeyType="done"
-          onSubmitEditing={handleCreate}
-        />
-        <Pressable
-          style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]}
-          onPress={handleCreate}
-          disabled={!newName.trim()}
-        >
-          <Text style={styles.createBtnText}>Create</Text>
-        </Pressable>
+        <View style={styles.newRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="New board name"
+            placeholderTextColor={Colors.textMuted}
+            value={newName}
+            onChangeText={setNewName}
+            returnKeyType="done"
+            onSubmitEditing={handleCreate}
+          />
+          <Pressable
+            style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]}
+            onPress={handleCreate}
+            disabled={!newName.trim()}
+          >
+            <Text style={styles.createBtnText}>Create</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -122,12 +127,11 @@ export default function SaveSheet() {
           })
         )}
       </ScrollView>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   titleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.screen, paddingTop: Spacing[6], paddingBottom: Spacing[4],
