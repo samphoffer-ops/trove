@@ -9,7 +9,7 @@ Every third-party service Trove depends on, where its credentials live, and what
 | **Exa** | Brand discovery — finds new candidate brand domains via search, returns structured `{name, domain}` pairs | `EXA_API_KEY` | Supabase Dashboard → Edge Functions → Secrets (project-wide) | `supabase/functions/discover-brands/index.ts` |
 | **Voyage AI** | Text embeddings for every product (brand + name + description) — powers the semantic taste-ranking engine | `VOYAGE_API_KEY` | Supabase Dashboard → Edge Functions → Secrets (project-wide) | `supabase/functions/catalog-intake/index.ts` (`backfill_embeddings`, run every 20 min by `.github/workflows/backfill-catalog.yml` — new products are embedded shortly after they land, not inline during the scrape); stored on `products.embedding`, read by the `rank_products_for_user` Postgres function |
 | **Frankfurter** (frankfurter.dev) | Daily ECB exchange rates — converts prices for stores with no US-market pricing, cached in the `fx_rates` table | none (free, no API key) | — | `supabase/functions/catalog-intake/index.ts` (`getUsdRates`) |
-| **Skimlinks** | Affiliate link wrapping on outbound "Shop now" taps — monetization | `EXPO_PUBLIC_SKIMLINKS_PUBLISHER_ID` | `mobile/.env` | `mobile/src/lib/affiliate.ts` |
+| **Skimlinks** | Affiliate link wrapping on outbound "Shop now" taps — monetization | `SKIMLINKS_PUBLISHER_ID` | Edge Function secret | `supabase/functions/go/handler.ts` |
 | **GitHub Pages** | Hosts the web build at shoptrove.app | none (public deploy, no API key) | `.github/workflows/deploy.yml` | Auto-deploys on every push to `main` |
 
 ## Pipeline relationship (Exa + Anthropic + Voyage + Supabase)
@@ -18,5 +18,5 @@ Every third-party service Trove depends on, where its credentials live, and what
 
 ## Not yet connected
 
-- **Skimlinks**: publisher application was rejected (2026-06-28) — `EXPO_PUBLIC_SKIMLINKS_PUBLISHER_ID` is unset, affiliate wrapping code exists but is dormant until a publisher account is approved (Skimlinks or an alternative network)
+- **Skimlinks**: publisher application was rejected (2026-06-28) — the `SKIMLINKS_PUBLISHER_ID` function secret is unset, affiliate wrapping code exists but is dormant until a publisher account is approved (Skimlinks or an alternative network)
 - Collaborative/"invisible social" signal (other users' behavior influencing each other) — not enough users yet for that to mean anything
