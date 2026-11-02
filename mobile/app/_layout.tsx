@@ -110,6 +110,7 @@ export default function RootLayout() {
             card; the screen animates itself (lib/sharedTransition.ts). */}
         <Stack.Screen name="product/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
         <Stack.Screen name="board/[id]"   options={{ presentation: 'card' }} />
+        <Stack.Screen name="board/new"    options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />
         <Stack.Screen name="brand/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />

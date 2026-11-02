@@ -27,6 +27,7 @@ import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getAffiliateUrl } from '@/lib/affiliate';
 import { goBack, openExternal } from '@/lib/navigation';
 import { Rect, setSourceHidden } from '@/lib/sharedTransition';
+import { logEvent } from '@/lib/events';
 import * as haptics from '@/lib/haptics';
 
 const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
@@ -288,7 +289,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
           {/* The one primary action, bottom-anchored in the thumb zone */}
           <Animated.View style={[styles.actions, { paddingBottom: bottomInset + Spacing[4] }, chromeStyle]}>
-            <Pressable style={styles.shopBtn} onPress={() => openExternal(getAffiliateUrl(product))} accessibilityRole="link">
+            <Pressable style={styles.shopBtn} onPress={() => { const url = getAffiliateUrl(product); logEvent('click_out', product.id, { properties: { url } }); openExternal(url); }} accessibilityRole="link">
               <Text style={styles.shopBtnText} numberOfLines={1}>Shop at {product.brand}</Text>
             </Pressable>
           </Animated.View>
