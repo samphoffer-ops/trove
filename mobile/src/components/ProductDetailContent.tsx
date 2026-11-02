@@ -17,7 +17,6 @@ import { useProductsStore, getProductById } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
-import { SaveSheet } from '@/components/SaveSheet';
 import { ImageGallery } from '@/components/ImageGallery';
 import { Glass } from '@/components/GlassHeader';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
@@ -25,7 +24,7 @@ import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
 import { Product, Profile } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getAffiliateUrl } from '@/lib/affiliate';
-import { goBack, openExternal } from '@/lib/navigation';
+import { goBack, openExternal, openSaveSheet } from '@/lib/navigation';
 import { Rect, setSourceHidden } from '@/lib/sharedTransition';
 import { logEvent } from '@/lib/events';
 import * as haptics from '@/lib/haptics';
@@ -82,7 +81,6 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const formatPrice = usePriceFormatter();
   const { width: windowWidth } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
-  const [saveTarget,  setSaveTarget]  = useState<Product | null>(null);
   const [fallbackProduct, setFallbackProduct] = useState<Product | null>(null);
 
   // Transition state. `progress` runs 0 (card / invisible) → 1 (detail).
@@ -297,14 +295,12 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               <GlassButton label="Share" onPress={() => shareProduct(product)}>
                 <ShareIcon size={18} />
               </GlassButton>
-              <GlassButton label={saved ? 'Saved to a board' : 'Save to board'} onPress={() => { haptics.saveToBoard(); setSaveTarget(product); }}>
+              <GlassButton label={saved ? 'Saved to a board' : 'Save to board'} onPress={() => { haptics.saveToBoard(); openSaveSheet(product); }}>
                 <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={18} />
               </GlassButton>
             </View>
           </View>
         )}
-
-        <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       </View>
     </GestureDetector>
   );

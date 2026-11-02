@@ -12,11 +12,10 @@ import { useShareStore } from '@/store/useShareStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeftIcon, BookmarkIcon } from '@/components/Icons';
-import { SaveSheet } from '@/components/SaveSheet';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Share, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack, openProduct } from '@/lib/navigation';
+import { goBack, openProduct, openSaveSheet } from '@/lib/navigation';
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -35,7 +34,6 @@ export default function Conversation() {
   const { isProductSaved } = useBoardStore();
   const [shares, setShares] = useState<Share[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [otherName, setOtherName] = useState(paramName ?? 'Messages');
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
@@ -125,7 +123,7 @@ export default function Conversation() {
                         <Text style={styles.productName} numberOfLines={2}>{p.name}</Text>
                         <Text style={styles.productPrice}>{formatPrice(p)}</Text>
                       </View>
-                      <Pressable style={styles.bookmarkBtn} onPress={() => setSaveTarget(p)} hitSlop={12}>
+                      <Pressable style={styles.bookmarkBtn} onPress={() => openSaveSheet(p)} hitSlop={12}>
                         <BookmarkIcon color={saved ? Colors.accent : Colors.textMuted} filled={saved} size={20} />
                       </Pressable>
                     </Pressable>

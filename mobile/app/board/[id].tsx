@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { usePriceFormatter, useCountry, useCurrencyStore } from '@/store/useCurrencyStore';
 import { formatMoney } from '@/lib/currency';
 import { useBoardStore } from '@/store/useBoardStore';
-import { SaveSheet } from '@/components/SaveSheet';
 import { ActionSheet } from '@/components/ActionSheet';
 import { ChevronLeftIcon, DotsIcon, CameraIcon, CheckIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '@/lib/theme';
@@ -32,7 +31,6 @@ export default function BoardDetail() {
   const { fetchBoardById, getBoardItems, setCoverImage, removeFromBoard, markPurchased, unmarkPurchased } = useBoardStore();
   const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [menuItem,   setMenuItem]   = useState<BoardItem | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
@@ -139,8 +137,6 @@ export default function BoardDetail() {
           </View>
         )}
       </ScrollView>
-
-      <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <ActionSheet
         visible={!!menuItem}
         onCancel={() => setMenuItem(null)}

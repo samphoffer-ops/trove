@@ -10,10 +10,9 @@ import { ChevronLeftIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Brand, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack, openExternal } from '@/lib/navigation';
+import { goBack, openExternal, openSaveSheet } from '@/lib/navigation';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { ProductCard } from '@/components/ProductCard';
-import { SaveSheet } from '@/components/SaveSheet';
 
 // Rendered in pages as you scroll, like the feed. The grid isn't
 // virtualized and every card with extra photos mounts its own swipeable
@@ -33,7 +32,6 @@ export default function BrandProfile() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [productsLoaded, setProductsLoaded] = useState(false);
 
@@ -110,13 +108,11 @@ export default function BrandProfile() {
           <MasonryGrid
             items={products.slice(0, visibleCount)}
             keyExtractor={p => p.id}
-            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} />}
+            renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={openSaveSheet} />}
           />
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
     </View>
     </WebFrame>
   );
