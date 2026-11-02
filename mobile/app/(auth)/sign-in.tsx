@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
-import { signInWithApple } from '@/lib/appleAuth';
+import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
 
 // HIG minimum touch target; the system Apple button is drawn at this height.
 const APPLE_BUTTON_HEIGHT = 48;
@@ -23,7 +22,7 @@ export default function SignIn() {
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
-    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+    isAppleSignInAvailable().then(setAppleAvailable);
   }, []);
 
   async function signIn() {
@@ -32,6 +31,8 @@ export default function SignIn() {
     if (error) notify('Sign in failed', error.message);
     setLoading(false);
   }
+
+  const AppleAuthentication = appleAvailable ? loadAppleAuth()?.AppleAuthentication : undefined;
 
   async function appleSignIn() {
     if (loading) return;
@@ -98,7 +99,7 @@ export default function SignIn() {
             {/* The system button, per Apple's HIG: Apple draws the logo, label
                 and colors, and it leads the group so no other option is
                 more prominent. */}
-            {appleAvailable && (
+            {AppleAuthentication && (
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
