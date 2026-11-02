@@ -251,7 +251,7 @@ export default function Settings() {
     <WebFrame maxWidth={960}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => goBack('/(tabs)/profile')} hitSlop={8}>
+        <Pressable onPress={() => goBack('/profile')} hitSlop={8}>
           <ChevronLeftIcon />
         </Pressable>
         <Text style={styles.topBarTitle}>Settings</Text>

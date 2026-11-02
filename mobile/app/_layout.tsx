@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Mulish_400Regular,
+  Mulish_300Light_Italic,
   Mulish_400Regular_Italic,
   Mulish_500Medium,
   Mulish_500Medium_Italic,
@@ -45,6 +46,7 @@ export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
   const [fontsLoaded] = useFonts({
     Mulish_400Regular,
+    Mulish_300Light_Italic,
     Mulish_400Regular_Italic,
     Mulish_500Medium,
     Mulish_500Medium_Italic,
@@ -114,6 +116,7 @@ export default function RootLayout() {
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />
         <Stack.Screen name="brand/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />
+        <Stack.Screen name="profile"      options={{ presentation: 'card' }} />
         <Stack.Screen name="edit-profile" options={{ presentation: 'card' }} />
         <Stack.Screen name="settings"     options={{ presentation: 'card' }} />
         <Stack.Screen name="country"      options={{ presentation: 'card' }} />
