@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { GoogleIcon, AppleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
@@ -26,11 +25,8 @@ export default function SignIn() {
   return (
     <View style={styles.root}>
       <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
-      <LinearGradient
-        colors={['rgba(13,16,53,0.55)', 'rgba(13,16,53,0)']}
-        locations={[0, 0.28]}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Flat ink band keeps the status bar legible over the photo (§9: no gradients) */}
+      <View style={[styles.statusBand, { height: insets.top }]} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -102,6 +98,7 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ink },
+  statusBand: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: Colors.ink },
   frame: {
     flex:             1,
     paddingHorizontal: Spacing.screen,
@@ -114,7 +111,6 @@ const styles = StyleSheet.create({
     paddingTop:      36,
     paddingBottom:   28,
     alignItems:      'center',
-    ...Shadows.phone,
   },
   headingWrap: { alignItems: 'center', marginTop: Spacing[4], marginBottom: Spacing[5] },
   heading: {
