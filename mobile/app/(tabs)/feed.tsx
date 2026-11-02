@@ -283,9 +283,6 @@ export default function FeedScreen() {
           <>
             {/* Masthead: the feed's opening, so the grid doesn't start cold */}
             <View style={styles.masthead}>
-              <Text style={styles.mastheadDate}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </Text>
               <Text {...DisplayScaling} style={styles.mastheadTitle} accessibilityRole="header">Your edit</Text>
               <View style={styles.rule} />
             </View>
@@ -339,7 +336,6 @@ const styles = StyleSheet.create({
   content:      { paddingBottom: 100 },
   contentEmpty: { flexGrow: 1 },
   masthead:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5] },
-  mastheadDate:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[2] },
   mastheadTitle: { ...Typography.displayXl, color: Colors.text, marginLeft: -2, marginBottom: Spacing[5] },
   rule:          { height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderStrong },
 
