@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,19 +8,23 @@ import { usePriceFormatter, useCountry, useCurrencyStore } from '@/store/useCurr
 import { formatMoney } from '@/lib/currency';
 import { useBoardStore } from '@/store/useBoardStore';
 import { SaveSheet } from '@/components/SaveSheet';
-import { InviteSheet } from '@/components/InviteSheet';
 import { ActionSheet } from '@/components/ActionSheet';
-import { ChevronLeftIcon, DotsIcon, UserPlusIcon, CameraIcon, CheckIcon } from '@/components/Icons';
-import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
+import { ChevronLeftIcon, DotsIcon, CameraIcon, CheckIcon } from '@/components/Icons';
+import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack, openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { notify } from '@/lib/alerts';
+import * as haptics from '@/lib/haptics';
+
+// Matches the WebFrame cap below; phones are narrower than this anyway.
+const MAX_WIDTH = 480;
 
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { user } = useAuthStore();
   const formatPrice = usePriceFormatter();
   const { currency } = useCountry();
@@ -29,7 +33,6 @@ export default function BoardDetail() {
   const [board,      setBoard]      = useState<Board | null>(null);
   const [items,      setItems]      = useState<BoardItem[]>([]);
   const [saveTarget, setSaveTarget] = useState<Product | null>(null);
-  const [inviting,   setInviting]   = useState(false);
   const [menuItem,   setMenuItem]   = useState<BoardItem | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
 
@@ -66,6 +69,7 @@ export default function BoardDetail() {
   }
 
   function openItemMenu(item: BoardItem) {
+    haptics.quickActionsOpen();
     const purchasedLabel = item.purchased_at ? 'Unmark as purchased' : 'Mark as purchased';
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -84,82 +88,61 @@ export default function BoardDetail() {
     }
   }
 
-  const leftCol  = items.filter((_, i) => i % 2 === 0);
-  const rightCol = items.filter((_, i) => i % 2 === 1);
-  const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
-  const coverImage = board.cover_image_url ?? coverItem?.product_data.image;
+  // Tight two-column grid of uniform 4:5 image tiles (spec §7 Boards).
+  const tileWidth = (Math.min(width, MAX_WIDTH) - Spacing.screen * 2 - Spacing.gutter) / 2;
 
   return (
-    <WebFrame maxWidth={480}>
-    <View style={[styles.root]}>
-      {/* Cover */}
-      <View style={[styles.cover, { paddingTop: insets.top }]}>
-        {coverImage && <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />}
-        <View style={styles.coverScrim} />
-        <View style={styles.coverTopRow}>
-          <Pressable style={styles.coverIconBtn} onPress={() => goBack('/(tabs)/boards')} hitSlop={8}>
+    <WebFrame maxWidth={MAX_WIDTH}>
+    <View style={styles.root}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing[3] }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.topRow}>
+          <Pressable style={styles.iconBtn} onPress={() => goBack('/(tabs)/boards')} hitSlop={8} accessibilityLabel="Back">
             <ChevronLeftIcon />
           </Pressable>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {canEdit && (
-              <Pressable style={styles.coverIconBtn} onPress={changeCoverImage} disabled={uploadingCover} hitSlop={8}>
-                <CameraIcon size={18} />
-              </Pressable>
-            )}
-            {board.isOwner && (
-              <Pressable style={styles.coverIconBtn} onPress={() => setInviting(true)} hitSlop={8}>
-                <UserPlusIcon size={19} />
-              </Pressable>
-            )}
-          </View>
+          {canEdit && (
+            <Pressable style={styles.iconBtn} onPress={changeCoverImage} disabled={uploadingCover} hitSlop={8} accessibilityLabel="Change cover">
+              <CameraIcon size={18} />
+            </Pressable>
+          )}
         </View>
-        <View style={styles.coverBottom}>
-          <Text {...DisplayScaling} style={styles.name}>{board.name}</Text>
-          <Text style={styles.meta}>
-            {items.length} item{items.length !== 1 ? 's' : ''} · {formatMoney(total, totalCurrency)} total
-            {collaborators.length > 0 ? ` · Shared with ${collaborators.length}` : ''}
-          </Text>
-        </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text {...DisplayScaling} style={styles.name}>{board.name}</Text>
+        <Text style={styles.meta}>
+          {items.length} item{items.length !== 1 ? 's' : ''} · {formatMoney(total, totalCurrency)} total
+        </Text>
+
         {items.length === 0 ? (
           <View style={styles.empty}>
-            <Text {...DisplayScaling} style={styles.emptyTitle}>Nothing saved here yet</Text>
-            <Text style={styles.emptyBody}>Save items from your feed and choose this board.</Text>
+            <Text style={styles.emptyBody}>Nothing saved here yet. Save from your feed and pick this board.</Text>
           </View>
         ) : (
           <View style={styles.grid}>
-            {[leftCol, rightCol].map((col, ci) => (
-              <View key={ci} style={styles.col}>
-                {col.map(item => (
-                  <Pressable key={item.id} style={styles.card} onPress={() => openProduct(item.product_id)}>
-                    <Image source={{ uri: item.product_data.image }} style={styles.img} contentFit="cover" />
-                    {item.purchased_at && (
-                      <View style={styles.purchasedBadge}>
-                        <CheckIcon color={Colors.text} size={11} />
-                      </View>
-                    )}
-                    {canEdit && (
-                      <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6}>
-                        <DotsIcon size={16} />
-                      </Pressable>
-                    )}
-                    <View style={styles.cardInfo}>
-                      <Text style={styles.cardBrand}>{item.product_data.brand}</Text>
-                      <Text style={styles.cardName} numberOfLines={2}>{item.product_data.name}</Text>
-                      <Text style={styles.cardPrice}>{formatPrice(item.product_data)}</Text>
-                    </View>
+            {items.map(item => (
+              <Pressable
+                key={item.id}
+                style={[styles.tile, { width: tileWidth }]}
+                onPress={() => openProduct(item.product_id)}
+                onLongPress={canEdit ? () => openItemMenu(item) : undefined}
+                accessibilityLabel={`${item.product_data.brand} ${item.product_data.name}`}
+              >
+                <Image source={{ uri: item.product_data.image }} style={styles.img} contentFit="cover" transition={Animation.micro} />
+                {item.purchased_at && (
+                  <View style={styles.purchasedBadge}>
+                    <CheckIcon color={Colors.text} size={11} />
+                  </View>
+                )}
+                {canEdit && (
+                  <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6} accessibilityLabel="Item options">
+                    <DotsIcon size={14} />
                   </Pressable>
-                ))}
-              </View>
+                )}
+              </Pressable>
             ))}
           </View>
         )}
       </ScrollView>
 
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
-      <InviteSheet board={inviting ? board : null} onClose={() => { setInviting(false); load(); }} />
       <ActionSheet
         visible={!!menuItem}
         onCancel={() => setMenuItem(null)}
@@ -182,25 +165,16 @@ export default function BoardDetail() {
 
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: Colors.bg },
-  cover:      { width: '100%', aspectRatio: 16/9, backgroundColor: Colors.stoneSoft, justifyContent: 'space-between' },
-  coverScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,12,29,0.28)' },
-  coverTopRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingTop: 8 },
-  coverIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.88)', alignItems: 'center', justifyContent: 'center' },
-  coverBottom: { paddingHorizontal: Spacing.screen, paddingBottom: 16 },
-  name:       { ...Typography.display, color: '#fff' },
-  meta:       { ...Typography.body, color: 'rgba(255,255,255,0.85)', marginTop: Spacing[1] },
-  content:    { paddingHorizontal: Spacing.screen, paddingVertical: Spacing[4], paddingBottom: 100 },
-  grid:       { flexDirection: 'row', gap: Spacing.gutter },
-  col:        { flex: 1 },
-  card:       { borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, marginBottom: Spacing.gutter, position: 'relative', ...Shadows.card },
+  content:    { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
+  topRow:     { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing[5] },
+  iconBtn:    { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  name:       { ...Typography.display, color: Colors.text },
+  meta:       { ...Typography.caption, color: Colors.textMuted, marginTop: Spacing[2], marginBottom: Spacing[5] },
+  grid:       { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.gutter },
+  tile:       { borderRadius: Radius.card, overflow: 'hidden' },
   img:        { width: '100%', aspectRatio: 4/5, backgroundColor: Colors.stoneSoft },
-  menuBtn:    { position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  menuBtn:    { position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   purchasedBadge: { position: 'absolute', bottom: 8, left: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center' },
-  cardInfo:   { padding: Spacing[3] },
-  cardBrand:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[1] },
-  cardName:   { ...Typography.caption, color: Colors.text, marginBottom: Spacing[1] },
-  cardPrice:  { ...Typography.price, color: Colors.accentBlue },
-  empty:      { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle: { ...Typography.display, color: Colors.text, textAlign: 'center', marginBottom: Spacing[3] },
-  emptyBody:  { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
+  empty:      { paddingTop: Spacing[6] },
+  emptyBody:  { ...Typography.body, color: Colors.textMuted, maxWidth: 300 },
 });

@@ -184,7 +184,7 @@ export default function SearchScreen() {
                   items={products}
                   keyExtractor={p => p.id}
                   horizontalPadding={0}
-                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onNotInterested={markNotInterested} onQuickActions={handleQuickActions} />}
+                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onQuickActions={handleQuickActions} />}
                 />
                 {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
               </>

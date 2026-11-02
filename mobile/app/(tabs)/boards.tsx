@@ -1,133 +1,82 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, TextInput, Platform, useWindowDimensions } from 'react-native';
-import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
-import { Colors, Radius, Typography, Spacing, Shadows, DisplayScaling } from '@/lib/theme';
-import * as haptics from '@/lib/haptics';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
+import { BoardBento } from '@/components/BoardBento';
 
-// Desktop gets a wider grid (3 columns); phones and narrow web viewports
-// keep the original 2-column layout.
-const DESKTOP_BREAKPOINT = 700;
-const DESKTOP_COLUMNS = 3;
-const MOBILE_COLUMNS = 2;
+// Board creation is the formSheet route at app/board/new.tsx (spec §4:
+// secondary flows open as bottom sheets).
+function openCreateSheet() {
+  router.push('/board/new');
+}
 
 export default function BoardsScreen() {
   const insets = useSafeAreaInsets();
-  const { boards, fetchBoards, createBoard } = useBoardStore();
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState('');
-  const { width } = useWindowDimensions();
-  // Same hydration-mismatch guard as MasonryGrid/the tab bar: web's static
-  // export prerenders this in Node with no real window, so the column count
-  // must stay fixed until mount, then recompute against the real viewport.
-  const [mounted, setMounted] = useState(Platform.OS !== 'web');
-  useEffect(() => { setMounted(true); }, []);
-  const effectiveWidth = mounted ? width : 0;
-  const columns = effectiveWidth >= DESKTOP_BREAKPOINT ? DESKTOP_COLUMNS : MOBILE_COLUMNS;
+  const { boards, fetchBoards } = useBoardStore();
+  // Hold the empty state back until the first fetch settles, so a user with
+  // boards never sees "Start a board" flash on launch.
+  const [loaded, setLoaded] = useState(false);
 
-  const boardColumns = useMemo(() => {
-    const cols: Board[][] = Array.from({ length: columns }, () => []);
-    boards.forEach((board, i) => cols[i % columns].push(board));
-    return cols;
-  }, [boards, columns]);
+  useEffect(() => { fetchBoards().finally(() => setLoaded(true)); }, []);
 
-  useEffect(() => { fetchBoards(); }, []);
+  const empty = loaded && boards.length === 0;
+  // Content starts below the floating glass header, then scrolls under it.
+  const headerInset = insets.top + GLASS_HEADER_HEIGHT;
 
-  async function handleCreate() {
-    if (!newName.trim()) return;
-    const board = await createBoard(newName.trim());
-    if (board) haptics.boardCreated();
-    setNewName('');
-    setCreating(false);
-  }
+  const titleRow = (
+    <View style={styles.titleRow}>
+      <Text {...DisplayScaling} style={styles.pageLabel}>boards</Text>
+      {!empty && (
+        <Pressable style={styles.newBoardBtn} onPress={openCreateSheet} hitSlop={8} accessibilityLabel="New board">
+          <PlusIcon color={Colors.text} size={20} />
+        </Pressable>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + GLASS_HEADER_HEIGHT }]} showsVerticalScrollIndicator={false} scrollsToTop={true}>
-        <View style={styles.titleRow}>
-          <Text {...DisplayScaling} style={styles.pageLabel}>boards</Text>
-          <Pressable style={styles.newBoardBtn} onPress={() => setCreating(c => !c)} hitSlop={8}>
-            <PlusIcon color={Colors.text} size={20} />
-          </Pressable>
-        </View>
-
-        {creating && (
-          <View style={styles.newRow}>
-            <TextInput
-              style={styles.newInput}
-              placeholder="New board name"
-              placeholderTextColor={Colors.textMuted}
-              value={newName}
-              onChangeText={setNewName}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleCreate}
-            />
-            <Pressable style={[styles.createBtn, !newName.trim() && styles.createBtnDisabled]} onPress={handleCreate} disabled={!newName.trim()}>
-              <Text style={styles.createBtnText}>Create</Text>
+      {empty ? (
+        <View style={{ flex: 1, paddingTop: headerInset }}>
+          {titleRow}
+          <View style={[styles.empty, { paddingBottom: insets.bottom + 100 }]}>
+            <View>
+              <Text {...DisplayScaling} style={styles.emptyTitle}>Start a board</Text>
+              <Text style={styles.emptyBody}>Group the pieces you save. Each board's cover builds itself from its first four.</Text>
+            </View>
+            <Pressable style={styles.createBtn} onPress={openCreateSheet}>
+              <Text style={styles.createBtnText}>Create board</Text>
             </Pressable>
           </View>
-        )}
-
-        {boards.length === 0 ? (
-          <View style={styles.empty}>
-            <Text {...DisplayScaling} style={styles.emptyTitle}>No boards yet</Text>
-            <Text style={styles.emptyBody}>Save products from your feed to start organizing them.</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingTop: headerInset }} showsVerticalScrollIndicator={false} scrollsToTop={true}>
+          {titleRow}
+          <View style={styles.content}>
+            {boards.map(board => <BoardCard key={board.id} board={board} />)}
           </View>
-        ) : (
-          <View style={styles.grid}>
-            {boardColumns.map((col, i) => (
-              <View key={i} style={styles.gridColumn}>
-                {col.map(board => <BoardCard key={board.id} board={board} style={styles.gridCard} />)}
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
+      {/* After the content so it draws on top */}
       <GlassHeader />
     </View>
   );
 }
 
 export function BoardCard({ board, style }: { board: Board; style?: object }) {
-  const items = board.board_items ?? [];
-  const coverItem = items.find(i => i.product_id === board.cover_product_id) ?? items[0];
-  const coverImage = board.cover_image_url ?? coverItem?.product_data?.image;
-  const collaborators = board.board_collaborators ?? [];
-
+  const count = board.board_items?.length ?? 0;
   return (
-    <Pressable style={[styles.card, style]} onPress={() => router.push(`/board/${board.id}`)}>
-      <View style={styles.cover}>
-        {coverImage ? (
-          <Image
-            source={{ uri: coverImage }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={styles.coverEmpty} />
-        )}
-        {collaborators.length > 0 && (
-          <View style={styles.avatarStack}>
-            {collaborators.slice(0, 3).map(c => (
-              <View key={c.id} style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(c.profiles?.display_name ?? c.profiles?.username ?? '?')[0].toUpperCase()}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
+    <Pressable style={style} onPress={() => router.push(`/board/${board.id}`)}>
+      <BoardBento board={board} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{board.name}</Text>
-        <Text style={styles.count} numberOfLines={1}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.count} numberOfLines={1}>{count} item{count !== 1 ? 's' : ''}</Text>
       </View>
     </Pressable>
   );
@@ -135,36 +84,18 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
-  // Content is already inset by Spacing.screen, so the title row adds none.
-  titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: Spacing[3] },
+  titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingBottom: Spacing[5] },
   pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
   newBoardBtn: { marginTop: Spacing[4], width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
-  newRow:    { flexDirection: 'row', gap: Spacing[3], paddingBottom: Spacing[3] },
-  newInput: {
-    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
-    paddingHorizontal: 16, paddingVertical: 11, ...Typography.body, color: Colors.text, backgroundColor: Colors.surface,
-  },
-  createBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 16, justifyContent: 'center' },
-  createBtnDisabled: { opacity: 0.35 },
-  createBtnText: { ...Typography.cardTitle, color: Colors.text },
-  content:   { paddingHorizontal: Spacing.screen, paddingBottom: 100, maxWidth: 960, alignSelf: 'center', width: '100%' },
-  grid:       { flexDirection: 'row', gap: Spacing.gutter },
-  gridColumn: { flex: 1, gap: Spacing.gutter },
-  gridCard:   { width: '100%' },
-  card:      { width: '48%', borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.card },
-  cover:     { width: '100%', aspectRatio: 1, backgroundColor: Colors.stoneSoft },
-  coverEmpty:{ flex: 1, backgroundColor: Colors.stoneSoft },
-  avatarStack: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row' },
-  avatar: {
-    width: 24, height: 24, borderRadius: 12, marginLeft: -8,
-    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#fff',
-  },
-  avatarText: { ...Typography.label, color: '#fff' },
-  info:      { padding: Spacing[3] },
+  // One full-width bento per board; capped on wide web viewports.
+  content:   { paddingHorizontal: Spacing.screen, paddingBottom: 100, gap: Spacing[6], maxWidth: 560, alignSelf: 'center', width: '100%' },
+  info:      { paddingTop: Spacing[3] },
   name:      { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
   count:     { ...Typography.caption, color: Colors.textMuted },
-  empty:     { flex: 1, alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
-  emptyTitle:{ ...Typography.display, color: Colors.text, textAlign: 'center', marginBottom: Spacing[3] },
-  emptyBody: { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
+  // Copy top-left, the one action in the thumb zone.
+  empty:     { flex: 1, justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingTop: Spacing[6] },
+  emptyTitle:{ ...Typography.display, color: Colors.text, marginBottom: Spacing[4] },
+  emptyBody: { ...Typography.body, color: Colors.textMuted, maxWidth: 300 },
+  createBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center' },
+  createBtnText: { ...Typography.cardTitle, color: Colors.text },
 });
