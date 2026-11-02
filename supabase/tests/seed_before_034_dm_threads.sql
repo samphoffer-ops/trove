@@ -1,4 +1,4 @@
--- Fixtures for 035's backfill from shares. Users:
+-- Fixtures for 034's backfill from shares. Users:
 --   A, B: have a DM history in shares
 --   C, D: have a share between them only
 --   E:    no history
