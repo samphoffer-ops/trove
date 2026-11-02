@@ -107,9 +107,7 @@ export default function BoardDetail() {
         </View>
 
         <Text {...DisplayScaling} style={styles.name}>{board.name}</Text>
-        <Text style={styles.meta}>
-          {items.length} item{items.length !== 1 ? 's' : ''} · {formatMoney(total, totalCurrency)} total
-        </Text>
+        <Text style={styles.meta}>{formatMoney(total, totalCurrency)} total</Text>
 
         {items.length === 0 ? (
           <View style={styles.empty}>
