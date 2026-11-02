@@ -640,7 +640,23 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
     });
   }
   const all = [...rows.values()];
-  const { saved, error } = await upsertProducts(admin, all);
+
+  // Write only what changed. Every refresh used to upsert every product —
+  // ~46k rows a night, plus the full-catalog backfill — and Postgres never
+  // updates in place: each write leaves a dead row version and adds fresh
+  // entries to every index, including the expensive HNSW vector index. The
+  // resulting bloat kept feed queries slow for hours after writes stopped
+  // (2026-09-26). Unchanged products are now left alone entirely.
+  const existing = await loadExistingProducts(admin, brand.id);
+  if (existing === null) {
+    await recordHealth(all.length, 0, 'could not read existing products');
+    return { count: 0, removed: 0, error: 'could not read existing products' };
+  }
+  const changed = all.filter(r => {
+    const e = existing.get(r.id as string);
+    return !e || e.status !== 'active' || productFingerprint(e) !== productFingerprint(r);
+  });
+  const { saved, error } = await upsertProducts(admin, changed);
   // Stop before the removal step — a half-written catalog must never be
   // read as "everything else is gone".
   if (error) {
@@ -649,14 +665,18 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
   }
 
   // Only a complete read of the store can say what's gone: sold out, or
-  // taken down. Products never used to be removed at all, so sold-out
-  // pieces stayed in the feed indefinitely.
+  // taken down. Decided by id (in the store now vs. active in our table)
+  // rather than by last_seen_at, since unchanged rows no longer get
+  // last_seen_at bumped.
   let removed = 0;
   if (scrape.complete) {
-    const { count } = await admin.from('products')
-      .update({ status: 'removed', removed_at: now }, { count: 'exact' })
-      .eq('brand_id', brand.id).eq('status', 'active').lt('last_seen_at', runStart);
-    removed = count ?? 0;
+    const gone = [...existing.values()].filter(e => e.status === 'active' && !rows.has(e.id)).map(e => e.id);
+    for (let i = 0; i < gone.length; i += 200) {
+      const { count } = await admin.from('products')
+        .update({ status: 'removed', removed_at: now }, { count: 'exact' })
+        .in('id', gone.slice(i, i + 200));
+      removed += count ?? 0;
+    }
   }
 
   const incomplete = scrape.platform === 'shopify' && !scrape.complete;
@@ -668,7 +688,33 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
     scrape_cursor: scrape.nextCursor,
   });
 
-  return { count: all.length, removed, currency: scrape.currency, usd_pricing: scrape.hasUsdPricing };
+  return { count: all.length, written: changed.length, removed, currency: scrape.currency, usd_pricing: scrape.hasUsdPricing };
+}
+
+// A brand's current rows, without the embedding. Paged: PostgREST caps a
+// response at 1,000 rows and big brands have several thousand.
+async function loadExistingProducts(admin: AdminClient, brandId: string): Promise<Map<string, any> | null> {
+  const out = new Map<string, any>();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from('products')
+      .select('id, brand, name, price, prices, image, images, ratio, url, description, category, status')
+      .eq('brand_id', brandId).order('id').range(from, from + 999);
+    if (error) return null;
+    for (const row of data ?? []) out.set(row.id, row);
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+// Everything a refresh writes, normalized the way the columns store it
+// (price numeric(10,2), ratio numeric(5,3), jsonb key order), so an
+// unchanged product compares equal to its stored row.
+function productFingerprint(r: any): string {
+  const sortKeys = (o: Record<string, number> | null | undefined) =>
+    Object.keys(o ?? {}).sort().map(k => `${k}:${Number(o![k]).toFixed(2)}`).join(',');
+  return JSON.stringify([
+    r.brand, r.name, Number(r.price).toFixed(2), sortKeys(r.prices), r.image, r.images ?? [],
+    Number(r.ratio).toFixed(3), r.url, r.description ?? '', r.category,
+  ]);
 }
 
 function passesPreFilter(domain: string, products: ScrapedProduct[]): boolean {
