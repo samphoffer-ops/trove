@@ -292,6 +292,7 @@ export default function FeedScreen() {
                 key={block.key}
                 items={block.items}
                 keyExtractor={p => p.id}
+                itemHeight={p => p.ratio}
                 renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onQuickActions={handleQuickActions} />}
               />
             ) : (

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
@@ -251,14 +251,15 @@ export default function Settings() {
     <WebFrame maxWidth={960}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => goBack('/profile')} hitSlop={8}>
+        <Pressable onPress={() => goBack('/profile')} hitSlop={11} accessibilityRole="button" accessibilityLabel="Back">
           <ChevronLeftIcon />
         </Pressable>
-        <Text style={styles.topBarTitle}>Settings</Text>
-        <View style={{ width: 22 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Same oversized page title as the Boards tab: the screen's editorial moment (spec §1) */}
+        <Text {...DisplayScaling} style={styles.pageLabel} accessibilityRole="header">settings</Text>
+
         <Pressable style={styles.linkRow} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.linkText}>Edit profile</Text>
         </Pressable>
@@ -363,8 +364,8 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
-  topBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingVertical: 14 },
-  topBarTitle: { ...Typography.cardTitle, color: Colors.text },
+  topBar:      { flexDirection: 'row', alignItems: 'center', height: 44, paddingHorizontal: Spacing.screen },
+  pageLabel:   { ...Typography.displayXl, color: Colors.textMuted, paddingTop: Spacing[4], marginBottom: Spacing[6] },
   content:     { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
   divider:     { height: 1, backgroundColor: Colors.border, marginVertical: Spacing[6] },
   linkRow:     { paddingVertical: Spacing[3] },

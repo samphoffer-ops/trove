@@ -20,7 +20,7 @@ export const GLASS_HEADER_HEIGHT = CONTROL_SIZE + Spacing[4] * 2;
 // header itself has no background: just the three controls, each its own
 // piece of glass. On iOS < 26 (and web) there's no Liquid Glass, so fall
 // back to a light system blur.
-function Glass({ style, children }: { style: ViewStyle; children: ReactNode }) {
+export function Glass({ style, children }: { style: ViewStyle; children: ReactNode }) {
   if (isLiquidGlassAvailable()) {
     return <GlassView glassEffectStyle="regular" isInteractive style={style}>{children}</GlassView>;
   }
