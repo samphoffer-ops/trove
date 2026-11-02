@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet,
-  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform,
+  View, Text, ScrollView, Pressable, StyleSheet, Animated,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
-import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { useShareStore } from '@/store/useShareStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
-import { ChevronLeftIcon, BookmarkIcon } from '@/components/Icons';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { ChevronLeftIcon } from '@/components/Icons';
+import { ProductCard } from '@/components/ProductCard';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Share, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack, openProduct, openSaveSheet } from '@/lib/navigation';
+import { goBack, openSaveSheet } from '@/lib/navigation';
+
+const MAX_WIDTH = 480;
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -29,7 +30,6 @@ export default function Conversation() {
   const { userId, name: paramName } = useLocalSearchParams<{ userId: string; name: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const formatPrice = usePriceFormatter();
   const { markRead, sendMessage } = useShareStore();
   const { isProductSaved } = useBoardStore();
   const [shares, setShares] = useState<Share[]>([]);
@@ -38,6 +38,19 @@ export default function Conversation() {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const { width } = useWindowDimensions();
+  // Shared products render at the feed's card width (spec §7 Feed).
+  const cardWidth = (Math.min(width, MAX_WIDTH) - Spacing.screen * 2 - Spacing.gutter) / 2;
+
+  // iOS large-title pattern: the oversized name heads the thread, and the
+  // small name in the top bar fades in once it has scrolled away.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [titleBottom, setTitleBottom] = useState(80);
+  const barTitleOpacity = scrollY.interpolate({
+    inputRange: [titleBottom - 24, titleBottom],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   async function load() {
     if (!user || !userId) return;
@@ -73,7 +86,7 @@ export default function Conversation() {
   }
 
   return (
-    <WebFrame maxWidth={480}>
+    <WebFrame maxWidth={MAX_WIDTH}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -81,11 +94,13 @@ export default function Conversation() {
     >
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => goBack('/inbox')} hitSlop={8}>
+        <Pressable onPress={() => goBack('/inbox')} hitSlop={11} accessibilityRole="button" accessibilityLabel="Back">
           <ChevronLeftIcon />
         </Pressable>
-        <Text style={styles.topBarTitle} numberOfLines={1}>{otherName}</Text>
-        <View style={{ width: 22 }} />
+        <Animated.Text style={[styles.topBarTitle, { opacity: barTitleOpacity }]} numberOfLines={1} importantForAccessibility="no">
+          {otherName}
+        </Animated.Text>
+        <View style={styles.topBarSpacer} />
       </View>
 
       {loading ? (
@@ -93,21 +108,32 @@ export default function Conversation() {
           <ActivityIndicator color={Colors.accent} />
         </View>
       ) : (
-        <ScrollView
+        <Animated.ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          scrollEventThrottle={16}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         >
+          {/* The thread's editorial moment (spec §1): the other person's name, oversized and left-aligned */}
+          <Text
+            {...DisplayScaling}
+            style={styles.name}
+            numberOfLines={2}
+            accessibilityRole="header"
+            onLayout={e => setTitleBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}
+          >
+            {otherName}
+          </Text>
+
           {shares.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyBody}>Nothing shared yet.</Text>
-            </View>
+            <Text style={styles.emptyBody}>Nothing shared yet.</Text>
           ) : (
             shares.map(share => {
               const isFromMe = share.sender_id === user?.id;
               const p = share.product_data;
-              const saved = p ? isProductSaved(share.product_id!) : false;
 
               return (
                 <View key={share.id} style={[styles.bubble, isFromMe && styles.bubbleMe]}>
@@ -116,21 +142,17 @@ export default function Conversation() {
                   </Text>
 
                   {p ? (
-                    <Pressable style={styles.productCard} onPress={() => openProduct(share.product_id!)}>
-                      <Image source={{ uri: p.image }} style={styles.productImage} contentFit="cover" />
-                      <View style={styles.productInfo}>
-                        <Text style={styles.productBrand} numberOfLines={1}>{p.brand}</Text>
-                        <Text style={styles.productName} numberOfLines={2}>{p.name}</Text>
-                        <Text style={styles.productPrice}>{formatPrice(p)}</Text>
-                      </View>
-                      <Pressable style={styles.bookmarkBtn} onPress={() => openSaveSheet(p)} hitSlop={12}>
-                        <BookmarkIcon color={saved ? Colors.accent : Colors.textMuted} filled={saved} size={20} />
-                      </Pressable>
-                    </Pressable>
+                    <View style={{ width: cardWidth }}>
+                      <ProductCard
+                        product={{ ...p, id: share.product_id ?? p.id }}
+                        saved={isProductSaved(share.product_id!)}
+                        onSave={openSaveSheet}
+                      />
+                    </View>
                   ) : null}
 
                   {share.message ? (
-                    <View style={[styles.messageWrap, isFromMe && styles.messageWrapMe]}>
+                    <View style={[styles.message, isFromMe ? styles.messageMe : styles.messageThem]}>
                       <Text style={styles.messageText}>{share.message}</Text>
                     </View>
                   ) : null}
@@ -138,14 +160,14 @@ export default function Conversation() {
               );
             })
           )}
-        </ScrollView>
+        </Animated.ScrollView>
       )}
 
-      {/* Reply bar */}
-      <View style={[styles.replyBar, { paddingBottom: insets.bottom + 8 }]}>
+      {/* Reply bar: the send button is the screen's one primary action */}
+      <View style={[styles.replyBar, { paddingBottom: insets.bottom + Spacing[3] }]}>
         <TextInput
           style={styles.replyInput}
-          placeholder="Message…"
+          placeholder="Message"
           placeholderTextColor={Colors.textMuted}
           value={reply}
           onChangeText={setReply}
@@ -159,8 +181,12 @@ export default function Conversation() {
           style={[styles.sendBtn, (!reply.trim() || sending) && styles.sendBtnDisabled]}
           onPress={handleSend}
           disabled={!reply.trim() || sending}
+          accessibilityRole="button"
+          accessibilityLabel="Send"
         >
-          <Text style={styles.sendBtnText}>{sending ? '…' : '↑'}</Text>
+          {sending
+            ? <ActivityIndicator size="small" color={Colors.ink} />
+            : <Text style={styles.sendBtnText}>↑</Text>}
         </Pressable>
       </View>
     </View>
@@ -169,64 +195,54 @@ export default function Conversation() {
   );
 }
 
+const CONTROL = 40;
+
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 0.5, borderBottomColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: Spacing[4],
+    height: 44, paddingHorizontal: Spacing.screen,
   },
-  topBarTitle: { ...Typography.cardTitle, fontSize: 16, color: Colors.text, flex: 1, textAlign: 'center' },
+  topBarTitle:  { ...Typography.cardTitle, color: Colors.text, flex: 1, textAlign: 'center' },
+  topBarSpacer: { width: 22 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  content: { padding: 16, gap: 20, paddingBottom: 16 },
+  content: { paddingHorizontal: Spacing.screen, paddingBottom: Spacing[5], gap: Spacing[5] },
+  name:    { ...Typography.display, color: Colors.text, paddingTop: Spacing[4], marginBottom: Spacing[3] },
 
-  bubble:   { gap: 6 },
-  bubbleMe: { alignItems: 'flex-end' },
+  bubble:     { gap: Spacing[2], alignItems: 'flex-start' },
+  bubbleMe:   { alignItems: 'flex-end' },
+  bubbleMeta: { ...Typography.caption, color: Colors.textMuted },
 
-  bubbleMeta: { ...Typography.caption, fontSize: 11, color: Colors.textMuted, paddingHorizontal: 4 },
-
-  productCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing[3],
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    padding: Spacing[3], alignSelf: 'stretch',
+  message: {
+    backgroundColor: Colors.surface, borderRadius: Radius.md,
+    paddingHorizontal: Spacing[4], paddingVertical: Spacing[3],
+    maxWidth: '85%',
   },
-  productImage: { width: 72, height: 72, borderRadius: Radius.input, backgroundColor: Colors.stoneSoft, flexShrink: 0 },
-  productInfo:  { flex: 1, gap: 3 },
-  productBrand: { ...Typography.label, color: Colors.accent, letterSpacing: 0.2 },
-  productName:  { ...Typography.cardTitle, fontSize: 13.5, color: Colors.text, lineHeight: 18 },
-  productPrice: { ...Typography.body, fontSize: 13, color: Colors.text, fontWeight: '600' },
-  bookmarkBtn:  { padding: 4, alignSelf: 'flex-start' },
-
-  messageWrap: {
-    backgroundColor: Colors.surface, borderRadius: 16, borderBottomLeftRadius: 4,
-    paddingHorizontal: 14, paddingVertical: 10,
-    maxWidth: '85%', alignSelf: 'flex-start',
-  },
-  messageWrapMe: { borderBottomLeftRadius: 16, borderBottomRightRadius: 4, alignSelf: 'flex-end' },
-  messageText: { ...Typography.body, fontSize: 14, color: Colors.text, lineHeight: 20 },
+  messageThem: { borderBottomLeftRadius: Radius.badge },
+  messageMe:   { borderBottomRightRadius: Radius.badge },
+  messageText: { ...Typography.body, color: Colors.text },
 
   replyBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: Spacing[2],
-    paddingHorizontal: 12, paddingTop: 10,
-    borderTopWidth: 0.5, borderTopColor: Colors.border,
+    flexDirection: 'row', alignItems: 'flex-end', gap: Spacing[3],
+    paddingHorizontal: Spacing.screen, paddingTop: Spacing[4],
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border,
     backgroundColor: Colors.bg,
   },
   replyInput: {
-    flex: 1,
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 22,
-    paddingHorizontal: 16, paddingVertical: 10,
-    ...Typography.body, fontSize: 15, color: Colors.text,
-    backgroundColor: Colors.surface, maxHeight: 100,
+    flex: 1, minHeight: CONTROL, maxHeight: 120,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
+    paddingHorizontal: Spacing[4], paddingTop: Spacing[3], paddingBottom: Spacing[3],
+    ...Typography.body, color: Colors.text,
+    backgroundColor: Colors.surface,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: CONTROL, height: CONTROL, borderRadius: Radius.pill,
     backgroundColor: Colors.accent,
     alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.3 },
-  sendBtnText: { fontSize: 18, fontWeight: '700', color: Colors.ink },
+  sendBtnText: { ...Typography.headline, color: Colors.ink },
 
-  empty:     { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
-  emptyBody: { ...Typography.body, color: Colors.textMuted, textAlign: 'center' },
+  emptyBody: { ...Typography.body, color: Colors.textMuted, maxWidth: 300 },
 });
