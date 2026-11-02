@@ -53,25 +53,21 @@ export const ONBOARDING_STEPS = [
 // for getProducts()/getProductById(). The 29 products that used to be
 // hardcoded here are now seeded via supabase/migrations/007_seed_products.sql.
 
-export const EDITORIAL_STRIPS: {
+// Mini-edits for the feed's editorial bento blocks (docs/design-spec.md §7
+// Feed). Each names a small set of products under an oversized italic header.
+// 'just-in' and 'new-from-brand' are resolved in the feed (they need the
+// viewer's followed brands and the brand list); the rest match on a filter.
+export type EditKind = 'just-in' | 'new-from-brand' | 'filter';
+
+export const EDITS: {
+  id: string;
   title: string;
-  subtitle: string;
-  bg: string;
-  fg: string;
-  filter: (p: Product, i: number) => boolean;
+  kind: EditKind;
+  filter?: (p: Product) => boolean;
 }[] = [
-  {
-    title: 'just in',
-    subtitle: 'The latest from brands we\'re watching.',
-    bg: '#FF4422',
-    fg: '#FFF8F0',
-    filter: (_p, i) => i % 3 === 0,
-  },
-  {
-    title: 'stripped back',
-    subtitle: 'Considered objects. Nothing extra.',
-    bg: '#0D1035',
-    fg: '#FFF8F0',
-    filter: (p) => p.styles?.includes('minimalist') ?? false,
-  },
+  { id: 'just-in',       title: 'Just in',       kind: 'just-in' },
+  { id: 'stripped-back', title: 'Stripped back', kind: 'filter', filter: (p) => p.styles?.includes('minimalist') ?? false },
+  { id: 'quiet-linen',   title: 'Quiet linen',   kind: 'filter', filter: (p) => p.styles?.includes('coastal') ?? false },
+  // Repeats once per brand: "New from [Brand]"
+  { id: 'new-from',      title: 'New from',      kind: 'new-from-brand' },
 ];
