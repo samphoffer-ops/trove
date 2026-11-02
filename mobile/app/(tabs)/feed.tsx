@@ -32,6 +32,9 @@ const PAGE_SIZE = 30;
 const FEED_SESSION_SEED = Math.floor(Math.random() * 2 ** 31);
 const JUST_IN_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const JUST_IN_MIN_CANDIDATES = 40;
+// "New from [Brand]" is a rare note, not the feed's rhythm: at most this many
+// per session, and only for brands with products inside the Just-in window.
+const MAX_NEW_FROM = 2;
 
 function seededRank(key: string): number {
   // FNV-1a over seed + key — cheap, stable, well-spread
@@ -86,28 +89,40 @@ function justInItems(allProducts: Product[], followedBrandIds: Set<string>): Pro
 interface ResolvedEdit { key: string; title: string; items: () => Product[] }
 
 // The queue of mini-edits, in the order bentos use them. "New from [Brand]"
-// expands to one edit per brand.
+// expands to at most MAX_NEW_FROM brand edits, slotted in between the named
+// edits rather than stacked after them.
 function resolveEdits(products: Product[], followedBrandIds: Set<string>): ResolvedEdit[] {
-  const edits: ResolvedEdit[] = [];
+  const named: ResolvedEdit[] = [];
+  const newFrom: ResolvedEdit[] = [];
   for (const edit of EDITS) {
     if (edit.kind === 'just-in') {
-      edits.push({ key: edit.id, title: edit.title, items: () => justInItems(products, followedBrandIds) });
+      named.push({ key: edit.id, title: edit.title, items: () => justInItems(products, followedBrandIds) });
     } else if (edit.kind === 'filter' && edit.filter) {
-      edits.push({ key: edit.id, title: edit.title, items: () => products.filter(edit.filter!) });
+      named.push({ key: edit.id, title: edit.title, items: () => products.filter(edit.filter!) });
     } else if (edit.kind === 'new-from-brand') {
+      const newest = Math.max(0, ...products.map(p => Date.parse(p.created_at ?? '') || 0));
       const byBrand = new Map<string, Product[]>();
       for (const p of products) {
+        if (newest - (Date.parse(p.created_at ?? '') || 0) > JUST_IN_WINDOW_MS) continue;
         const key = brandKey(p);
         if (!byBrand.has(key)) byBrand.set(key, []);
         byBrand.get(key)!.push(p);
       }
       const keys = [...byBrand.keys()].sort((a, b) => seededRank(a) - seededRank(b));
       for (const key of keys) {
+        if (newFrom.length >= MAX_NEW_FROM) break;
         const items = byBrand.get(key)!;
         if (items.length < BENTO_SIZE) continue;
-        edits.push({ key: `${edit.id}-${key}`, title: `${edit.title} ${items[0].brand}`, items: () => [...items].sort(newestFirst) });
+        newFrom.push({ key: `${edit.id}-${key}`, title: `${edit.title} ${items[0].brand}`, items: () => [...items].sort(newestFirst) });
       }
     }
+  }
+  // Just in, a named edit, then alternate: … New from, named, New from …
+  const edits: ResolvedEdit[] = named.slice(0, 2);
+  const rest = named.slice(2);
+  while (rest.length || newFrom.length) {
+    if (newFrom.length) edits.push(newFrom.shift()!);
+    if (rest.length) edits.push(rest.shift()!);
   }
   return edits;
 }
