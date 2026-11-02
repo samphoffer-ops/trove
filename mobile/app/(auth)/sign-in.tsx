@@ -1,24 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
-import { GoogleIcon, AppleIcon } from '@/components/Icons';
+import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
+import { signInWithApple } from '@/lib/appleAuth';
+
+// HIG minimum touch target; the system Apple button is drawn at this height.
+const APPLE_BUTTON_HEIGHT = 48;
 
 export default function SignIn() {
   const insets = useSafeAreaInsets();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
+  // False on web and anywhere the system Apple sheet isn't available.
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+  }, []);
 
   async function signIn() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) notify('Sign in failed', error.message);
+    setLoading(false);
+  }
+
+  async function appleSignIn() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithApple();
+    } catch (e: any) {
+      notify('Sign in with Apple failed', e?.message);
+    }
     setLoading(false);
   }
 
@@ -73,13 +95,21 @@ export default function SignIn() {
           </View>
 
           <View style={styles.oauthGroup}>
+            {/* The system button, per Apple's HIG: Apple draws the logo, label
+                and colors, and it leads the group so no other option is
+                more prominent. */}
+            {appleAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={APPLE_BUTTON_HEIGHT / 2}
+                style={styles.appleBtn}
+                onPress={appleSignIn}
+              />
+            )}
             <Pressable style={styles.oauthBtn}>
               <GoogleIcon size={16} />
               <Text style={styles.oauthText}>Sign in with Google</Text>
-            </Pressable>
-            <Pressable style={styles.oauthBtn}>
-              <AppleIcon color={Colors.text} size={15} />
-              <Text style={styles.oauthText}>Sign in with Apple</Text>
             </Pressable>
           </View>
         </View>
@@ -161,6 +191,7 @@ const styles = StyleSheet.create({
     borderColor:     Colors.border,
     backgroundColor: Colors.surface,
   },
+  appleBtn:  { width: '100%', height: APPLE_BUTTON_HEIGHT },
   oauthText: { ...Typography.cardTitle, color: Colors.text },
   link:       { alignItems: 'center', paddingTop: Spacing[5] },
   linkText:   {
