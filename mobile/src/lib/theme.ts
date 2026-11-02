@@ -130,6 +130,7 @@ export const Spacing = {
   6: 28,
   screen: 24,   // outer screen margin
   gutter: 8,    // masonry and board-grid gutter
+  bento: 2,     // hairline between tiles inside a board's bento cover
   safeBottom: 34,
   dynamicIsland: 54,
 };
