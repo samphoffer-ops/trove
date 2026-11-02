@@ -6,7 +6,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "start:dev": "expo start --dev-client",
+    "build:dev:ios": "eas build --profile development --platform ios",
+    "device:register": "eas device:create"
   },
   "dependencies": {
     "@expo-google-fonts/mulish": "^0.4.2",
