@@ -23,6 +23,7 @@ export interface Product {
   images?: string[];   // additional product photos (scraper populates when available)
   ratio: number;
   url: string;
+  blurhash?: string | null; // placeholder while image loads (#108); '' = none
   category?: string;
   styles?: string[];
   search_keywords?: string[];

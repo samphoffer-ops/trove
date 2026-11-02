@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { View, Pressable, Platform, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent, GestureResponderEvent } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { Colors } from '@/lib/theme';
 import { ChevronLeftIcon } from './Icons';
 
@@ -33,6 +34,7 @@ interface Props {
   maxHeight?:  number;       // caps the gallery height (for modal context)
   aspectRatio?: number;      // overrides the default 3:4 (e.g. masonry cards use a per-product ratio)
   contentFit?: 'cover' | 'contain'; // detail uses contain so no photo is ever cropped
+  blurhash?: string | null;  // the product's, shown on every page while it loads
 }
 
 // Simple horizontal-pager gallery. Works with a single image (dots hidden,
@@ -42,7 +44,7 @@ interface Props {
 // can be 1200px wide while the modal is only 460px, so useWindowDimensions
 // would make every image page 1200px wide and pagingEnabled would scroll
 // by 1200px at a time. onLayout always reflects the actual rendered size.
-export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover' }: Props) {
+export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover', blurhash }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -69,6 +71,8 @@ export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cov
       <View style={styles.root}>
         <Image
           source={{ uri: unique[0] }}
+          placeholder={productPlaceholder(blurhash)}
+          placeholderContentFit="cover"
           style={[
             styles.img,
             aspectRatio ? { aspectRatio } : undefined,
@@ -118,6 +122,8 @@ export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cov
           <View key={i} style={[styles.page, { width: pageWidth }]}>
             <Image
               source={{ uri }}
+              placeholder={productPlaceholder(blurhash)}
+              placeholderContentFit="cover"
               style={[
                 styles.img,
                 aspectRatio ? { aspectRatio } : undefined,

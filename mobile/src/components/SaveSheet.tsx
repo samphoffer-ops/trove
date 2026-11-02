@@ -5,6 +5,7 @@ import {
   ScrollView, TouchableWithoutFeedback,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { Product } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
@@ -109,7 +110,7 @@ export function SaveSheet({ product, onClose }: Props) {
                   >
                     <View style={styles.boardCover}>
                       {coverImage ? (
-                        <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                        <Image source={{ uri: coverImage }} placeholder={productPlaceholder(board.cover_image_url ? null : coverItem?.product_data?.blurhash)} placeholderContentFit="cover" style={StyleSheet.absoluteFill} contentFit="cover" />
                       ) : (
                         <View style={styles.boardCoverEmpty} />
                       )}
