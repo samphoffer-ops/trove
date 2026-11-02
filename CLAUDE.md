@@ -10,12 +10,12 @@ backend is Supabase in `supabase/`, and the catalog is built by intake and refre
 ## v1.0 scope
 **In scope:** Sign in with Apple · onboarding taste capture · feed (masonry, Layer 1
 ranking, pagination, empty/loading states) · product detail with redirect click-out ·
-boards (create, save, rename, delete, reorder) · settings with in-app account deletion ·
-event logging · crash reporting · curated catalog with scheduled refresh and dead-link checks.
+boards (create, save, rename, delete, reorder) · DMs/inbox (with report, block and
+content filtering) · settings with in-app account deletion · event logging · crash
+reporting · curated catalog with scheduled refresh and dead-link checks.
 
-**Deferred (v1.1+):** DMs/inbox (pending the 1.0 DM decision) · board sharing and
-collaborators · public user profiles · brand-facing pages (for-brands, brand review,
-inquiries) · search.
+**Deferred (v1.1+):** board sharing and collaborators · public user profiles ·
+brand-facing pages (for-brands, brand review, inquiries) · search.
 <!-- Draft until "Freeze v1.0 scope" (#8) closes. -->
 
 ## Design system (locked)
