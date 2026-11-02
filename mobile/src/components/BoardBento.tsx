@@ -47,7 +47,17 @@ export function BoardBento({ board }: { board: Board }) {
   if (!lead) {
     return (
       <View style={[styles.frame, styles.empty]}>
-        <Text {...DisplayScaling} style={styles.emptyName} numberOfLines={2}>{board.name}</Text>
+        {/* Shrink rather than break a word mid-way in narrow tiles (profile's
+            two-column grid): a one-word name gets one line. */}
+        <Text
+          {...DisplayScaling}
+          style={styles.emptyName}
+          numberOfLines={board.name.trim().includes(' ') ? 2 : 1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+        >
+          {board.name}
+        </Text>
       </View>
     );
   }

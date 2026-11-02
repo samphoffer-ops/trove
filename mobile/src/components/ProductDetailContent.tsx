@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, LayoutChangeEvent, Share, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,6 +19,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
 import { SaveSheet } from '@/components/SaveSheet';
 import { ImageGallery } from '@/components/ImageGallery';
+import { Glass } from '@/components/GlassHeader';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
 import { Product, Profile } from '@/types';
@@ -29,8 +29,6 @@ import { goBack, openExternal } from '@/lib/navigation';
 import { Rect, setSourceHidden } from '@/lib/sharedTransition';
 import { logEvent } from '@/lib/events';
 import * as haptics from '@/lib/haptics';
-
-const PLACEHOLDER_DESC = 'A considered piece designed to wear and wear. Crafted with attention to material and fit — built to earn a place in your rotation, not just your cart.';
 
 // Hero drifts at 30% of scroll speed. Subtle on purpose (spec §5).
 const PARALLAX = 0.3;
@@ -96,6 +94,11 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const [frame, setFrame]   = useState<Rect | null>(null);
   const [heroHeight, setHeroHeight] = useState(0);
   const [ready, setReady]   = useState(!animated);
+  // Liquid Glass renders blank under an ancestor with animated opacity, so
+  // the glass controls aren't faded with the rest of the chrome: they mount
+  // once the entrance settles and unmount as a dismiss starts.
+  const [glassShown, setGlassShown] = useState(!animated);
+  const showGlass = (finished?: boolean) => { 'worklet'; if (finished) scheduleOnRN(setGlassShown, true); };
   const flight = useMemo(() => (
     animated && !reduceMotion && source && frame && heroHeight
       ? { src: source, tgt: { x: frame.x, y: frame.y, width: frame.width, height: heroHeight } }
@@ -130,9 +133,9 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
     setReady(true);
     if (flight) {
       setSourceHidden(productId, true);
-      progress.value = withSpring(1, SPRING);
+      progress.value = withSpring(1, SPRING, showGlass);
     } else {
-      progress.value = withTiming(1, { duration: Animation.standard });
+      progress.value = withTiming(1, { duration: Animation.standard }, showGlass);
     }
   }, [animated, ready, frame, heroHeight]);
 
@@ -148,6 +151,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
     if (onClose) return onClose();
     if (!animated) return goBack('/(tabs)/feed');
     const done = (finished?: boolean) => { 'worklet'; if (finished) scheduleOnRN(finishDismiss); };
+    setGlassShown(false);
     progress.value = flight
       ? withSpring(0, SPRING, done)
       : withTiming(0, { duration: Animation.standard }, done);
@@ -160,13 +164,14 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
     .enabled(animated)
     .hitSlop({ left: 0, width: 24 })
     .activeOffsetX(10)
+    .onStart(() => { scheduleOnRN(setGlassShown, false); })
     .onUpdate(e => {
       progress.value = Math.min(1, Math.max(0, 1 - e.translationX / windowWidth));
     })
     .onEnd(e => {
       const commit = e.translationX > windowWidth * DISMISS_DISTANCE || e.velocityX > DISMISS_VELOCITY;
       const done = (finished?: boolean) => { 'worklet'; if (finished) scheduleOnRN(finishDismiss); };
-      if (!commit) progress.value = withSpring(1, SPRING);
+      if (!commit) progress.value = withSpring(1, SPRING, showGlass);
       else if (flying) progress.value = withSpring(0, SPRING, done);
       else progress.value = withTiming(0, { duration: Animation.standard }, done);
     });
@@ -268,12 +273,23 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               <Text style={styles.name}>{product.name}</Text>
               <Text style={styles.price}>{formatPrice(product)}</Text>
               {why && <Text style={styles.why} numberOfLines={1}>{why}</Text>}
-              <Text style={styles.desc}>{product.description ?? PLACEHOLDER_DESC}</Text>
+              {/* Only the brand's own copy: no stand-in text when there's none */}
+              {product.description ? <Text style={styles.desc}>{product.description}</Text> : null}
             </Animated.View>
           </Animated.ScrollView>
 
-          {/* Glass header controls, fixed over the photo */}
-          <Animated.View style={[styles.header, { top: topInset + Spacing[3] }, chromeStyle]} pointerEvents="box-none">
+          {/* The one primary action, bottom-anchored in the thumb zone */}
+          <Animated.View style={[styles.actions, { paddingBottom: bottomInset + Spacing[4] }, chromeStyle]}>
+            <Pressable style={styles.shopBtn} onPress={() => { const url = getAffiliateUrl(product); logEvent('click_out', product.id, { properties: { url } }); openExternal(url); }} accessibilityRole="link">
+              <Text style={styles.shopBtnText} numberOfLines={1}>Shop at {product.brand}</Text>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+
+        {/* Glass header controls, fixed over the photo. Outside the faded
+            content on purpose (see glassShown). */}
+        {glassShown && (
+          <View style={[styles.header, { top: topInset + Spacing[3] }]} pointerEvents="box-none">
             <GlassButton label="Back" onPress={dismiss}>
               <ChevronLeftIcon size={20} />
             </GlassButton>
@@ -285,15 +301,8 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
                 <BookmarkIcon color={saved ? Colors.accent : Colors.text} filled={saved} size={18} />
               </GlassButton>
             </View>
-          </Animated.View>
-
-          {/* The one primary action, bottom-anchored in the thumb zone */}
-          <Animated.View style={[styles.actions, { paddingBottom: bottomInset + Spacing[4] }, chromeStyle]}>
-            <Pressable style={styles.shopBtn} onPress={() => { const url = getAffiliateUrl(product); logEvent('click_out', product.id, { properties: { url } }); openExternal(url); }} accessibilityRole="link">
-              <Text style={styles.shopBtnText} numberOfLines={1}>Shop at {product.brand}</Text>
-            </Pressable>
-          </Animated.View>
-        </Animated.View>
+          </View>
+        )}
 
         <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       </View>
@@ -301,11 +310,12 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   );
 }
 
+// Same Liquid Glass as the feed header controls (GlassHeader), so detail and
+// feed float the same material over photos.
 function GlassButton({ label, onPress, children }: { label: string; onPress: () => void; children: React.ReactNode }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6} style={styles.glassBtn}>
-      <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
-      {children}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6}>
+      <Glass style={styles.glassBtn}>{children}</Glass>
     </Pressable>
   );
 }
@@ -326,10 +336,9 @@ const styles = StyleSheet.create({
   },
   headerActions: { flexDirection: 'row', gap: Spacing[4] },
   glassBtn: {
-    width:          40,
-    height:         40,
+    width:          44,   // Apple's minimum hit target, matching GlassHeader
+    height:         44,
     borderRadius:   Radius.full,
-    overflow:       'hidden',
     alignItems:     'center',
     justifyContent: 'center',
   },

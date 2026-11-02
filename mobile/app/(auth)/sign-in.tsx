@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     width:           '100%',
-    backgroundColor: Colors.ink,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.full,
     paddingVertical: 15,
     alignItems:      'center',
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   btnText: {
     ...Typography.cardTitle,
-    color: Colors.bg,
+    color: Colors.text,
   },
   dividerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: Spacing[3], marginBottom: Spacing[4] },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },

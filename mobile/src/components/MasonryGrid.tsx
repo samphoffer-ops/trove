@@ -15,11 +15,14 @@ interface Props<T> {
   items: T[];
   keyExtractor: (item: T) => string;
   renderItem: (item: T) => ReactNode;
+  // Height per unit width (e.g. a product's ratio). When given, each item goes
+  // into the shortest column so columns end level; otherwise round-robin.
+  itemHeight?: (item: T) => number;
   horizontalPadding?: number;
   gap?: number;
 }
 
-export function MasonryGrid<T>({ items, keyExtractor, renderItem, horizontalPadding = Spacing.screen, gap = Spacing.gutter }: Props<T>) {
+export function MasonryGrid<T>({ items, keyExtractor, renderItem, itemHeight, horizontalPadding = Spacing.screen, gap = Spacing.gutter }: Props<T>) {
   const { width } = useWindowDimensions();
   // Web's static export prerenders this in Node (no real window), where
   // useWindowDimensions falls back to a value that never matches a real
@@ -39,7 +42,12 @@ export function MasonryGrid<T>({ items, keyExtractor, renderItem, horizontalPadd
   const columns = Math.max(2, Math.min(MAX_COLUMNS, Math.floor((available + gap) / (CARD_TARGET_WIDTH + gap))));
 
   const cols: T[][] = Array.from({ length: columns }, () => []);
-  items.forEach((item, i) => cols[i % columns].push(item));
+  const heights = cols.map(() => 0);
+  items.forEach((item, i) => {
+    const c = itemHeight ? heights.indexOf(Math.min(...heights)) : i % columns;
+    cols[c].push(item);
+    if (itemHeight) heights[c] += itemHeight(item);
+  });
 
   return (
     <View style={[styles.grid, { gap, paddingHorizontal: horizontalPadding, maxWidth: MAX_GRID_WIDTH }]}>
