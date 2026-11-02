@@ -1,13 +1,10 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset } from 'react-native-reanimated';
-import { router, useFocusEffect } from 'expo-router';
-import { setStatusBarStyle } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EDITS } from '@/data/products';
 import { useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
-import { useShareStore } from '@/store/useShareStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { fetchFollowedBrands } from '@/lib/social';
 import { ProductCard } from '@/components/ProductCard';
@@ -15,8 +12,8 @@ import { MasonryGrid } from '@/components/MasonryGrid';
 import { EditorialBento } from '@/components/EditorialBento';
 import { SaveSheet } from '@/components/SaveSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
-import { Logo } from '@/components/Logo';
-import { InboxIcon, BookmarkIcon, CloseIcon } from '@/components/Icons';
+import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
+import { BookmarkIcon, CloseIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
@@ -157,7 +154,6 @@ function buildFeed(products: Product[], followedBrandIds: Set<string>): FeedBloc
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved, fetchBoards } = useBoardStore();
-  const { unreadCount, fetchInbox } = useShareStore();
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, loading: productsLoading } = useProductsStore();
   const { user } = useAuthStore();
   const [followedBrandIds, setFollowedBrandIds] = useState<Set<string>>(new Set());
@@ -169,14 +165,8 @@ export default function FeedScreen() {
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scrollRef);
 
-  // Ink masthead needs light status bar icons; other tabs sit on Colors.bg
-  // and use the dark default set in the root layout.
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
-    }, [])
-  );
+  // Content starts below the floating glass header, then scrolls under it.
+  const headerInset = insets.top + GLASS_HEADER_HEIGHT;
 
   // Store order is the ranked feed.
   const feedProducts = useMemo(
@@ -211,7 +201,6 @@ export default function FeedScreen() {
   const isEmpty = !isLoading && feedProducts.length === 0;
 
   useEffect(() => {
-    fetchInbox();
     fetchProducts().finally(() => setFirstFetchDone(true));
   }, []);
   useEffect(() => {
@@ -252,35 +241,18 @@ export default function FeedScreen() {
     setRefreshing(true);
     // fetchProducts() no-ops once already loaded (see useProductsStore), so
     // this is just the retry path for a feed that failed to load initially.
-    await Promise.all([fetchBoards(), fetchInbox(), fetchProducts()]);
+    await Promise.all([fetchBoards(), fetchProducts()]);
     setRefreshing(false);
   }, []);
 
   return (
     <View style={styles.root}>
-      {/* Ink masthead */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View style={styles.headerContent}>
-        <View style={styles.titleRow}>
-          <Logo width={84} color={Colors.bg} />
-          <Pressable style={styles.inboxBtn} onPress={() => router.push('/inbox')} hitSlop={8}>
-            <InboxIcon size={22} color={Colors.bg} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-        </View>
-      </View>
-
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollsToTop={true}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
-        contentContainerStyle={isEmpty ? styles.contentEmpty : styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} progressViewOffset={headerInset} />}
+        contentContainerStyle={isEmpty ? styles.contentEmpty : [styles.content, { paddingTop: headerInset }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
@@ -288,13 +260,20 @@ export default function FeedScreen() {
           // Quiet first load: no coral spinner, no gray boxes
           <ActivityIndicator color={Colors.textLight} style={styles.firstLoad} />
         ) : isEmpty ? (
-          <View style={styles.empty}>
+          <View style={[styles.empty, { paddingTop: headerInset }]}>
             <Text {...DisplayScaling} style={styles.emptyTitle} accessibilityRole="header">That's everything, for now</Text>
             <Text style={styles.emptyBody}>New pieces land as brands restock. Pull down to refresh.</Text>
           </View>
         ) : (
           <>
-            <View style={styles.gridTop} />
+            {/* Masthead: the feed's opening, so the grid doesn't start cold */}
+            <View style={styles.masthead}>
+              <Text style={styles.mastheadDate}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </Text>
+              <Text {...DisplayScaling} style={styles.mastheadTitle} accessibilityRole="header">Your edit</Text>
+              <View style={styles.rule} />
+            </View>
             {/* Each block is a direct child of the scroll content: bentos read their own y for parallax */}
             {pagedBlocks.map(block => block.type === 'grid' ? (
               <MasonryGrid
@@ -327,6 +306,9 @@ export default function FeedScreen() {
         )}
       </Animated.ScrollView>
 
+      {/* After the scroll view so it draws on top of the content */}
+      <GlassHeader />
+
       <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <QuickActionsMenu
         anchor={quickActions?.anchor ?? null}
@@ -339,27 +321,12 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
-  header: { backgroundColor: Colors.ink, zIndex: 10 },
-  headerContent: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
-
-  titleRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
-    paddingHorizontal: Spacing.screen,
-    paddingTop:        16,
-    paddingBottom:     14,
-  },
-  inboxBtn: { padding: 4 },
-  badge: {
-    position: 'absolute', top: -4, right: -6, minWidth: 17, height: 17, borderRadius: 8.5,
-    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
-  },
-  badgeText: { ...Typography.label, color: '#fff' },
-
   content:      { paddingBottom: 100 },
   contentEmpty: { flexGrow: 1 },
-  gridTop:      { height: Spacing.screen },
+  masthead:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5] },
+  mastheadDate:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[2] },
+  mastheadTitle: { ...Typography.displayXl, color: Colors.text, marginLeft: -2, marginBottom: Spacing[5] },
+  rule:          { height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderStrong },
 
   firstLoad: { marginTop: Spacing[6] * 2 },
   pageLoad:  { marginTop: Spacing[3], marginBottom: Spacing[5] },

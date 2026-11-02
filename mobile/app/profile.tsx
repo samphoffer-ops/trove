@@ -9,11 +9,10 @@ import { supabase } from '@/lib/supabase';
 import { fetchFollowedBrands } from '@/lib/social';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
-import { openProduct } from '@/lib/navigation';
+import { goBack, openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
-import { CameraIcon, GearIcon } from '@/components/Icons';
-import { Logo } from '@/components/Logo';
-import { BoardCard } from './boards';
+import { CameraIcon, ChevronLeftIcon, GearIcon } from '@/components/Icons';
+import { BoardCard } from './(tabs)/boards';
 import { Brand, BoardItem } from '@/types';
 
 const BOARDS_PREVIEW_COUNT = 4;
@@ -64,7 +63,10 @@ export default function ProfileScreen() {
     <View style={styles.root}>
       <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Logo width={72} color={Colors.text} onPress={() => router.push('/(tabs)/feed')} />
+          {/* Pushed from the header (no longer a tab), so it needs a way back */}
+          <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={8} accessibilityLabel="Back">
+            <ChevronLeftIcon color={Colors.text} />
+          </Pressable>
           <Text style={styles.pageLabel}>profile</Text>
         </View>
         <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={8}>

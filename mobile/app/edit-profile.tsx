@@ -44,14 +44,14 @@ export default function EditProfile() {
       );
       return;
     }
-    goBack('/(tabs)/profile');
+    goBack('/profile');
   }
 
   return (
     <WebFrame maxWidth={480}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => goBack('/(tabs)/profile')} hitSlop={8}>
+        <Pressable onPress={() => goBack('/profile')} hitSlop={8}>
           <ChevronLeftIcon />
         </Pressable>
         <Text style={styles.topBarTitle}>Edit profile</Text>
