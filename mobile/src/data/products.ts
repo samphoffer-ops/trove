@@ -1,50 +1,131 @@
 import { Product } from '@/types';
 
-// Generic mood/concept imagery for onboarding tiles (aesthetics + categories are
-// abstract concepts, not real products, so a placeholder image service is fine here).
-function moodImg(tags: string, w: number, h: number, lock: number) {
-  return `https://loremflickr.com/${w}/${h}/${tags}?lock=${lock}`;
-}
+// Onboarding steps, in order. The reveal isn't a data step, it always follows
+// the last one. Image-led per Sam's decision on #56, which replaces spec §7's
+// brand-picks first step: image yes/no, then never-show, then the reveal.
+//
+// Option ids are the exact values the catalog stores in products.styles and
+// products.category, so selections can be matched without a lookup table.
 
-export const ONBOARDING_STEPS = [
+export type NeverShowStep = {
+  key: 'neverShow';
+  title: string;
+  subtitle: string;
+  groups: { field: 'styles' | 'categories'; label: string; options: { id: string; label: string }[] }[];
+};
+
+export type OnboardingPick = {
+  id: string;
+  brand: string;
+  name: string;
+  image: string;
+  // products.ratio (height / width): sizes the frame. The image is never cropped.
+  ratio: number;
+  category: string;
+  styles: string[];
+};
+
+export type ImagePicksStep = {
+  key: 'imagePicks';
+  title: string;
+  subtitle: string;
+  products: OnboardingPick[];
+};
+
+export type OnboardingStep = NeverShowStep | ImagePicksStep;
+
+export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    key: 'brands' as const,
-    title: 'Brands you gravitate toward',
-    subtitle: 'Tap the ones that feel like you.',
-    options: [
-      { id: 'every-other-thursday', label: 'Every Other Thursday', img: 'https://cdn.shopify.com/s/files/1/0432/6450/8061/files/ButterBlueStripeRDS.jpg?v=1775412290' },
-      { id: 'gardenheir',           label: 'Gardenheir',            img: 'https://cdn.shopify.com/s/files/1/0720/5824/1345/files/Toquilla-Camouflage-Hat-4.jpg?v=1723348686' },
-      { id: 'chamula',              label: 'Chamula',                img: 'https://cdn.shopify.com/s/files/1/0628/0098/6298/files/8536251M-MO-Smile-Moc-Moca.jpg?v=1773430108' },
-      { id: 'oree-new-york',        label: 'Orée New York',          img: 'https://static.wixstatic.com/media/5d3369_384a0bfdcffa4ad38fc295287a8361c3~mv2.jpg/v1/fit/w_500,h_500,q_90/file.jpg' },
-      { id: 'necessaire',           label: 'Nécessaire',             img: 'https://cdn.shopify.com/s/files/1/0034/8812/0947/files/01_THEEUCALYPTUSWATER.jpg?v=1779917039' },
+    key: 'imagePicks',
+    // The first screen after sign-in, so the title says what's happening.
+    title: 'Let\'s find your taste',
+    subtitle: 'Yes or no, one piece at a time. Go with your gut.',
+    // Seeded catalog products (supabase/migrations/007_seed_products.sql),
+    // images exactly as scraped. Spread across brands, categories and styles.
+    products: [
+      {
+        id: 'eot-relaxed-button-down', brand: 'Every Other Thursday', name: 'Relaxed Button Down in Butter Blue Stripe',
+        category: 'clothing', styles: ['coastal', 'minimalist'], ratio: 1.25,
+        image: 'https://cdn.shopify.com/s/files/1/0432/6450/8061/files/ButterBlueStripeRDS.jpg?v=1775412290',
+      },
+      {
+        id: 'oree-crossborder-trainer', brand: 'Orée New York', name: 'Crossborder Trainer 0-70 Sneaker (Antique Brown)',
+        category: 'shoes', styles: ['streetwear'], ratio: 1,
+        image: 'https://static.wixstatic.com/media/5d3369_de9ace6fc89c4631ba1b6160f71106c3~mv2.jpg/v1/fit/w_500,h_500,q_90/file.jpg',
+      },
+      {
+        id: 'chamula-cardigan', brand: 'Chamula', name: 'Souvenir Paisaje Zipper Cardigan - Ivory',
+        category: 'clothing', styles: ['boho', 'maximalist'], ratio: 1.5,
+        image: 'https://cdn.shopify.com/s/files/1/0628/0098/6298/files/SOUVENIR-PAISAJE-ZIPPER-CARDIGAN-IVORY.jpg?v=1770343464',
+      },
+      {
+        id: 'gh-work-jacket', brand: 'Le Laboureur x Gardenheir', name: 'Stonewashed Work Jacket in Light Denim',
+        category: 'clothing', styles: ['industrial', 'vintage'], ratio: 1,
+        image: 'https://cdn.shopify.com/s/files/1/0720/5824/1345/files/StonewashedWorkJacket_LightDenim_039.jpg?v=1780425686',
+      },
+      {
+        id: 'eot-leather-max-bag', brand: 'Every Other Thursday', name: 'Leather Max Bag',
+        category: 'bags', styles: ['vintage', 'minimalist'], ratio: 1.25,
+        image: 'https://cdn.shopify.com/s/files/1/0432/6450/8061/files/MaxBagfrontbrown_e13783c5-a536-411b-bfe9-1e9293e47a9c.jpg?v=1771346034',
+      },
+      {
+        id: 'necessaire-rosemary-mask', brand: 'Nécessaire', name: 'Rosemary Leave-In Mask',
+        category: 'beauty', styles: ['minimalist', 'boho'], ratio: 1.17,
+        image: 'https://cdn.shopify.com/s/files/1/0034/8812/0947/files/01_ROSEMARYMASK.jpg?v=1765906488',
+      },
+      {
+        id: 'oree-military-jacket', brand: 'Orée New York', name: 'O-65 Military Field Jacket (Black)',
+        category: 'clothing', styles: ['streetwear', 'industrial'], ratio: 1,
+        image: 'https://static.wixstatic.com/media/5d3369_983a77b79f174a26aa891ebaef0a4269~mv2.jpg/v1/fit/w_500,h_500,q_90/file.jpg',
+      },
+      {
+        id: 'gh-straw-hat', brand: 'Gardenheir', name: 'Handwoven Toquilla Straw Hat in Camouflage',
+        category: 'accessories', styles: ['coastal', 'boho'], ratio: 1,
+        image: 'https://cdn.shopify.com/s/files/1/0720/5824/1345/files/Toquilla-Camouflage-Hat-4.jpg?v=1723348686',
+      },
+      {
+        id: 'eot-club-loafer', brand: 'Every Other Thursday', name: 'The Club Loafer',
+        category: 'shoes', styles: ['vintage', 'coastal'], ratio: 1.25,
+        image: 'https://cdn.shopify.com/s/files/1/0432/6450/8061/files/LoaferSide2.jpg?v=1781631237',
+      },
+      {
+        id: 'gh-muse-lamp', brand: 'Tala', name: 'The Muse 2.0 Portable Lamp in Solid Brass',
+        category: 'home', styles: ['industrial', 'minimalist'], ratio: 1,
+        image: 'https://cdn.shopify.com/s/files/1/0720/5824/1345/files/Tala-Muse-Solid-Brass-packshot-7.jpg?v=1781626733',
+      },
     ],
   },
   {
-    key: 'styles' as const,
-    title: 'Aesthetics that speak to you',
-    subtitle: 'Your taste, in a few taps.',
-    options: [
-      { id: 'minimalist',  label: 'minimalist',  img: moodImg('minimalist,interior,white', 300, 300, 201) },
-      { id: 'maximalist',  label: 'maximalist',  img: moodImg('colorful,pattern,maximalist', 300, 300, 202) },
-      { id: 'streetwear',  label: 'streetwear',  img: moodImg('streetwear,urban,fashion', 300, 300, 203) },
-      { id: 'vintage',     label: 'vintage',     img: moodImg('vintage,fashion,retro', 300, 300, 204) },
-      { id: 'coastal',     label: 'coastal',     img: moodImg('coastal,beach,linen', 300, 300, 205) },
-      { id: 'cottagecore', label: 'cottagecore', img: moodImg('cottagecore,floral,countryside', 300, 300, 206) },
-      { id: 'industrial',  label: 'industrial',  img: moodImg('industrial,loft,concrete', 300, 300, 207) },
-      { id: 'boho',        label: 'boho',        img: moodImg('bohemian,textile,decor', 300, 300, 208) },
-    ],
-  },
-  {
-    key: 'categories' as const,
-    title: "What are you shopping for?",
-    subtitle: "Last step — we'll tailor your feed.",
-    options: [
-      { id: 'clothing',    label: 'clothing',    img: moodImg('clothing,rack,fashion', 300, 300, 301) },
-      { id: 'shoes',       label: 'shoes',       img: moodImg('shoes,sneakers', 300, 300, 302) },
-      { id: 'bags',        label: 'bags',        img: moodImg('handbag,tote,leather', 300, 300, 303) },
-      { id: 'accessories', label: 'accessories', img: moodImg('accessories,scarf,belt', 300, 300, 304) },
-      { id: 'home',        label: 'home',        img: moodImg('homedecor,interior', 300, 300, 305) },
-      { id: 'beauty',      label: 'beauty',      img: moodImg('cosmetics,beauty,skincare', 300, 300, 306) },
+    key: 'neverShow',
+    title: 'Never show me',
+    subtitle: 'Anything you\'d skip every time. Leave it blank if nothing.',
+    groups: [
+      {
+        field: 'styles',
+        label: 'Styles',
+        options: [
+          { id: 'minimalist',  label: 'Minimalist' },
+          { id: 'maximalist',  label: 'Maximalist' },
+          { id: 'streetwear',  label: 'Streetwear' },
+          { id: 'vintage',     label: 'Vintage' },
+          { id: 'coastal',     label: 'Coastal' },
+          { id: 'cottagecore', label: 'Cottagecore' },
+          { id: 'industrial',  label: 'Industrial' },
+          { id: 'boho',        label: 'Boho' },
+        ],
+      },
+      {
+        field: 'categories',
+        label: 'Categories',
+        options: [
+          { id: 'clothing',    label: 'Clothing' },
+          { id: 'shoes',       label: 'Shoes' },
+          { id: 'bags',        label: 'Bags' },
+          { id: 'accessories', label: 'Accessories' },
+          { id: 'home',        label: 'Home' },
+          { id: 'beauty',      label: 'Beauty' },
+        ],
+      },
     ],
   },
 ];
