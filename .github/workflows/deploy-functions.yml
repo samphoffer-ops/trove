@@ -30,3 +30,12 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The click-out redirect (#27). No JWT check: the browser opens it
+      # directly with no Authorization header. It only redirects to the
+      # stored URL of an active product, so it's not an open redirect.
+      - name: Deploy go
+        run: supabase functions deploy go --project-ref xxyserlkigllpmtxzlsa --use-api --no-verify-jwt --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
