@@ -266,7 +266,14 @@ export default function FeedScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.gridTop} />
+            {/* Masthead: the feed's opening, so the grid doesn't start cold */}
+            <View style={styles.masthead}>
+              <Text style={styles.mastheadDate}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </Text>
+              <Text {...DisplayScaling} style={styles.mastheadTitle} accessibilityRole="header">Your edit</Text>
+              <View style={styles.rule} />
+            </View>
             {/* Each block is a direct child of the scroll content: bentos read their own y for parallax */}
             {pagedBlocks.map(block => block.type === 'grid' ? (
               <MasonryGrid
@@ -316,7 +323,10 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.bg },
   content:      { paddingBottom: 100 },
   contentEmpty: { flexGrow: 1 },
-  gridTop:      { height: Spacing.screen },
+  masthead:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5] },
+  mastheadDate:  { ...Typography.label, color: Colors.textMuted, marginBottom: Spacing[2] },
+  mastheadTitle: { ...Typography.displayXl, color: Colors.text, marginLeft: -2, marginBottom: Spacing[5] },
+  rule:          { height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderStrong },
 
   firstLoad: { marginTop: Spacing[6] * 2 },
   pageLoad:  { marginTop: Spacing[3], marginBottom: Spacing[5] },

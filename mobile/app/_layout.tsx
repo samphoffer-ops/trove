@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Mulish_400Regular,
+  Mulish_300Light_Italic,
   Mulish_400Regular_Italic,
   Mulish_500Medium,
   Mulish_500Medium_Italic,
@@ -45,7 +46,8 @@ export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
   const [fontsLoaded] = useFonts({
     Mulish_400Regular,
-    Mulish_400Regular_Italic,
+    Mulish_300Light_Italic,
+  Mulish_400Regular_Italic,
     Mulish_500Medium,
     Mulish_500Medium_Italic,
     Mulish_600SemiBold,

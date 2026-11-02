@@ -48,6 +48,7 @@ export function EditorialBento({ title, products, scrollY, isSaved, onSave, onQu
 
   return (
     <View style={styles.block} onLayout={handleLayout}>
+      <View style={[styles.rule, styles.ruleTop]} />
       <Text {...DisplayScaling} style={styles.title} accessibilityRole="header">{title}</Text>
       <View style={styles.row}>
         <View style={styles.lead}>
@@ -59,6 +60,7 @@ export function EditorialBento({ title, products, scrollY, isSaved, onSave, onQu
           ))}
         </Animated.View>
       </View>
+      <View style={[styles.rule, styles.ruleBottom]} />
     </View>
   );
 }
@@ -72,6 +74,10 @@ const styles = StyleSheet.create({
     paddingTop:        Spacing[6],
     paddingBottom:     Spacing[6],
   },
+  // Section opens and closes with a rule, so the grid visibly pauses and resumes
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderStrong },
+  ruleTop:    { marginBottom: Spacing[5] },
+  ruleBottom: { marginTop: Spacing[6] },
   title: {
     ...Typography.displayXl,
     color:        Colors.text,

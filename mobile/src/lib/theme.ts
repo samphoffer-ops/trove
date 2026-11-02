@@ -54,10 +54,10 @@ export const Radius = {
 export const Typography: Record<string, TextStyle> = {
   // Page masthead, onboarding reveal, editorial bento headers
   displayXl: {
-    fontFamily: 'Mulish_400Regular_Italic',
-    fontSize: 64,
-    letterSpacing: -1.6,
-    lineHeight: 62,
+    fontFamily: 'Mulish_300Light_Italic',
+    fontSize: 48,
+    letterSpacing: -1.2,
+    lineHeight: 48,
   },
   // Step titles, board name on cover, empty-state headers
   display: {
