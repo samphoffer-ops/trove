@@ -119,6 +119,7 @@ export default function RootLayout() {
         <Stack.Screen name="profile"      options={{ presentation: 'card' }} />
         <Stack.Screen name="edit-profile" options={{ presentation: 'card' }} />
         <Stack.Screen name="settings"     options={{ presentation: 'card' }} />
+        <Stack.Screen name="delete-account" options={{ presentation: 'card' }} />
         <Stack.Screen name="country"      options={{ presentation: 'card' }} />
         <Stack.Screen name="brand-review" options={{ presentation: 'card' }} />
         <Stack.Screen name="privacy-policy" options={{ presentation: 'card' }} />
