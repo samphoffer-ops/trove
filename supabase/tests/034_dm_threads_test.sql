@@ -1,5 +1,5 @@
--- RLS and behavior tests for 033_dm_threads. Run with supabase/tests/run.sh.
--- Fixture users come from seed_before_033_dm_threads.sql. Each DO block is
+-- RLS and behavior tests for 034_dm_threads. Run with supabase/tests/run.sh.
+-- Fixture users come from seed_before_034_dm_threads.sql. Each DO block is
 -- its own transaction, so tests build on each other in order.
 \set ON_ERROR_STOP 1
 
