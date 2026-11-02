@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { blurhashMany } from './blurhash.ts';
 
 // What createClient() returns for an untyped database. ReturnType<typeof
 // createClient> infers `unknown` for the schema, which types every table
@@ -656,6 +657,7 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
     const e = existing.get(r.id as string);
     return !e || e.status !== 'active' || productFingerprint(e) !== productFingerprint(r);
   });
+  await setBlurhashes(changed, existing);
   const { saved, error } = await upsertProducts(admin, changed);
   // Stop before the removal step — a half-written catalog must never be
   // read as "everything else is gone".
@@ -697,7 +699,7 @@ async function loadExistingProducts(admin: AdminClient, brandId: string): Promis
   const out = new Map<string, any>();
   for (let from = 0; ; from += 1000) {
     const { data, error } = await admin.from('products')
-      .select('id, brand, name, price, prices, image, images, ratio, url, description, category, status')
+      .select('id, brand, name, price, prices, image, images, ratio, url, description, category, status, blurhash')
       .eq('brand_id', brandId).order('id').range(from, from + 999);
     if (error) return null;
     for (const row of data ?? []) out.set(row.id, row);
@@ -715,6 +717,29 @@ function productFingerprint(r: any): string {
     r.brand, r.name, Number(r.price).toFixed(2), sortKeys(r.prices), r.image, r.images ?? [],
     Number(r.ratio).toFixed(3), r.url, r.description ?? '', r.category,
   ]);
+}
+
+// Every changed row gets a blurhash value, because a bulk upsert nulls any
+// column some of its rows omit. A row whose image is the same as the stored
+// one keeps its stored hash. A new image is hashed now, within a time budget
+// so a brand's first scrape (thousands of new products) still fits in one
+// refresh call. Anything not reached stays null and backfill_blurhash picks
+// it up. '' means "tried, no hash" (dead link, WebP-only host) so the
+// backfill doesn't retry it forever. A new image clears that.
+const REFRESH_BLURHASH_BUDGET_MS = 20000;
+async function setBlurhashes(rows: Record<string, unknown>[], existing: Map<string, any>) {
+  const toHash: string[] = [];
+  for (const r of rows) {
+    const e = existing.get(r.id as string);
+    if (e && e.image === r.image) r.blurhash = e.blurhash ?? null;
+    else toHash.push(r.image as string);
+  }
+  const hashes = await blurhashMany(toHash, Date.now() + REFRESH_BLURHASH_BUDGET_MS);
+  for (const r of rows) {
+    if (r.blurhash !== undefined) continue;
+    const h = hashes.get(r.image as string);
+    r.blurhash = h === undefined ? null : (h ?? '');
+  }
 }
 
 function passesPreFilter(domain: string, products: ScrapedProduct[]): boolean {
@@ -1134,6 +1159,41 @@ Deno.serve(async (req) => {
         if (failed > 40) break; // bail out if Voyage is broadly failing, not just one bad row
       }
       return respond({ embedded, failed }, 200);
+    }
+
+    // Blurhash for every active product that doesn't have one (#108): the
+    // catalog that predates the column, and anything a refresh ran out of
+    // time to hash. Rows are claimed from the partial index in migration 033
+    // (blurhash is null), so each call starts where the last one stopped.
+    // Hashes are written through set_product_blurhashes, 100 rows per
+    // statement. Stops at ~110s to stay inside the function's limit; call it
+    // repeatedly until `remaining` is 0.
+    // { "action": "backfill_blurhash" }
+    if (body.action === 'backfill_blurhash') {
+      const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const deadline = Date.now() + 110_000;
+      let hashed = 0;
+      let failed = 0;
+      while (Date.now() < deadline) {
+        const { data: rows, error } = await admin
+          .from('products').select('id, image')
+          .is('blurhash', null).eq('status', 'active')
+          .order('id').limit(400);
+        if (error) return respond({ error: error.message, hashed, failed }, 500);
+        if (!rows || rows.length === 0) break;
+        const hashes = await blurhashMany(rows.map(r => r.image), deadline, 16);
+        const done = rows.filter(r => hashes.has(r.image));
+        for (let i = 0; i < done.length; i += 100) {
+          const chunk = Object.fromEntries(done.slice(i, i + 100).map(r => [r.id, hashes.get(r.image) ?? '']));
+          const { error: writeError } = await admin.rpc('set_product_blurhashes', { p_hashes: chunk });
+          if (writeError) return respond({ error: writeError.message, hashed, failed }, 500);
+        }
+        for (const r of done) hashes.get(r.image) ? hashed++ : failed++;
+        if (done.length < rows.length) break; // deadline hit mid-page
+      }
+      const { count: remaining } = await admin.from('products')
+        .select('id', { count: 'exact', head: true }).is('blurhash', null).eq('status', 'active');
+      return respond({ hashed, failed, remaining }, 200);
     }
 
     // One-off backfill: classifies audience for every approved brand that
