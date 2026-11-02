@@ -14,7 +14,9 @@ interface ProductsState {
   brandAudience: Map<string, 'mens' | 'womens' | 'unisex'>;
   loading: boolean;
   loaded: boolean;
-  fetchProducts: () => Promise<void>;
+  // `force` is for pull-to-refresh: refetch (a new ranked draw) even though
+  // the feed already loaded. Without it this only ever loads once.
+  fetchProducts: (opts?: { force?: boolean }) => Promise<void>;
   fetchTrendingCounts: () => Promise<void>;
   markNotInterested: (product: Product) => Promise<void>;
 }
@@ -66,8 +68,11 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   loading: false,
   loaded: false,
 
-  async fetchProducts() {
-    if (get().loaded || get().loading) return;
+  async fetchProducts({ force = false } = {}) {
+    // `loading` always blocks, so the first load can't fire twice and a pull
+    // during it is a no-op. A failed refresh returns before the set() below,
+    // so the products already on screen stay put rather than blanking.
+    if (get().loading || (get().loaded && !force)) return;
     set({ loading: true });
     try {
       // Logged-out (the marketing homepage's showcase) has no taste signals to

@@ -254,9 +254,11 @@ export default function FeedScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // fetchProducts() no-ops once already loaded (see useProductsStore), so
-    // this is just the retry path for a feed that failed to load initially.
-    await Promise.all([fetchBoards(), fetchProducts()]);
+    // Forced, so a loaded feed gets a fresh draw (rank_products_for_user
+    // samples randomly) instead of no-oping; also the retry path for a feed
+    // that failed to load initially.
+    await Promise.all([fetchBoards(), fetchProducts({ force: true })]);
+    setVisibleCount(PAGE_SIZE);
     setRefreshing(false);
   }, []);
 
