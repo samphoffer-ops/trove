@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { logEvent } from '@/lib/events';
 import { Product } from '@/types';
 
 interface ProductsState {
@@ -159,6 +160,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     set(state => ({ notInterestedIds: new Set(state.notInterestedIds).add(product.id) }));
+    logEvent('not_for_me', product.id);
     await supabase.from('not_interested').upsert({
       user_id: user.id, product_id: product.id, brand: product.brand, category: product.category ?? null,
     });

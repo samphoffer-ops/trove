@@ -1,6 +1,7 @@
 import { Platform, Linking } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useProductModalStore } from '@/store/useProductModalStore';
+import { logEvent } from '@/lib/events';
 
 // On native, Linking.openURL hands off to the OS (Safari/Chrome as a
 // separate app) — the RN app stays alive in the background untouched. On
@@ -35,6 +36,7 @@ export function goBack(fallback: Href) {
 const DESKTOP_MODAL_MIN_WIDTH = 820;
 
 export function openProduct(productId: string) {
+  logEvent('product_open', productId);
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= DESKTOP_MODAL_MIN_WIDTH) {
     useProductModalStore.getState().open(productId);
   } else {
