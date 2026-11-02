@@ -116,7 +116,6 @@ export function SaveSheet({ product, onClose }: Props) {
                     </View>
                     <View style={styles.boardInfo}>
                       <Text style={styles.boardName}>{board.name}</Text>
-                      <Text style={styles.boardCount}>{(board.board_items ?? []).length} items</Text>
                     </View>
                     <View style={[styles.check, isSaved && styles.checkActive]}>
                       {isSaved && <CheckIcon color={Colors.text} />}
@@ -185,7 +184,6 @@ const styles = StyleSheet.create({
   boardCoverEmpty: { flex: 1, backgroundColor: Colors.stoneSoft },
   boardInfo:  { flex: 1 },
   boardName:  { ...Typography.cardTitle, color: Colors.text },
-  boardCount: { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
   check: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: Colors.border,

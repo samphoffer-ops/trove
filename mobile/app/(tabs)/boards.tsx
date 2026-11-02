@@ -60,13 +60,11 @@ export default function BoardsScreen() {
 }
 
 export function BoardCard({ board, style }: { board: Board; style?: object }) {
-  const count = board.board_items?.length ?? 0;
   return (
     <Pressable style={style} onPress={() => router.push(`/board/${board.id}`)}>
       <BoardBento board={board} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{board.name}</Text>
-        <Text style={styles.count} numberOfLines={1}>{count} item{count !== 1 ? 's' : ''}</Text>
       </View>
     </Pressable>
   );
@@ -80,8 +78,7 @@ const styles = StyleSheet.create({
   // One full-width bento per board; capped on wide web viewports.
   content:   { paddingHorizontal: Spacing.screen, paddingBottom: 100, gap: Spacing[6], maxWidth: 560, alignSelf: 'center', width: '100%' },
   info:      { paddingTop: Spacing[3] },
-  name:      { ...Typography.cardTitle, color: Colors.text, marginBottom: Spacing[1] },
-  count:     { ...Typography.caption, color: Colors.textMuted },
+  name:      { ...Typography.cardTitle, color: Colors.text },
   // Copy top-left, the one action in the thumb zone.
   empty:     { flex: 1, justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingTop: Spacing[6] },
   emptyTitle:{ ...Typography.display, color: Colors.text, marginBottom: Spacing[4] },
