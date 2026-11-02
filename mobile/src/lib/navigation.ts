@@ -1,6 +1,7 @@
 import { Platform, Linking } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useProductModalStore } from '@/store/useProductModalStore';
+import { measureSource, setPendingSource } from '@/lib/sharedTransition';
 import { logEvent } from '@/lib/events';
 
 // On native, Linking.openURL hands off to the OS (Safari/Chrome as a
@@ -39,7 +40,14 @@ export function openProduct(productId: string) {
   logEvent('product_open', productId);
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= DESKTOP_MODAL_MIN_WIDTH) {
     useProductModalStore.getState().open(productId);
-  } else {
+  } else if (Platform.OS === 'web') {
     router.push(`/product/${productId}`);
+  } else {
+    // Native: measure the card image first so the detail hero can grow out
+    // of it (see lib/sharedTransition.ts). One frame of latency, no more.
+    measureSource(productId).then(rect => {
+      if (rect) setPendingSource(productId, rect);
+      router.push(`/product/${productId}`);
+    });
   }
 }

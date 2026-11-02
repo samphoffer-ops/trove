@@ -32,6 +32,7 @@ interface Props {
   images:      string[];     // at least 1; first is always the hero
   maxHeight?:  number;       // caps the gallery height (for modal context)
   aspectRatio?: number;      // overrides the default 3:4 (e.g. masonry cards use a per-product ratio)
+  contentFit?: 'cover' | 'contain'; // detail uses contain so no photo is ever cropped
 }
 
 // Simple horizontal-pager gallery. Works with a single image (dots hidden,
@@ -41,7 +42,7 @@ interface Props {
 // can be 1200px wide while the modal is only 460px, so useWindowDimensions
 // would make every image page 1200px wide and pagingEnabled would scroll
 // by 1200px at a time. onLayout always reflects the actual rendered size.
-export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
+export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover' }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -73,7 +74,7 @@ export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
             aspectRatio ? { aspectRatio } : undefined,
             maxHeight ? { height: maxHeight } : undefined,
           ]}
-          contentFit="cover"
+          contentFit={contentFit}
         />
       </View>
     );
@@ -122,7 +123,7 @@ export function ImageGallery({ images, maxHeight, aspectRatio }: Props) {
                 aspectRatio ? { aspectRatio } : undefined,
                 maxHeight ? { height: maxHeight } : undefined,
               ]}
-              contentFit="cover"
+              contentFit={contentFit}
             />
           </View>
         ))}

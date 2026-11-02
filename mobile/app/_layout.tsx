@@ -106,7 +106,9 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="product/[id]" options={{ presentation: 'card' }} />
+        {/* Transparent so the feed stays visible while the hero grows out of its
+            card; the screen animates itself (lib/sharedTransition.ts). */}
+        <Stack.Screen name="product/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
         <Stack.Screen name="board/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="board/new"    options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />

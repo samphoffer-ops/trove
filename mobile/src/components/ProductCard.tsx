@@ -6,6 +6,7 @@ import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
 import { openProduct } from '@/lib/navigation';
+import { sharedTransitionSource } from '@/lib/sharedTransition';
 import * as haptics from '@/lib/haptics';
 import { BookmarkIcon } from './Icons';
 
@@ -42,8 +43,7 @@ export function ProductCard({ product, saved, onSave, onQuickActions }: Props) {
       accessibilityLabel={`${product.brand}, ${formatPrice(product)}`}
       accessibilityHint="Long-press for Save or Not for me"
     >
-      <View style={[styles.media, { aspectRatio }]}>
-        {/* #55: shared-transition tag goes on this Image */}
+      <View style={[styles.media, { aspectRatio }]} {...sharedTransitionSource(product.id)}>
         <Image
           source={{ uri: product.image }}
           style={styles.image}
