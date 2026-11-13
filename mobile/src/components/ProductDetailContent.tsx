@@ -24,10 +24,9 @@ import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
 import { Product, Profile } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
-import { getAffiliateUrl } from '@/lib/affiliate';
+import { getClickOutUrl } from '@/lib/clickOut';
 import { goBack, openExternal } from '@/lib/navigation';
 import { Rect, setSourceHidden } from '@/lib/sharedTransition';
-import { logEvent } from '@/lib/events';
 import * as haptics from '@/lib/haptics';
 
 // Hero drifts at 30% of scroll speed. Subtle on purpose (spec §5).
@@ -281,7 +280,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
 
           {/* The one primary action, bottom-anchored in the thumb zone */}
           <Animated.View style={[styles.actions, { paddingBottom: bottomInset + Spacing[4] }, chromeStyle]}>
-            <Pressable style={styles.shopBtn} onPress={() => { const url = getAffiliateUrl(product); logEvent('click_out', product.id, { properties: { url } }); openExternal(url); }} accessibilityRole="link">
+            <Pressable style={styles.shopBtn} onPress={() => openExternal(getClickOutUrl(product.id))} accessibilityRole="link">
               <Text style={styles.shopBtnText} numberOfLines={1}>Shop at {product.brand}</Text>
             </Pressable>
           </Animated.View>

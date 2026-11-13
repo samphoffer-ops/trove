@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { productPlaceholder } from '@/lib/placeholder';
@@ -14,18 +14,15 @@ import { ChevronLeftIcon, DotsIcon, CameraIcon, CheckIcon } from '@/components/I
 import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '@/lib/theme';
 import { Board, BoardItem, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
+import { MasonryGrid } from '@/components/MasonryGrid';
 import { goBack, openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
 import { notify } from '@/lib/alerts';
 import * as haptics from '@/lib/haptics';
 
-// Matches the WebFrame cap below; phones are narrower than this anyway.
-const MAX_WIDTH = 480;
-
 export default function BoardDetail() {
   const { id }  = useLocalSearchParams<{ id: string }>();
   const insets  = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const { user } = useAuthStore();
   const formatPrice = usePriceFormatter();
   const { currency } = useCountry();
@@ -89,11 +86,10 @@ export default function BoardDetail() {
     }
   }
 
-  // Tight two-column grid of uniform 4:5 image tiles (spec §7 Boards).
-  const tileWidth = (Math.min(width, MAX_WIDTH) - Spacing.screen * 2 - Spacing.gutter) / 2;
-
+  // Default (wide) frame, like the feed and brand pages: MasonryGrid picks its
+  // column count from the window width, so a 480px frame would squeeze it.
   return (
-    <WebFrame maxWidth={MAX_WIDTH}>
+    <WebFrame>
     <View style={styles.root}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing[3] }]} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
@@ -115,29 +111,18 @@ export default function BoardDetail() {
             <Text style={styles.emptyBody}>Nothing saved here yet. Save from your feed and pick this board.</Text>
           </View>
         ) : (
-          <View style={styles.grid}>
-            {items.map(item => (
-              <Pressable
-                key={item.id}
-                style={[styles.tile, { width: tileWidth }]}
-                onPress={() => openProduct(item.product_id)}
-                onLongPress={canEdit ? () => openItemMenu(item) : undefined}
-                accessibilityLabel={`${item.product_data.brand} ${item.product_data.name}`}
-              >
-                <Image source={{ uri: item.product_data.image }} placeholder={productPlaceholder(item.product_data.blurhash)} placeholderContentFit="cover" style={styles.img} contentFit="cover" transition={Animation.micro} />
-                {item.purchased_at && (
-                  <View style={styles.purchasedBadge}>
-                    <CheckIcon color={Colors.text} size={11} />
-                  </View>
-                )}
-                {canEdit && (
-                  <Pressable style={styles.menuBtn} onPress={() => openItemMenu(item)} hitSlop={6} accessibilityLabel="Item options">
-                    <DotsIcon size={14} />
-                  </Pressable>
-                )}
-              </Pressable>
-            ))}
-          </View>
+          // Tight, image-only masonry like the feed (spec §7 Boards): each image
+          // at its own ratio, never cropped. The scroll content already has the
+          // screen margin, so the grid adds none.
+          <MasonryGrid
+            items={items}
+            keyExtractor={item => item.id}
+            itemHeight={item => item.product_data.ratio || 1.25}
+            horizontalPadding={0}
+            renderItem={item => (
+              <BoardTile item={item} canEdit={canEdit} onMenu={() => openItemMenu(item)} />
+            )}
+          />
         )}
       </ScrollView>
 
@@ -162,6 +147,43 @@ export default function BoardDetail() {
   );
 }
 
+// Starts from the stored ratio so the grid lays out before the image arrives,
+// then switches to the image's own dimensions, same as the feed's ProductCard.
+function BoardTile({ item, canEdit, onMenu }: { item: BoardItem; canEdit: boolean; onMenu: () => void }) {
+  const [aspectRatio, setAspectRatio] = useState(1 / (item.product_data.ratio || 1.25));
+  return (
+    <Pressable
+      style={[styles.tile, { aspectRatio }]}
+      onPress={() => openProduct(item.product_id)}
+      onLongPress={canEdit ? onMenu : undefined}
+      accessibilityLabel={`${item.product_data.brand} ${item.product_data.name}`}
+    >
+      <Image
+        source={{ uri: item.product_data.image }}
+        placeholder={productPlaceholder(item.product_data.blurhash)}
+        placeholderContentFit="cover"
+        style={styles.img}
+        contentFit="contain"
+        transition={Animation.micro}
+        recyclingKey={item.id}
+        onLoad={({ source }) => {
+          if (source.width && source.height) setAspectRatio(source.width / source.height);
+        }}
+      />
+      {item.purchased_at && (
+        <View style={styles.purchasedBadge}>
+          <CheckIcon color={Colors.text} size={11} />
+        </View>
+      )}
+      {canEdit && (
+        <Pressable style={styles.menuBtn} onPress={onMenu} hitSlop={6} accessibilityLabel="Item options">
+          <DotsIcon size={14} />
+        </Pressable>
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root:       { flex: 1, backgroundColor: Colors.bg },
   content:    { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
@@ -169,9 +191,8 @@ const styles = StyleSheet.create({
   iconBtn:    { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   name:       { ...Typography.display, color: Colors.text },
   meta:       { ...Typography.caption, color: Colors.textMuted, marginTop: Spacing[2], marginBottom: Spacing[5] },
-  grid:       { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.gutter },
-  tile:       { borderRadius: Radius.card, overflow: 'hidden' },
-  img:        { width: '100%', aspectRatio: 4/5, backgroundColor: Colors.stoneSoft },
+  tile:       { width: '100%', marginBottom: Spacing.gutter, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Colors.stoneSoft },
+  img:        { width: '100%', height: '100%' },
   menuBtn:    { position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   purchasedBadge: { position: 'absolute', bottom: 8, left: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center' },
   empty:      { paddingTop: Spacing[6] },
