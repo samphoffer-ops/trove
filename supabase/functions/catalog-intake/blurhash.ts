@@ -40,8 +40,9 @@ function hashUrl(image: string): string | null {
   try { u = new URL(image.startsWith('//') ? `https:${image}` : image); } catch { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
   if (u.hostname === 'cdn.shopify.com' || u.pathname.startsWith('/cdn/shop/')) {
-    // A legacy size suffix in the filename ("_2048x.jpg") wins over width=.
-    u.pathname = u.pathname.replace(/_(\d+x\d*|\d*x\d+)(?=\.\w+$)/, '');
+    // A legacy size suffix in the filename ("_2048x.jpg", "_grande.jpg")
+    // wins over width=, and the CDN sends the full-size photo.
+    u.pathname = u.pathname.replace(/_(\d+x\d*|\d*x\d+|pico|icon|thumb|small|compact|medium|large|grande|original|master)(?=\.\w+$)/, '');
     u.searchParams.set('width', String(HASH_WIDTH));
     // Some stores' URLs also carry height= and crop=, which with a small
     // width= returns a 16x1200 strip: 60x the pixels, enough to run a
