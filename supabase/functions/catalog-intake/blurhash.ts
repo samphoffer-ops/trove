@@ -39,6 +39,13 @@ function hashUrl(image: string): string | null {
   // Some stores' feeds give protocol-relative URLs ("//host/...").
   try { u = new URL(image.startsWith('//') ? `https:${image}` : image); } catch { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  // SpeedSize proxies a store's own image URL, which is in its path:
+  // https://scdn.speedsize.com/<id>/https://store.com/cdn/shop/... Hash the
+  // store's URL, whose CDN serves a small copy; the proxy sends 1024px.
+  if (u.hostname.endsWith('speedsize.com')) {
+    const inner = u.pathname.indexOf('/https://') >= 0 ? u.pathname.slice(u.pathname.indexOf('/https://') + 1) + u.search : null;
+    return inner && !inner.includes('speedsize.com') ? hashUrl(inner) : null;
+  }
   if (u.hostname === 'cdn.shopify.com' || u.pathname.startsWith('/cdn/shop/')) {
     // A legacy size suffix in the filename ("_2048x.jpg", "_grande.jpg")
     // wins over width=, and the CDN sends the full-size photo.
@@ -87,7 +94,13 @@ export function blurhashFromBytes(bytes: Uint8Array): string | null {
   return null;
 }
 
-export async function blurhashForImage(image: string): Promise<string | null> {
+// Decoding is the CPU-heavy part, and Edge Functions get about 2s of CPU per
+// request. Each blurhashMany call keeps a running total of decode time and
+// stops taking new images once it passes its budget, so one page of large
+// photos from a host without a resizing CDN can't kill the call.
+type Budget = { spentMs: number; limitMs: number };
+
+export async function blurhashForImage(image: string, budget?: Budget): Promise<string | null> {
   const url = hashUrl(image);
   if (!url) return null;
   try {
@@ -98,22 +111,27 @@ export async function blurhashForImage(image: string): Promise<string | null> {
     if (len > MAX_BYTES) { await res.body?.cancel(); return null; }
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.length > MAX_BYTES) return null;
-    return blurhashFromBytes(bytes);
+    const start = performance.now();
+    const hash = blurhashFromBytes(bytes);
+    if (budget) budget.spentMs += performance.now() - start;
+    return hash;
   } catch {
     return null;
   }
 }
 
 // Hashes many images with a few fetches in flight, stopping early once
-// `deadline` (epoch ms) passes. Images not reached are left out of the
-// result, so callers can tell "not tried" from "tried, no hash" (null).
-export async function blurhashMany(images: string[], deadline: number, concurrency = 8): Promise<Map<string, string | null>> {
+// `deadline` (epoch ms) passes or decoding has used `decodeBudgetMs`.
+// Images not reached are left out of the result, so callers can tell "not
+// tried" from "tried, no hash" (null).
+export async function blurhashMany(images: string[], deadline: number, concurrency = 8, decodeBudgetMs = 900): Promise<Map<string, string | null>> {
   const out = new Map<string, string | null>();
   const queue = [...new Set(images)];
+  const budget: Budget = { spentMs: 0, limitMs: decodeBudgetMs };
   const worker = async () => {
-    while (queue.length > 0 && Date.now() < deadline) {
+    while (queue.length > 0 && Date.now() < deadline && budget.spentMs < budget.limitMs) {
       const image = queue.shift()!;
-      out.set(image, await blurhashForImage(image));
+      out.set(image, await blurhashForImage(image, budget));
     }
   };
   await Promise.all(Array.from({ length: concurrency }, worker));
