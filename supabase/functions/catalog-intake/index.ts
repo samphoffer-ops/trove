@@ -1170,10 +1170,10 @@ Deno.serve(async (req) => {
     // one statement: decoding is CPU, and a call that runs past the ~2s CPU
     // limit is killed before it writes anything. Call it repeatedly until
     // `remaining` is 0 (backfill-catalog.yml loops it).
-    // { "action": "backfill_blurhash", "limit": 120 }
+    // { "action": "backfill_blurhash", "limit": 80 }
     if (body.action === 'backfill_blurhash') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-      const limit = Math.min(Math.max(Number(body.limit) || 120, 1), 300);
+      const limit = Math.min(Math.max(Number(body.limit) || 80, 1), 300);
       let hashed = 0;
       let failed = 0;
       const { data: rows, error } = await admin

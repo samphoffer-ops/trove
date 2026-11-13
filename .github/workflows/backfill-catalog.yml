@@ -51,7 +51,7 @@ jobs:
             -d '{"action":"backfill_search_keywords"}' --max-time 170
           echo ""
 
-      # Blurhash placeholders (#108). Each call hashes one small page (120
+      # Blurhash placeholders (#108). Each call hashes one small page (80
       # products, a few seconds) because an Edge Function gets ~2s of CPU
       # per request. This loops calls for up to ~12 minutes, about 12-20k
       # products a run, and stops early once `remaining` is 0. After the
@@ -66,7 +66,7 @@ jobs:
             OUT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
-              -d '{"action":"backfill_blurhash","limit":120}' --max-time 90)
+              -d '{"action":"backfill_blurhash","limit":80}' --max-time 90)
             if echo "$OUT" | grep -q '"remaining"'; then
               FAILS=0
               echo "$OUT" | grep -q '"remaining":0' && { echo "$OUT"; break; }
