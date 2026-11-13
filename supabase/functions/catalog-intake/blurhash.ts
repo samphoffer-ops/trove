@@ -27,6 +27,7 @@ const UPNG = upng as any;
 const HASH_WIDTH = 16;
 const MAX_BYTES = 1_500_000;
 const MAX_PIXELS = 1_000_000; // jpeg-js decodes the full image to RGBA
+const MAX_HASH_PIXELS = 512;
 const FETCH_TIMEOUT_MS = 8000;
 // 4x3 components: enough for a soft light-to-dark field without banding,
 // and a 28-character string.
@@ -42,6 +43,11 @@ function hashUrl(image: string): string | null {
     // A legacy size suffix in the filename ("_2048x.jpg") wins over width=.
     u.pathname = u.pathname.replace(/_(\d+x\d*|\d*x\d+)(?=\.\w+$)/, '');
     u.searchParams.set('width', String(HASH_WIDTH));
+    // Some stores' URLs also carry height= and crop=, which with a small
+    // width= returns a 16x1200 strip: 60x the pixels, enough to run a
+    // backfill call out of CPU. The width alone keeps the photo's shape.
+    u.searchParams.delete('height');
+    u.searchParams.delete('crop');
   } else if (u.hostname.endsWith('squarespace-cdn.com') || u.hostname.endsWith('squarespace.com')) {
     u.searchParams.set('format', '100w');
   }
@@ -51,8 +57,9 @@ function hashUrl(image: string): string | null {
 function encodeRgba(data: Uint8Array, width: number, height: number): string | null {
   if (!width || !height || data.length < width * height * 4) return null;
   // blurhash's cost grows with pixel count, so large non-Shopify originals
-  // are sampled down to about HASH_WIDTH across by nearest pixel first.
-  const step = Math.max(1, Math.floor(Math.min(width, height) / HASH_WIDTH));
+  // are sampled down to about HASH_WIDTH across by nearest pixel first, and
+  // any image, whatever its shape, to at most MAX_HASH_PIXELS.
+  const step = Math.max(1, Math.floor(Math.min(width, height) / HASH_WIDTH), Math.ceil(Math.sqrt(width * height / MAX_HASH_PIXELS)));
   const w = Math.floor(width / step), h = Math.floor(height / step);
   const px = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) {
