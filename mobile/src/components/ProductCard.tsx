@@ -47,7 +47,7 @@ export function ProductCard({ product, saved, onSave, onQuickActions }: Props) {
       <View style={[styles.media, { aspectRatio }]} {...sharedTransitionSource(product.id)}>
         <Image
           source={{ uri: product.image }}
-          placeholder={productPlaceholder(product.blurhash)}
+          placeholder={productPlaceholder(product.blurhash, product.ratio)}
           placeholderContentFit="cover"
           style={styles.image}
           contentFit="contain"

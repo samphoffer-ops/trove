@@ -112,7 +112,7 @@ export default function SaveSheet() {
               >
                 <View style={styles.boardCover}>
                   {coverImage ? (
-                    <Image source={{ uri: coverImage }} placeholder={productPlaceholder(board.cover_image_url ? null : coverItem?.product_data?.blurhash)} placeholderContentFit="cover" style={StyleSheet.absoluteFill} contentFit="contain" />
+                    <Image source={{ uri: coverImage }} placeholder={productPlaceholder(board.cover_image_url ? null : coverItem?.product_data?.blurhash, coverItem?.product_data?.ratio)} placeholderContentFit="cover" style={StyleSheet.absoluteFill} contentFit="contain" />
                   ) : (
                     <View style={styles.boardCoverEmpty} />
                   )}

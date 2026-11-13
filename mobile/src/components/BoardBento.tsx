@@ -12,7 +12,7 @@ import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '
 
 const MAX_TILES = 4;
 
-type Cover = { uri: string; blurhash?: string | null };
+type Cover = { uri: string; blurhash?: string | null; ratio?: number };
 
 function coverImages(board: Board): Cover[] {
   const items = board.board_items ?? [];
@@ -21,15 +21,15 @@ function coverImages(board: Board): Cover[] {
   const ordered = lead ? [lead, ...items.filter(i => i !== lead)] : items;
   return ordered
     .filter(i => !!i.product_data?.image)
-    .map(i => ({ uri: i.product_data!.image, blurhash: i.product_data!.blurhash }))
+    .map(i => ({ uri: i.product_data!.image, blurhash: i.product_data!.blurhash, ratio: i.product_data!.ratio }))
     .slice(0, MAX_TILES);
 }
 
-function Tile({ uri, blurhash }: Cover) {
+function Tile({ uri, blurhash, ratio }: Cover) {
   return (
     <Image
       source={{ uri }}
-      placeholder={productPlaceholder(blurhash)}
+      placeholder={productPlaceholder(blurhash, ratio)}
       placeholderContentFit="cover"
       style={styles.tile}
       contentFit="cover"

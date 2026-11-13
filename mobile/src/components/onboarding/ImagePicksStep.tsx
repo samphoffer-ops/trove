@@ -47,7 +47,7 @@ export function ImagePicksStep({ products, index, answers, onAnswer, bottomInset
           <Animated.View key={product.id} entering={entering} exiting={exiting} style={{ width: frameW, height: frameH }}>
             <Image
               source={{ uri: product.image }}
-              placeholder={productPlaceholder(product.blurhash)}
+              placeholder={productPlaceholder(product.blurhash, product.ratio)}
               placeholderContentFit="cover"
               style={StyleSheet.absoluteFill}
               contentFit="contain"

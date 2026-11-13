@@ -156,7 +156,7 @@ function BoardTile({ item, canEdit, onMenu }: { item: BoardItem; canEdit: boolea
     >
       <Image
         source={{ uri: item.product_data.image }}
-        placeholder={productPlaceholder(item.product_data.blurhash)}
+        placeholder={productPlaceholder(item.product_data.blurhash, item.product_data.ratio)}
         placeholderContentFit="cover"
         style={styles.img}
         contentFit="contain"

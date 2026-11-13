@@ -254,6 +254,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               <ImageGallery
                 images={galleryImages}
                 blurhash={product.blurhash}
+                ratio={product.ratio}
                 aspectRatio={1 / product.ratio}
                 contentFit="contain"
                 maxHeight={heroMaxHeight ?? (onClose ? 460 : undefined)}
