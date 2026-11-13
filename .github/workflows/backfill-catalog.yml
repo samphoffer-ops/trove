@@ -21,6 +21,12 @@ on:
     - cron: '*/20 * * * *'
   workflow_dispatch:
 
+# A run can take most of the 20 minutes; queue the next one rather than
+# overlap, so two backfills never hash the same rows.
+concurrency:
+  group: backfill-catalog
+  cancel-in-progress: false
+
 env:
   SUPABASE_URL: https://xxyserlkigllpmtxzlsa.supabase.co
   SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eXNlcmxraWdsbHBtdHh6bHNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjQ2NzEsImV4cCI6MjA5NzIwMDY3MX0.69xsoMopJi39sCbHmQZC3I-AeZiP-aKg9KQns4CS6uk
@@ -45,19 +51,29 @@ jobs:
             -d '{"action":"backfill_search_keywords"}' --max-time 170
           echo ""
 
-      # Blurhash placeholders (#108). Each call hashes for ~110s (about 5k
-      # products) and reports what's left, so three calls a run clear the
-      # ~146k-product first pass in a few hours. After that it only sees
-      # products a refresh ran out of time to hash. Before migration 033 is
-      # applied this prints a "column does not exist" error and does nothing.
+      # Blurhash placeholders (#108). Each call hashes one small page (120
+      # products, a few seconds) because an Edge Function gets ~2s of CPU
+      # per request. This loops calls for up to ~12 minutes, about 12-20k
+      # products a run, and stops early once `remaining` is 0. After the
+      # first pass it only sees products a refresh didn't get to. Three
+      # failures in a row (e.g. a page that keeps getting killed) end the
+      # run so it doesn't spin; the next run retries.
       - name: Backfill blurhash
         run: |
-          for i in 1 2 3; do
+          END=$(( $(date +%s) + 720 ))
+          FAILS=0
+          while [ "$(date +%s)" -lt "$END" ]; do
             OUT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
-              -d '{"action":"backfill_blurhash"}' --max-time 140)
-            echo "$OUT"
-            echo "$OUT" | grep -q '"remaining":0' && break
-            echo "$OUT" | grep -q '"remaining"' || break
+              -d '{"action":"backfill_blurhash","limit":120}' --max-time 90)
+            if echo "$OUT" | grep -q '"remaining"'; then
+              FAILS=0
+              echo "$OUT" | grep -q '"remaining":0' && { echo "$OUT"; break; }
+            else
+              echo "$OUT"
+              FAILS=$((FAILS + 1))
+              [ "$FAILS" -ge 3 ] && break
+            fi
           done
+          echo "$OUT"

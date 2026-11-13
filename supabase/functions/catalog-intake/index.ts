@@ -721,12 +721,13 @@ function productFingerprint(r: any): string {
 
 // Every changed row gets a blurhash value, because a bulk upsert nulls any
 // column some of its rows omit. A row whose image is the same as the stored
-// one keeps its stored hash. A new image is hashed now, within a time budget
-// so a brand's first scrape (thousands of new products) still fits in one
-// refresh call. Anything not reached stays null and backfill_blurhash picks
-// it up. '' means "tried, no hash" (dead link, WebP-only host) so the
+// one keeps its stored hash. Up to REFRESH_BLURHASH_MAX new images are
+// hashed now, within a time budget, so a brand's first scrape (thousands of
+// new products) still fits in one refresh call's time and CPU. Anything not
+// reached stays null and backfill_blurhash picks it up. '' means "tried, no hash" (dead link, WebP-only host) so the
 // backfill doesn't retry it forever. A new image clears that.
 const REFRESH_BLURHASH_BUDGET_MS = 20000;
+const REFRESH_BLURHASH_MAX = 60;
 async function setBlurhashes(rows: Record<string, unknown>[], existing: Map<string, any>) {
   const toHash: string[] = [];
   for (const r of rows) {
@@ -734,7 +735,7 @@ async function setBlurhashes(rows: Record<string, unknown>[], existing: Map<stri
     if (e && e.image === r.image) r.blurhash = e.blurhash ?? null;
     else toHash.push(r.image as string);
   }
-  const hashes = await blurhashMany(toHash, Date.now() + REFRESH_BLURHASH_BUDGET_MS);
+  const hashes = await blurhashMany(toHash.slice(0, REFRESH_BLURHASH_MAX), Date.now() + REFRESH_BLURHASH_BUDGET_MS);
   for (const r of rows) {
     if (r.blurhash !== undefined) continue;
     const h = hashes.get(r.image as string);
@@ -1165,31 +1166,29 @@ Deno.serve(async (req) => {
     // catalog that predates the column, and anything a refresh ran out of
     // time to hash. Rows are claimed from the partial index in migration 033
     // (blurhash is null), so each call starts where the last one stopped.
-    // Hashes are written through set_product_blurhashes, 100 rows per
-    // statement. Stops at ~110s to stay inside the function's limit; call it
-    // repeatedly until `remaining` is 0.
-    // { "action": "backfill_blurhash" }
+    // One small page per call, written through set_product_blurhashes in
+    // one statement: decoding is CPU, and a call that runs past the ~2s CPU
+    // limit is killed before it writes anything. Call it repeatedly until
+    // `remaining` is 0 (backfill-catalog.yml loops it).
+    // { "action": "backfill_blurhash", "limit": 120 }
     if (body.action === 'backfill_blurhash') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-      const deadline = Date.now() + 110_000;
+      const limit = Math.min(Math.max(Number(body.limit) || 120, 1), 300);
       let hashed = 0;
       let failed = 0;
-      while (Date.now() < deadline) {
-        const { data: rows, error } = await admin
-          .from('products').select('id, image')
-          .is('blurhash', null).eq('status', 'active')
-          .order('id').limit(400);
-        if (error) return respond({ error: error.message, hashed, failed }, 500);
-        if (!rows || rows.length === 0) break;
-        const hashes = await blurhashMany(rows.map(r => r.image), deadline, 16);
+      const { data: rows, error } = await admin
+        .from('products').select('id, image')
+        .is('blurhash', null).eq('status', 'active')
+        .order('id').limit(limit);
+      if (error) return respond({ error: error.message }, 500);
+      if (rows && rows.length > 0) {
+        const hashes = await blurhashMany(rows.map(r => r.image), Date.now() + 60_000, 12);
         const done = rows.filter(r => hashes.has(r.image));
-        for (let i = 0; i < done.length; i += 100) {
-          const chunk = Object.fromEntries(done.slice(i, i + 100).map(r => [r.id, hashes.get(r.image) ?? '']));
-          const { error: writeError } = await admin.rpc('set_product_blurhashes', { p_hashes: chunk });
-          if (writeError) return respond({ error: writeError.message, hashed, failed }, 500);
-        }
+        const { error: writeError } = await admin.rpc('set_product_blurhashes', {
+          p_hashes: Object.fromEntries(done.map(r => [r.id, hashes.get(r.image) ?? ''])),
+        });
+        if (writeError) return respond({ error: writeError.message }, 500);
         for (const r of done) hashes.get(r.image) ? hashed++ : failed++;
-        if (done.length < rows.length) break; // deadline hit mid-page
       }
       const { count: remaining } = await admin.from('products')
         .select('id', { count: 'exact', head: true }).is('blurhash', null).eq('status', 'active');
