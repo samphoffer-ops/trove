@@ -11,12 +11,12 @@ import { searchProfiles, fetchFollowing } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
-import { SaveSheet } from '@/components/SaveSheet';
 import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { Product, Profile } from '@/types';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
+import { openSaveSheet } from '@/lib/navigation';
 import { SearchIcon, CloseIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Logo } from '@/components/Logo';
 
@@ -28,7 +28,6 @@ export default function SearchScreen() {
   const { fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
   const { user } = useAuthStore();
   const [query,      setQuery]      = useState('');
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -95,7 +94,7 @@ export default function SearchScreen() {
     {
       key: 'save', label: 'Save',
       icon: (color) => <BookmarkIcon color={color} size={18} />,
-      onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
+      onPress: () => { haptics.saveToBoard(); openSaveSheet(quickActions.product); },
     },
     {
       key: 'share', label: 'Share',
@@ -184,7 +183,7 @@ export default function SearchScreen() {
                   items={products}
                   keyExtractor={p => p.id}
                   horizontalPadding={0}
-                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={setSaveTarget} onQuickActions={handleQuickActions} />}
+                  renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={openSaveSheet} onQuickActions={handleQuickActions} />}
                 />
                 {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
               </>
@@ -192,8 +191,6 @@ export default function SearchScreen() {
           </>
         )}
       </ScrollView>
-
-      <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
       <QuickActionsMenu
         anchor={quickActions?.anchor ?? null}

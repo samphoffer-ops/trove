@@ -1,6 +1,8 @@
 import { Platform, Linking } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useProductModalStore } from '@/store/useProductModalStore';
+import { useSaveSheetStore } from '@/store/useSaveSheetStore';
+import { Product } from '@/types';
 import { measureSource, setPendingSource } from '@/lib/sharedTransition';
 import { logEvent } from '@/lib/events';
 
@@ -50,4 +52,10 @@ export function openProduct(productId: string) {
       router.push(`/product/${productId}`);
     });
   }
+}
+
+// Save to Board is a native form sheet route (app/save.tsx, spec §4).
+export function openSaveSheet(product: Product) {
+  useSaveSheetStore.getState().setProduct(product);
+  router.push('/save');
 }

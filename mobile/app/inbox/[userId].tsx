@@ -10,12 +10,11 @@ import { useShareStore } from '@/store/useShareStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeftIcon } from '@/components/Icons';
-import { SaveSheet } from '@/components/SaveSheet';
 import { ProductCard } from '@/components/ProductCard';
 import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Share, Product } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
-import { goBack } from '@/lib/navigation';
+import { goBack, openSaveSheet } from '@/lib/navigation';
 
 const MAX_WIDTH = 480;
 
@@ -35,7 +34,6 @@ export default function Conversation() {
   const { isProductSaved } = useBoardStore();
   const [shares, setShares] = useState<Share[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [otherName, setOtherName] = useState(paramName ?? 'Messages');
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
@@ -148,7 +146,7 @@ export default function Conversation() {
                       <ProductCard
                         product={{ ...p, id: share.product_id ?? p.id }}
                         saved={isProductSaved(share.product_id!)}
-                        onSave={setSaveTarget}
+                        onSave={openSaveSheet}
                       />
                     </View>
                   ) : null}

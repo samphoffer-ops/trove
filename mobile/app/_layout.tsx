@@ -113,6 +113,7 @@ export default function RootLayout() {
         <Stack.Screen name="product/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
         <Stack.Screen name="board/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="board/new"    options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+        <Stack.Screen name="save"         options={{ presentation: 'formSheet', sheetAllowedDetents: [0.5, 1.0], sheetInitialDetentIndex: 0, sheetGrabberVisible: true }} />
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />
         <Stack.Screen name="brand/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />

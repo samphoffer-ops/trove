@@ -10,13 +10,13 @@ import { fetchFollowedBrands } from '@/lib/social';
 import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { EditorialBento } from '@/components/EditorialBento';
-import { SaveSheet } from '@/components/SaveSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 import { BookmarkIcon, CloseIcon } from '@/components/Icons';
 import { Product } from '@/types';
 import { Colors, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
+import { openSaveSheet } from '@/lib/navigation';
 
 // A bento block follows each grid segment; segment lengths cycle through
 // this list so blocks land every 8–12 cards (docs/design-spec.md §7 Feed)
@@ -172,7 +172,6 @@ export default function FeedScreen() {
   const { products: allProducts, fetchProducts, notInterestedIds, markNotInterested, loading: productsLoading } = useProductsStore();
   const { user } = useAuthStore();
   const [followedBrandIds, setFollowedBrandIds] = useState<Set<string>>(new Set());
-  const [saveTarget, setSaveTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [firstFetchDone, setFirstFetchDone] = useState(false);
@@ -231,10 +230,6 @@ export default function FeedScreen() {
     }
   }
 
-  function handleSave(product: Product) {
-    setSaveTarget(product);
-  }
-
   function handleQuickActions(product: Product, anchor: { x: number; y: number }) {
     setQuickActions({ product, anchor });
   }
@@ -243,7 +238,7 @@ export default function FeedScreen() {
     {
       key: 'save', label: 'Save',
       icon: (color) => <BookmarkIcon color={color} size={18} />,
-      onPress: () => { haptics.saveToBoard(); setSaveTarget(quickActions.product); },
+      onPress: () => { haptics.saveToBoard(); openSaveSheet(quickActions.product); },
     },
     {
       key: 'not-for-me', label: 'Not for me',
@@ -295,7 +290,7 @@ export default function FeedScreen() {
                 items={block.items}
                 keyExtractor={p => p.id}
                 itemHeight={p => p.ratio}
-                renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={handleSave} onQuickActions={handleQuickActions} />}
+                renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={openSaveSheet} onQuickActions={handleQuickActions} />}
               />
             ) : (
               <EditorialBento
@@ -304,7 +299,7 @@ export default function FeedScreen() {
                 products={block.items}
                 scrollY={scrollY}
                 isSaved={isProductSaved}
-                onSave={handleSave}
+                onSave={openSaveSheet}
                 onQuickActions={handleQuickActions}
               />
             ))}
@@ -323,8 +318,6 @@ export default function FeedScreen() {
 
       {/* After the scroll view so it draws on top of the content */}
       <GlassHeader />
-
-      <SaveSheet product={saveTarget} onClose={() => setSaveTarget(null)} />
       <QuickActionsMenu
         anchor={quickActions?.anchor ?? null}
         actions={quickActionsList}
