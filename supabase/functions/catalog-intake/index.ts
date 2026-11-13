@@ -1185,16 +1185,21 @@ Deno.serve(async (req) => {
       if (typeof body.after === 'string' && body.after) query = query.gt('id', body.after);
       const { data: rows, error } = await query.order('id').limit(limit);
       if (error) return respond({ error: error.message }, 500);
-      if (rows && rows.length > 0) {
-        const hashes = await blurhashMany(rows.map(r => r.image), Date.now() + 60_000, 12);
-        const done = rows.filter(r => hashes.has(r.image));
-        const { error: writeError } = await admin.rpc('set_product_blurhashes', {
-          p_hashes: Object.fromEntries(done.map(r => [r.id, hashes.get(r.image) ?? ''])),
-        });
-        if (writeError) return respond({ error: writeError.message }, 500);
-        for (const r of done) hashes.get(r.image) ? hashed++ : failed++;
-      }
-      const next = rows && rows.length === limit ? rows[rows.length - 1].id : null;
+      if (!rows || rows.length === 0) return respond({ hashed, failed, next: null }, 200);
+      const hashes = await blurhashMany(rows.map(r => r.image), Date.now() + 60_000, 12);
+      const done = rows.filter(r => hashes.has(r.image));
+      const { error: writeError } = await admin.rpc('set_product_blurhashes', {
+        p_hashes: Object.fromEntries(done.map(r => [r.id, hashes.get(r.image) ?? ''])),
+      });
+      if (writeError) return respond({ error: writeError.message }, 500);
+      for (const r of done) hashes.get(r.image) ? hashed++ : failed++;
+      // The cursor only moves past rows actually tried: if the decode budget
+      // stopped the page early, the next call picks up the rest. The first
+      // row is always tried (workers start before any decode time is spent).
+      const firstUntried = rows.findIndex(r => !hashes.has(r.image));
+      const next = firstUntried > 0 ? rows[firstUntried - 1].id
+        : firstUntried === 0 ? rows[0].id
+        : rows.length === limit ? rows[rows.length - 1].id : null;
       return respond({ hashed, failed, next }, 200);
     }
 
