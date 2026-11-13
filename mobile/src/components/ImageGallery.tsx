@@ -35,6 +35,7 @@ interface Props {
   aspectRatio?: number;      // overrides the default 3:4 (e.g. masonry cards use a per-product ratio)
   contentFit?: 'cover' | 'contain'; // detail uses contain so no photo is ever cropped
   blurhash?: string | null;  // the product's, shown on every page while it loads
+  ratio?: number;            // the product's stored ratio, for the placeholder's shape
 }
 
 // Simple horizontal-pager gallery. Works with a single image (dots hidden,
@@ -44,7 +45,7 @@ interface Props {
 // can be 1200px wide while the modal is only 460px, so useWindowDimensions
 // would make every image page 1200px wide and pagingEnabled would scroll
 // by 1200px at a time. onLayout always reflects the actual rendered size.
-export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover', blurhash }: Props) {
+export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover', blurhash, ratio }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -71,7 +72,7 @@ export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cov
       <View style={styles.root}>
         <Image
           source={{ uri: unique[0] }}
-          placeholder={productPlaceholder(blurhash)}
+          placeholder={productPlaceholder(blurhash, ratio)}
           placeholderContentFit="cover"
           style={[
             styles.img,
@@ -122,7 +123,7 @@ export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cov
           <View key={i} style={[styles.page, { width: pageWidth }]}>
             <Image
               source={{ uri }}
-              placeholder={productPlaceholder(blurhash)}
+              placeholder={productPlaceholder(blurhash, ratio)}
               placeholderContentFit="cover"
               style={[
                 styles.img,
