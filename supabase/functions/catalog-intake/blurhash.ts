@@ -19,9 +19,14 @@ const UPNG = upng as any;
 // other format, or any failure, returns null, and the app falls back to its
 // plain placeholder color for that product.
 
-const HASH_WIDTH = 32;
-const MAX_BYTES = 4_000_000;
-const MAX_PIXELS = 4_000_000; // jpeg-js decodes the full image to RGBA
+// Edge Functions get about 2s of CPU per request (WORKER_RESOURCE_LIMIT
+// past it), and decoding is CPU. A 16px-wide copy costs ~0.3ms to decode
+// and hash; 32px cost 4x that, and a first live backfill call of 400 died.
+// Originals from other hosts are capped at 1MP, so one large photo can't
+// use up a call's budget; bigger ones get no hash ('').
+const HASH_WIDTH = 16;
+const MAX_BYTES = 1_500_000;
+const MAX_PIXELS = 1_000_000; // jpeg-js decodes the full image to RGBA
 const FETCH_TIMEOUT_MS = 8000;
 // 4x3 components: enough for a soft light-to-dark field without banding,
 // and a 28-character string.
