@@ -57,11 +57,15 @@ export default function SaveSheet() {
   if (!product) return null;
 
   return (
-    // react-native-screens lays out a form sheet holding a scroll view from
-    // exactly two direct children, header then ScrollView; collapsable keeps
-    // the header from being flattened away.
-    <>
-      <View collapsable={false}>
+    // One ScrollView holds everything: react-native-screens sizes a lone
+    // scroll view to the sheet's current detent, while a separate header
+    // beside it ends up drawn underneath the list.
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, Spacing[5]) }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Save to board</Text>
           <Pressable onPress={close} hitSlop={10} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
@@ -89,11 +93,7 @@ export default function SaveSheet() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.list}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, Spacing[5]) }}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.list}>
         {boards.length === 0 ? (
           <Text style={styles.empty}>No boards yet — create one above.</Text>
         ) : (
@@ -111,7 +111,7 @@ export default function SaveSheet() {
               >
                 <View style={styles.boardCover}>
                   {coverImage ? (
-                    <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="contain" />
                   ) : (
                     <View style={styles.boardCoverEmpty} />
                   )}
@@ -126,12 +126,13 @@ export default function SaveSheet() {
             );
           })
         )}
-      </ScrollView>
-    </>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   titleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.screen, paddingTop: Spacing[6], paddingBottom: Spacing[4],
