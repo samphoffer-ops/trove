@@ -53,23 +53,26 @@ jobs:
 
       # Blurhash placeholders (#108). Each call hashes one small page (80
       # products, a few seconds) because an Edge Function gets ~2s of CPU
-      # per request. This loops calls for up to ~12 minutes, about 12-20k
-      # products a run, and stops early once `remaining` is 0. After the
-      # first pass it only sees products a refresh didn't get to. Three
-      # failures in a row (e.g. a page that keeps getting killed) end the
-      # run so it doesn't spin; the next run retries.
+      # per request, and returns `next`, the id to continue after. This
+      # walks the queue for up to ~12 minutes, about 12-20k products a run,
+      # and stops early at the end of the queue (`next` null). The next run
+      # starts from the front again, which after the first pass only holds
+      # products a refresh didn't get to. Three failures in a row (e.g. a
+      # page that keeps getting killed) end the run so it doesn't spin.
       - name: Backfill blurhash
         run: |
           END=$(( $(date +%s) + 720 ))
           FAILS=0
+          AFTER=""
           while [ "$(date +%s)" -lt "$END" ]; do
             OUT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
               -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
               -H "Content-Type: application/json" \
-              -d '{"action":"backfill_blurhash","limit":80}' --max-time 90)
-            if echo "$OUT" | grep -q '"remaining"'; then
+              -d "{\"action\":\"backfill_blurhash\",\"limit\":80,\"after\":\"$AFTER\"}" --max-time 90)
+            if echo "$OUT" | grep -q '"next"'; then
               FAILS=0
-              echo "$OUT" | grep -q '"remaining":0' && { echo "$OUT"; break; }
+              echo "$OUT" | grep -q '"next":null' && { echo "$OUT"; echo "reached the end of the queue"; break; }
+              AFTER=$(echo "$OUT" | sed -E 's/.*"next":"([^"]*)".*/\1/')
             else
               echo "$OUT"
               FAILS=$((FAILS + 1))
@@ -77,3 +80,4 @@ jobs:
             fi
           done
           echo "$OUT"
+          echo "last id: $AFTER"

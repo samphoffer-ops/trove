@@ -1164,22 +1164,26 @@ Deno.serve(async (req) => {
 
     // Blurhash for every active product that doesn't have one (#108): the
     // catalog that predates the column, and anything a refresh ran out of
-    // time to hash. Rows are claimed from the partial index in migration 033
-    // (blurhash is null), so each call starts where the last one stopped.
+    // time to hash. Rows come from the partial index in migration 033
+    // (blurhash is null), walked forward by id: pass the response's `next`
+    // as `after` on the following call, and start again without `after` once
+    // `next` is null. Always reading the front of the index stalled the first
+    // live backfill: every hashed row leaves a dead index entry there until
+    // vacuum, and after ~30k the query hit the statement timeout.
     // One small page per call, written through set_product_blurhashes in
     // one statement: decoding is CPU, and a call that runs past the ~2s CPU
-    // limit is killed before it writes anything. Call it repeatedly until
-    // `remaining` is 0 (backfill-catalog.yml loops it).
-    // { "action": "backfill_blurhash", "limit": 80 }
+    // limit is killed before it writes anything.
+    // { "action": "backfill_blurhash", "limit": 80, "after": "<id>" }
     if (body.action === 'backfill_blurhash') {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const limit = Math.min(Math.max(Number(body.limit) || 80, 1), 300);
       let hashed = 0;
       let failed = 0;
-      const { data: rows, error } = await admin
+      let query = admin
         .from('products').select('id, image')
-        .is('blurhash', null).eq('status', 'active')
-        .order('id').limit(limit);
+        .is('blurhash', null).eq('status', 'active');
+      if (typeof body.after === 'string' && body.after) query = query.gt('id', body.after);
+      const { data: rows, error } = await query.order('id').limit(limit);
       if (error) return respond({ error: error.message }, 500);
       if (rows && rows.length > 0) {
         const hashes = await blurhashMany(rows.map(r => r.image), Date.now() + 60_000, 12);
@@ -1190,9 +1194,8 @@ Deno.serve(async (req) => {
         if (writeError) return respond({ error: writeError.message }, 500);
         for (const r of done) hashes.get(r.image) ? hashed++ : failed++;
       }
-      const { count: remaining } = await admin.from('products')
-        .select('id', { count: 'exact', head: true }).is('blurhash', null).eq('status', 'active');
-      return respond({ hashed, failed, remaining }, 200);
+      const next = rows && rows.length === limit ? rows[rows.length - 1].id : null;
+      return respond({ hashed, failed, next }, 200);
     }
 
     // One-off backfill: classifies audience for every approved brand that
