@@ -12,7 +12,7 @@ import { Colors, Radius, Shadows, Animation } from '@/lib/theme';
 // whatever's actually behind it, not a fake/static backdrop.
 //
 // Animates itself explicitly rather than relying on Modal's animationType —
-// every other sheet in this app (SaveSheet, ShareSheet, etc.) does the same,
+// every other sheet in this app (ShareSheet, etc.) does the same,
 // since react-native-web doesn't reliably animate a plain Modal.
 //
 // IMPORTANT: the Modal (and everything inside it) genuinely mounts/unmounts
