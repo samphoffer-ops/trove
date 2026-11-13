@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import Animated, { FadeIn, FadeOut, FadeInRight, FadeOutLeft, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import type { OnboardingPick } from '@/data/products';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
@@ -46,6 +47,8 @@ export function ImagePicksStep({ products, index, answers, onAnswer, bottomInset
           <Animated.View key={product.id} entering={entering} exiting={exiting} style={{ width: frameW, height: frameH }}>
             <Image
               source={{ uri: product.image }}
+              placeholder={productPlaceholder(product.blurhash)}
+              placeholderContentFit="cover"
               style={StyleSheet.absoluteFill}
               contentFit="contain"
               transition={Animation.standard}

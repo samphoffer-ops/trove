@@ -253,6 +253,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
             <Animated.View style={[styles.hero, heroStyle]} onLayout={onHeroLayout}>
               <ImageGallery
                 images={galleryImages}
+                blurhash={product.blurhash}
                 aspectRatio={1 / product.ratio}
                 contentFit="contain"
                 maxHeight={heroMaxHeight ?? (onClose ? 460 : undefined)}

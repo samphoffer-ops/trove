@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useSaveSheetStore } from '@/store/useSaveSheetStore';
@@ -111,7 +112,7 @@ export default function SaveSheet() {
               >
                 <View style={styles.boardCover}>
                   {coverImage ? (
-                    <Image source={{ uri: coverImage }} style={StyleSheet.absoluteFill} contentFit="contain" />
+                    <Image source={{ uri: coverImage }} placeholder={productPlaceholder(board.cover_image_url ? null : coverItem?.product_data?.blurhash)} placeholderContentFit="cover" style={StyleSheet.absoluteFill} contentFit="contain" />
                   ) : (
                     <View style={styles.boardCoverEmpty} />
                   )}

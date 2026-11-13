@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, GestureResponderEvent } from 'react-native';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { router } from 'expo-router';
 import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
@@ -46,6 +47,8 @@ export function ProductCard({ product, saved, onSave, onQuickActions }: Props) {
       <View style={[styles.media, { aspectRatio }]} {...sharedTransitionSource(product.id)}>
         <Image
           source={{ uri: product.image }}
+          placeholder={productPlaceholder(product.blurhash)}
+          placeholderContentFit="cover"
           style={styles.image}
           contentFit="contain"
           transition={Animation.micro}

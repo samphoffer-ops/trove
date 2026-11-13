@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActionSheetIOS, Platform } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePriceFormatter, useCountry, useCurrencyStore } from '@/store/useCurrencyStore';
@@ -155,6 +156,8 @@ function BoardTile({ item, canEdit, onMenu }: { item: BoardItem; canEdit: boolea
     >
       <Image
         source={{ uri: item.product_data.image }}
+        placeholder={productPlaceholder(item.product_data.blurhash)}
+        placeholderContentFit="cover"
         style={styles.img}
         contentFit="contain"
         transition={Animation.micro}

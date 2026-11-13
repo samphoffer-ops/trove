@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { productPlaceholder } from '@/lib/placeholder';
 import { Board } from '@/types';
 import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '@/lib/theme';
 
@@ -11,21 +12,25 @@ import { Colors, Radius, Typography, Spacing, Animation, DisplayScaling } from '
 
 const MAX_TILES = 4;
 
-function coverImages(board: Board): string[] {
+type Cover = { uri: string; blurhash?: string | null };
+
+function coverImages(board: Board): Cover[] {
   const items = board.board_items ?? [];
   // A chosen cover product leads the bento; the rest keep save order.
   const lead = items.find(i => i.product_id === board.cover_product_id);
   const ordered = lead ? [lead, ...items.filter(i => i !== lead)] : items;
   return ordered
-    .map(i => i.product_data?.image)
-    .filter((uri): uri is string => !!uri)
+    .filter(i => !!i.product_data?.image)
+    .map(i => ({ uri: i.product_data!.image, blurhash: i.product_data!.blurhash }))
     .slice(0, MAX_TILES);
 }
 
-function Tile({ uri }: { uri: string }) {
+function Tile({ uri, blurhash }: Cover) {
   return (
     <Image
       source={{ uri }}
+      placeholder={productPlaceholder(blurhash)}
+      placeholderContentFit="cover"
       style={styles.tile}
       contentFit="cover"
       transition={Animation.micro}
@@ -65,11 +70,11 @@ export function BoardBento({ board }: { board: Board }) {
   return (
     <View style={styles.frame}>
       <View style={rest.length > 1 ? styles.leadWide : styles.leadHalf}>
-        <Tile uri={lead} />
+        <Tile {...lead} />
       </View>
       {rest.length > 0 && (
         <View style={styles.stack}>
-          {rest.map((uri, i) => <Tile key={i} uri={uri} />)}
+          {rest.map((cover, i) => <Tile key={i} {...cover} />)}
         </View>
       )}
     </View>

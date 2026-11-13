@@ -1,4 +1,4 @@
-name: Backfill product embeddings and search keywords
+name: Backfill product embeddings, search keywords and blurhash
 
 # Runs the two one-time-ish backfill actions on a schedule instead of
 # relying on someone being in an active session to call them manually —
@@ -44,3 +44,20 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"action":"backfill_search_keywords"}' --max-time 170
           echo ""
+
+      # Blurhash placeholders (#108). Each call hashes for ~110s (about 5k
+      # products) and reports what's left, so three calls a run clear the
+      # ~146k-product first pass in a few hours. After that it only sees
+      # products a refresh ran out of time to hash. Before migration 033 is
+      # applied this prints a "column does not exist" error and does nothing.
+      - name: Backfill blurhash
+        run: |
+          for i in 1 2 3; do
+            OUT=$(curl -s -X POST "$SUPABASE_URL/functions/v1/catalog-intake" \
+              -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{"action":"backfill_blurhash"}' --max-time 140)
+            echo "$OUT"
+            echo "$OUT" | grep -q '"remaining":0' && break
+            echo "$OUT" | grep -q '"remaining"' || break
+          done
