@@ -199,8 +199,10 @@ function fetchWithTimeout(url: string, init: RequestInit = {}) {
   return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+// Takes unknown, not string: JSON-LD productGroupID/sku can be a number
+// (hutch-design.com's are), which crashed the whole refresh (#164).
+function slugify(s: unknown) {
+  return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 // decodeURIComponent throws on a malformed escape; one bad URL mustn't
@@ -662,9 +664,10 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
   // resulting bloat kept feed queries slow for hours after writes stopped
   // (2026-09-26). Unchanged products are now left alone entirely.
   const existing = await loadExistingProducts(admin, brand.id);
-  if (existing === null) {
-    await recordHealth(all.length, 0, 'could not read existing products');
-    return { count: 0, removed: 0, error: 'could not read existing products' };
+  if (typeof existing === 'string') {
+    const message = `could not read existing products: ${existing}`;
+    await recordHealth(all.length, 0, message);
+    return { count: 0, removed: 0, error: message };
   }
   const changed = all.filter(r => {
     const e = existing.get(r.id as string);
@@ -721,15 +724,20 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
 
 // A brand's current rows, without the embedding. Paged: PostgREST caps a
 // response at 1,000 rows and big brands have several thousand.
-async function loadExistingProducts(admin: AdminClient, brandId: string): Promise<Map<string, any> | null> {
+// Keyset-paged on (brand_id, id) (migration 043). Offset paging re-sorted
+// every row of the brand per page, which timed out for Sabre Paris's
+// 5,600 products (#164). Returns the error message on failure.
+async function loadExistingProducts(admin: AdminClient, brandId: string): Promise<Map<string, any> | string> {
   const out = new Map<string, any>();
-  for (let from = 0; ; from += 1000) {
+  let after = '';
+  while (true) {
     const { data, error } = await admin.from('products')
       .select('id, brand, name, price, prices, image, images, ratio, url, description, category, status, blurhash')
-      .eq('brand_id', brandId).order('id').range(from, from + 999);
-    if (error) return null;
+      .eq('brand_id', brandId).gt('id', after).order('id').limit(1000);
+    if (error) return error.message;
     for (const row of data ?? []) out.set(row.id, row);
     if (!data || data.length < 1000) return out;
+    after = data[data.length - 1].id;
   }
 }
 
@@ -1345,8 +1353,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const offset = body.refresh_offset ?? 0;
       const limit  = body.refresh_limit  ?? 5;
+      // id breaks created_at ties. Brands seeded together share a timestamp,
+      // and without a tie-break their order changed between calls, so some
+      // were refreshed twice a run and others never (#164).
       const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }).order('id', { ascending: true })
         .range(offset, offset + limit - 1);
       body.domains = (approved ?? []).map((b: { domain: string }) => b.domain);
     }
