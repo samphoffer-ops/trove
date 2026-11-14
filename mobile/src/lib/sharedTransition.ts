@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 // Feed card → product detail shared-element transition (docs/design-spec.md §5).
 //
@@ -12,15 +12,15 @@ import { View } from 'react-native';
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
-const sources = new Map<string, View>();
+const sources = new Map<string, ViewInstance>();
 const pending = new Map<string, Rect>();
 
 // Spread onto the card's image container: {...sharedTransitionSource(product.id)}
 export function sharedTransitionSource(productId: string) {
-  let mine: View | null = null;
+  let mine: ViewInstance | null = null;
   return {
     collapsable: false,
-    ref: (node: View | null) => {
+    ref: (node: ViewInstance | null) => {
       if (node) {
         mine = node;
         sources.set(productId, node);

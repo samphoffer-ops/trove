@@ -1,9 +1,9 @@
-import { View, StyleSheet, ImageSourcePropType } from 'react-native';
-import { Image } from 'expo-image';
+import { View, StyleSheet } from 'react-native';
+import { Image, type ImageProps } from 'expo-image';
 import { Colors, Shadows } from '@/lib/theme';
 
 interface Props {
-  source?: ImageSourcePropType;
+  source?: ImageProps['source'];
   width?: number;
 }
 

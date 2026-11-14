@@ -50,7 +50,6 @@
           }
         }
       ],
-      "./plugins/withIosSceneLifecycle",
       "expo-image",
       "expo-status-bar"
     ],

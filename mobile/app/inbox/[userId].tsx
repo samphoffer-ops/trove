@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet, Animated,
-  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
+  ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions, type ScrollViewInstance,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,7 @@ export default function Conversation() {
   const [otherName, setOtherName] = useState(paramName ?? 'Messages');
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const { width } = useWindowDimensions();
   // Shared products render at the feed's card width (spec §7 Feed).
   const cardWidth = (Math.min(width, MAX_WIDTH) - Spacing.screen * 2 - Spacing.gutter) / 2;

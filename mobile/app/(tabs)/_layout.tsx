@@ -1,4 +1,4 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/native-tabs';
 import { Colors, Typography } from '@/lib/theme';
 
 // System tab bar (UITabBarController via react-native-screens), so iOS 26+
@@ -6,7 +6,7 @@ import { Colors, Typography } from '@/lib/theme';
 // blurEffect or shadow: any of those replaces the system glass appearance.
 //
 // Feed, Boards, and Search (#63, back in 1.0 on 2026-11-14 over spec §3).
-// Search takes the system search role, so iOS 26+ draws it as the separate
+// Search takes the system search role, so iOS 26.1+ draws it as the separate
 // round search button at the end of the bar and supplies its own icon and
 // localized title. Profile and settings are reached from the header
 // (GlassHeader).
