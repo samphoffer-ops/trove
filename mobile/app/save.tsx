@@ -133,7 +133,7 @@ export default function SaveSheet() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.bg },
   titleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.screen, paddingTop: Spacing[6], paddingBottom: Spacing[4],
