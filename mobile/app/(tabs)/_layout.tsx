@@ -1,4 +1,4 @@
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { Colors, Typography } from '@/lib/theme';
 
 // System tab bar (UITabBarController via react-native-screens), so iOS 26+
@@ -17,12 +17,12 @@ export default function TabsLayout() {
       labelStyle={{ fontFamily: Typography.label.fontFamily, fontSize: Typography.label.fontSize }}
     >
       <NativeTabs.Trigger name="feed">
-        <Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} />
-        <Label>Feed</Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} />
+        <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="boards">
-        <Icon sf={{ default: 'rectangle.stack', selected: 'rectangle.stack.fill' }} />
-        <Label>Boards</Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'rectangle.stack', selected: 'rectangle.stack.fill' }} />
+        <NativeTabs.Trigger.Label>Boards</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="search" role="search" />
     </NativeTabs>
