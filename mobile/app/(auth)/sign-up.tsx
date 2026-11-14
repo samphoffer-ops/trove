@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { notify } from '@/lib/alerts';
+import { ALREADY_REGISTERED, authErrorMessage, validateSignUp } from '@/lib/authErrors';
 
 export default function SignUp() {
   const [username, setUsername] = useState('');
@@ -13,15 +14,22 @@ export default function SignUp() {
   const [loading,  setLoading]  = useState(false);
 
   async function signUp() {
-    if (!username.trim()) { notify('Pick a username'); return; }
+    const invalid = validateSignUp(username, email, password);
+    if (invalid) { notify(invalid.title, invalid.message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
       password,
       options: { data: { username: username.trim().toLowerCase(), display_name: username.trim() } },
     });
-    if (error) notify('Sign up failed', error.message);
-    else notify('Check your email', 'Click the confirmation link to activate your account.');
+    if (error) {
+      const { title, message } = authErrorMessage(error);
+      notify(title, message);
+    } else if (data.user && data.user.identities?.length === 0) {
+      // With email confirmation on, Supabase hides existing accounts by
+      // returning a user with no identities instead of an error.
+      notify(ALREADY_REGISTERED.title, ALREADY_REGISTERED.message);
+    } else notify('Check your email', 'Click the confirmation link to activate your account.');
     setLoading(false);
   }
 

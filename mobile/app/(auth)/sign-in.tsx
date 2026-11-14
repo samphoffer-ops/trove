@@ -8,6 +8,7 @@ import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme
 import { Logo } from '@/components/Logo';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
+import { authErrorMessage, validateSignIn } from '@/lib/authErrors';
 import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
 
 // HIG minimum touch target; the system Apple button is drawn at this height.
@@ -26,9 +27,14 @@ export default function SignIn() {
   }, []);
 
   async function signIn() {
+    const invalid = validateSignIn(email, password);
+    if (invalid) { notify(invalid.title, invalid.message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) notify('Sign in failed', error.message);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) {
+      const { title, message } = authErrorMessage(error);
+      notify(title, message);
+    }
     setLoading(false);
   }
 
