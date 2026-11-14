@@ -67,10 +67,10 @@ function whyInYourEdit(product: Product, profile: Profile | null): string | null
   return null;
 }
 
-// Native share sheet with the product's page on the brand's site. The old
-// ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
+// Native share sheet with a tracked go link to the brand's page (#138). The
+// old ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
 function shareProduct(product: Product) {
-  Share.share({ message: `${product.name} by ${product.brand}`, url: product.url });
+  Share.share({ message: `${product.name} by ${product.brand}`, url: getClickOutUrl(product.id, 'share') });
 }
 
 export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose, heroMaxHeight, source = null, onDismissed }: Props) {

@@ -22,12 +22,12 @@ Deno.serve(createHandler({
     if (error) throw error;
     return data;
   },
-  logClickOut: async ({ userId, productId, url }) => {
+  logClickOut: async ({ userId, productId, url, via }) => {
     const { error } = await admin.from('events').insert({
       user_id:    userId,
       type:       'click_out',
       product_id: productId,
-      properties: { url, source: 'go' },
+      properties: via ? { url, source: 'go', via } : { url, source: 'go' },
     });
     // A u= that isn't a real user fails the FK and is dropped here.
     if (error) throw error;
