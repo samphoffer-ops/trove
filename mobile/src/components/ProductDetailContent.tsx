@@ -21,7 +21,7 @@ import { ImageGallery } from '@/components/ImageGallery';
 import { Glass } from '@/components/GlassHeader';
 import { ChevronLeftIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
 import { Colors, Radius, Typography, Spacing, Animation } from '@/lib/theme';
-import { Product, Profile } from '@/types';
+import { Product } from '@/types';
 import { usePriceFormatter } from '@/store/useCurrencyStore';
 import { getClickOutUrl } from '@/lib/clickOut';
 import { goBack, openExternal, openSaveSheet } from '@/lib/navigation';
@@ -51,22 +51,6 @@ interface Props {
   onDismissed?: () => void;
 }
 
-// "Why it's in your edit" (spec §7), from the onboarding taste profile's
-// style and category signals. Hidden when nothing in the profile explains
-// the product. Onboarding has no brand-picks step (#56), so no brand variant.
-function whyInYourEdit(product: Product, profile: Profile | null): string | null {
-  if (!profile) return null;
-  const has = (list: string[] | undefined, value: string | undefined) =>
-    !!value && (list ?? []).some(v => v.toLowerCase() === value.toLowerCase());
-
-  const style = product.styles?.find(s => has(profile.taste_styles, s));
-  if (style) return `Matches the ${style.toLowerCase()} side of your taste.`;
-  if (has(profile.taste_categories, product.category)) {
-    return `From the ${product.category} you said you wear.`;
-  }
-  return null;
-}
-
 // Native share sheet with the product's page on the brand's site. The old
 // ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
 function shareProduct(product: Product) {
@@ -75,7 +59,7 @@ function shareProduct(product: Product) {
 
 export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose, heroMaxHeight, source = null, onDismissed }: Props) {
   const { isProductSaved } = useBoardStore();
-  const { user, profile } = useAuthStore();
+  const { user } = useAuthStore();
   const { loaded, fetchProducts } = useProductsStore();
   const formatPrice = usePriceFormatter();
   const { width: windowWidth } = useWindowDimensions();
@@ -232,7 +216,6 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   if (!product) return null;
 
   const saved = isProductSaved(product.id);
-  const why = whyInYourEdit(product, profile);
 
   // Build image array: hero first, extras deduplicated
   const galleryImages = [product.image, ...(product.images ?? []).filter(u => u && u !== product.image)];
@@ -271,7 +254,6 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
               )}
               <Text style={styles.name}>{product.name}</Text>
               <Text style={styles.price}>{formatPrice(product)}</Text>
-              {why && <Text style={styles.why} numberOfLines={1}>{why}</Text>}
               {/* Only the brand's own copy: no stand-in text when there's none */}
               {product.description ? <Text style={styles.desc}>{product.description}</Text> : null}
             </Animated.View>
@@ -354,11 +336,6 @@ const styles = StyleSheet.create({
   },
   price: {
     ...Typography.price,
-    color:        Colors.text,
-    marginBottom: Spacing[5],
-  },
-  why: {
-    ...Typography.subhead,
     color:        Colors.text,
     marginBottom: Spacing[5],
   },
