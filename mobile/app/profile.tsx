@@ -100,9 +100,9 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
-            { value: boards.length, label: 'Boards' },
+            { value: boards.length, label: boards.length === 1 ? 'Board' : 'Boards' },
             { value: totalSaved,    label: 'Saved' },
-            { value: followerCount, label: 'Followers' },
+            { value: followerCount, label: followerCount === 1 ? 'Follower' : 'Followers' },
             { value: followingCount,label: 'Following' },
           ].map(s => (
             <View key={s.label} style={styles.stat}>
