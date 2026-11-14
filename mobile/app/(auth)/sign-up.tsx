@@ -98,7 +98,7 @@ export default function SignUp() {
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.accent },
+  root:  { flex: 1, backgroundColor: Colors.ink },
   inner: {
     flex:              1,
     paddingHorizontal: 28,
