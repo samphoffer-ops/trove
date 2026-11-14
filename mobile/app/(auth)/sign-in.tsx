@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,9 +57,17 @@ export default function SignIn() {
       {/* Flat ink band keeps the status bar legible over the photo (§9: no gradients) */}
       <View style={[styles.statusBand, { height: insets.top }]} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.frame, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+      {/* Starts below the status bar, so with the keyboard up the card scrolls
+          inside the safe area instead of sliding under the Dynamic Island.
+          Tapping outside the fields dismisses the keyboard. */}
+      <ScrollView
+        style={{ marginTop: insets.top }}
+        contentContainerStyle={[styles.frame, { paddingTop: 40, paddingBottom: insets.bottom + 24 }]}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        alwaysBounceVertical={false}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
           <Logo width={132} color={Colors.text} />
@@ -128,7 +136,7 @@ export default function SignIn() {
             </Text>
           </Pressable>
         </Link>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </View>
   );
 }
@@ -137,7 +145,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ink },
   statusBand: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: Colors.ink },
   frame: {
-    flex:             1,
+    flexGrow:         1,
     paddingHorizontal: Spacing.screen,
     justifyContent:   'flex-end',
   },
