@@ -1,16 +1,31 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
+import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
+import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
 
+// HIG minimum touch target; the system Apple button is drawn at this height.
+const APPLE_BUTTON_HEIGHT = 48;
+
+// Same photo-and-cream-card treatment as sign-in, so the two read as one flow.
 export default function SignUp() {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
+  // False on web and anywhere the system Apple sheet isn't available.
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    isAppleSignInAvailable().then(setAppleAvailable);
+  }, []);
 
   async function signUp() {
     if (!username.trim()) { notify('Pick a username'); return; }
@@ -25,50 +40,110 @@ export default function SignUp() {
     setLoading(false);
   }
 
+  const AppleAuthentication = appleAvailable ? loadAppleAuth()?.AppleAuthentication : undefined;
+
+  // Apple creates the account on first use, so sign-up and sign-in share a flow.
+  async function appleSignUp() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithApple();
+    } catch (e: any) {
+      notify('Sign up with Apple failed', e?.message);
+    }
+    setLoading(false);
+  }
+
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
-      <View style={styles.inner}>
-        <Logo width={160} color={Colors.bg}  />
+    <View style={styles.root}>
+      <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {/* Flat ink band keeps the status bar legible over the photo (§9: no gradients) */}
+      <View style={[styles.statusBand, { height: insets.top }]} />
 
-        <View style={styles.headingWrap}>
-          <Text style={styles.heading}>Join Trove.</Text>
-          <Text style={styles.sub}>Discover things worth keeping.</Text>
+      {/* The card is taller than sign-in's, so it scrolls inside the safe area
+          on small phones and with the keyboard up. */}
+      <ScrollView
+        style={{ marginTop: insets.top }}
+        contentContainerStyle={[styles.frame, { paddingTop: 40, paddingBottom: insets.bottom + 24 }]}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        alwaysBounceVertical={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          <Logo width={132} color={Colors.text} />
+
+          <View style={styles.headingWrap}>
+            <Text {...DisplayScaling} style={styles.heading}>Join Trove.</Text>
+            <Text style={styles.sub}>Discover things worth keeping.</Text>
+          </View>
+
+          <View style={styles.fields}>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              placeholderTextColor={Colors.textLight}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              textContentType="username"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email address"
+              placeholderTextColor={Colors.textLight}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={Colors.textLight}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              textContentType="newPassword"
+            />
+          </View>
+
+          <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={signUp} disabled={loading}>
+            <Text style={styles.btnText}>{loading ? 'Creating account…' : 'Create account'}</Text>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.oauthGroup}>
+            {/* The system button leads the group, as on sign-in (Apple's HIG). */}
+            {AppleAuthentication && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={APPLE_BUTTON_HEIGHT / 2}
+                style={styles.appleBtn}
+                onPress={appleSignUp}
+              />
+            )}
+            <Pressable style={styles.oauthBtn}>
+              <GoogleIcon size={16} />
+              <Text style={styles.oauthText}>Sign up with Google</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.legal}>
+            By creating an account you agree to Trove's{' '}
+            <Link href="/terms"><Text style={styles.legalLink}>Terms of Service</Text></Link>
+            {' '}and{' '}
+            <Link href="/privacy-policy"><Text style={styles.legalLink}>Privacy Policy</Text></Link>.
+          </Text>
         </View>
-
-        <View style={styles.fields}>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="rgba(253,252,249,0.45)"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            textContentType="username"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email address"
-            placeholderTextColor="rgba(253,252,249,0.45)"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            textContentType="emailAddress"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="rgba(253,252,249,0.45)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="newPassword"
-          />
-        </View>
-
-        <Pressable style={[styles.btn, loading && styles.btnDisabled]} onPress={signUp} disabled={loading}>
-          <Text style={styles.btnText}>{loading ? 'Creating account…' : 'Create account'}</Text>
-        </Pressable>
 
         <Link href="/(auth)/sign-in" asChild>
           <Pressable style={styles.link}>
@@ -77,69 +152,87 @@ export default function SignUp() {
             </Text>
           </Pressable>
         </Link>
-
-        <Text style={styles.legal}>
-          By creating an account you agree to Trove's{' '}
-          <Link href="/terms"><Text style={styles.legalLink}>Terms of Service</Text></Link>
-          {' '}and{' '}
-          <Link href="/privacy-policy"><Text style={styles.legalLink}>Privacy Policy</Text></Link>.
-        </Text>
-      </View>
-    </KeyboardAvoidingView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.accent },
-  inner: {
-    flex:              1,
-    paddingHorizontal: 28,
-    justifyContent:    'center',
-    gap:               0,
+  root: { flex: 1, backgroundColor: Colors.ink },
+  statusBand: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: Colors.ink },
+  frame: {
+    flexGrow:          1,
+    paddingHorizontal: Spacing.screen,
+    justifyContent:    'flex-end',
   },
-  headingWrap: { marginTop: Spacing[6], marginBottom: Spacing[6] },
+  card: {
+    backgroundColor: Colors.bg,
+    borderRadius:    28,
+    paddingHorizontal: 26,
+    paddingTop:      36,
+    paddingBottom:   28,
+    alignItems:      'center',
+  },
+  headingWrap: { alignItems: 'center', marginTop: Spacing[4], marginBottom: Spacing[5] },
   heading: {
-    fontFamily:    'Mulish_900Black',
-    fontSize:      34,
-    letterSpacing: -1,
-    lineHeight:    38,
-    color:         Colors.bg,
-    marginBottom:  Spacing[2],
+    ...Typography.display,
+    color:         Colors.text,
+    marginBottom:  Spacing[1],
   },
   sub: {
     ...Typography.body,
-    fontSize: 16,
-    color:    'rgba(253,252,249,0.65)',
+    color:    Colors.textMuted,
   },
-  fields: { gap: Spacing[3], marginBottom: Spacing[5] },
+  fields: { width: '100%', gap: Spacing[2], marginBottom: Spacing[4] },
   input: {
-    borderWidth:       1.5,
-    borderColor:       'rgba(253,252,249,0.22)',
+    width:             '100%',
     borderRadius:      Radius.full,
-    paddingHorizontal: 18,
-    paddingVertical:   16,
+    paddingHorizontal: 20,
+    paddingVertical:   14,
     ...Typography.body,
-    fontSize:        15,
-    color:           Colors.bg,
-    backgroundColor: 'rgba(13,16,53,0.18)',
+    color:           Colors.text,
+    backgroundColor: Colors.stoneSoft,
   },
   btn: {
+    width:           '100%',
     backgroundColor: Colors.accent,
     borderRadius:    Radius.full,
-    paddingVertical: 17,
+    paddingVertical: 15,
     alignItems:      'center',
-    marginBottom:    Spacing[4],
+    marginBottom:    Spacing[5],
   },
   btnDisabled: { opacity: 0.5 },
   btnText: {
-    fontFamily:    'Mulish_800ExtraBold',
-    fontSize:      16,
-    color:         Colors.text,
-    letterSpacing: -0.2,
+    ...Typography.cardTitle,
+    color: Colors.text,
   },
-  link:       { alignItems: 'center', paddingVertical: 8 },
-  linkText:   { ...Typography.body, fontSize: 14, color: 'rgba(253,252,249,0.65)' },
-  linkAccent: { fontFamily: 'Mulish_700Bold', color: Colors.bg },
-  legal:      { ...Typography.caption, fontSize: 12, color: 'rgba(253,252,249,0.5)', textAlign: 'center', lineHeight: 18, marginTop: Spacing[4], paddingHorizontal: 8 },
-  legalLink:  { fontFamily: 'Mulish_700Bold', color: 'rgba(253,252,249,0.75)' },
+  dividerRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: Spacing[3], marginBottom: Spacing[4] },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { ...Typography.caption, color: Colors.textMuted },
+  oauthGroup: { width: '100%', gap: Spacing[2] },
+  oauthBtn: {
+    width:           '100%',
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:             10,
+    paddingVertical: 12,
+    borderRadius:    Radius.full,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  appleBtn:  { width: '100%', height: APPLE_BUTTON_HEIGHT },
+  oauthText: { ...Typography.cardTitle, color: Colors.text },
+  legal:     { ...Typography.caption, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing[5] },
+  legalLink: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.text },
+  link:       { alignItems: 'center', paddingTop: Spacing[5] },
+  linkText:   {
+    ...Typography.body,
+    color:    'rgba(253,252,249,0.75)',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  linkAccent: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.bg },
 });
