@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
-import { setStatusBarStyle } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { searchProducts, useProductsStore } from '@/store/useProductsStore';
 import { useBoardStore } from '@/store/useBoardStore';
@@ -13,20 +12,26 @@ import { ProductCard } from '@/components/ProductCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
+import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 import { Product, Profile } from '@/types';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
 import { openSaveSheet } from '@/lib/navigation';
 import { SearchIcon, CloseIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
-import { Logo } from '@/components/Logo';
 
 const PAGE_SIZE = 30;
+const FIELD_HEIGHT = 44; // Apple's minimum hit target
 
+// The search tab (#63). Same frame as Boards: floating glass header, a
+// display title, then the field on the page, not in a dark bar. Results
+// come from search_products (migration 039), which searches the whole
+// catalog server-side rather than the feed's ranked slice.
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { isProductSaved } = useBoardStore();
-  const { fetchProducts, notInterestedIds, markNotInterested } = useProductsStore();
+  const { notInterestedIds, markNotInterested } = useProductsStore();
   const { user } = useAuthStore();
+  const inputRef = useRef<TextInput>(null);
   const [query,      setQuery]      = useState('');
   const [shareTarget, setShareTarget] = useState<Product | null>(null);
   const [quickActions, setQuickActions] = useState<{ product: Product; anchor: { x: number; y: number } } | null>(null);
@@ -36,38 +41,35 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searching,  setSearching]  = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
-    }, [])
-  );
-
-  useEffect(() => { fetchProducts(); }, []);
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [query]);
   useEffect(() => {
     if (user) fetchFollowing(user.id).then(list => setFollowingIds(new Set(list.map(p => p.id))));
   }, [user]);
 
+  // Each effect drops its response once the query has moved on, so a slow
+  // answer for "ja" can't land on top of the one for "jacket".
   useEffect(() => {
     const q = query.trim();
     if (!q) { setPeople([]); return; }
-    searchProfiles(q, user?.id).then(setPeople);
+    let stale = false;
+    searchProfiles(q, user?.id).then(found => { if (!stale) setPeople(found); });
+    return () => { stale = true; };
   }, [query, user]);
 
-  // Debounced — this is a real network round-trip now (searching the full
-  // catalog server-side, see searchProducts), not a free in-memory filter.
+  // Debounced: a network round trip per settled query.
   useEffect(() => {
     const q = query.trim();
     if (!q) { setSearchResults([]); setSearching(false); return; }
+    let stale = false;
     setSearching(true);
     const timeout = setTimeout(() => {
       searchProducts(q).then(results => {
+        if (stale) return;
         setSearchResults(results.filter(p => !notInterestedIds.has(p.id)));
         setSearching(false);
       });
     }, 300);
-    return () => clearTimeout(timeout);
+    return () => { stale = true; clearTimeout(timeout); };
   }, [query, notInterestedIds]);
 
   async function toggleFollow(personId: string) {
@@ -85,6 +87,8 @@ export default function SearchScreen() {
   const products = searchResults.slice(0, visibleCount);
   const hasMore = visibleCount < searchResults.length;
   const hasQuery = query.trim().length > 0;
+  // Content starts below the floating glass header, then scrolls under it.
+  const headerInset = insets.top + GLASS_HEADER_HEIGHT;
 
   function handleQuickActions(product: Product, anchor: { x: number; y: number }) {
     setQuickActions({ product, anchor });
@@ -117,32 +121,43 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View style={styles.headerContent}>
-          <Logo width={72} color={Colors.bg} onPress={() => router.push('/(tabs)/feed')} />
-          <View style={styles.searchBar}>
-            <SearchIcon color="rgba(255,255,255,0.45)" />
+      <ScrollView
+        contentContainerStyle={{ paddingTop: headerInset, paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        scrollsToTop={true}
+        onScroll={handleScroll}
+        scrollEventThrottle={200}
+      >
+        <View style={styles.masthead}>
+          <Text {...DisplayScaling} style={styles.pageLabel} accessibilityRole="header">search</Text>
+          <Pressable style={styles.field} onPress={() => inputRef.current?.focus()}>
+            <SearchIcon color={Colors.textMuted} size={18} />
             <TextInput
+              ref={inputRef}
               style={styles.input}
-              placeholder="products, brands, people…"
-              placeholderTextColor="rgba(255,255,255,0.38)"
+              placeholder="Brands, pieces, people"
+              placeholderTextColor={Colors.textLight}
               value={query}
               onChangeText={setQuery}
               autoCorrect={false}
+              autoCapitalize="none"
               returnKeyType="search"
+              clearButtonMode="never"
+              selectionColor={Colors.text}
+              accessibilityLabel="Search"
             />
             {hasQuery && (
-              <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <CloseIcon color="rgba(255,255,255,0.55)" />
+              <Pressable onPress={() => { setQuery(''); inputRef.current?.focus(); }} hitSlop={12} accessibilityLabel="Clear search">
+                <CloseIcon color={Colors.textMuted} size={14} />
               </Pressable>
             )}
-          </View>
+          </Pressable>
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={200}>
         {!hasQuery ? (
-          <Text style={styles.hint}>Start typing to discover products, brands, or people</Text>
+          <Text style={styles.hint}>Search every brand in Trove by name, piece or material. People show up here too.</Text>
         ) : (
           <>
             {people.length > 0 && (
@@ -159,10 +174,10 @@ export default function SearchScreen() {
                         )}
                       </View>
                       <View style={styles.personInfo}>
-                        <Text style={styles.personName}>{person.display_name ?? person.username}</Text>
-                        <Text style={styles.personUsername}>@{person.username}</Text>
+                        <Text style={styles.personName} numberOfLines={1}>{person.display_name ?? person.username}</Text>
+                        <Text style={styles.personUsername} numberOfLines={1}>@{person.username}</Text>
                       </View>
-                      <Pressable style={[styles.followBtn, isFollowing && styles.followBtnActive]} onPress={() => toggleFollow(person.id)}>
+                      <Pressable style={[styles.followBtn, isFollowing && styles.followBtnActive]} onPress={() => toggleFollow(person.id)} hitSlop={6}>
                         <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
                           {isFollowing ? 'Following' : 'Follow'}
                         </Text>
@@ -174,23 +189,29 @@ export default function SearchScreen() {
             )}
 
             {searching && products.length === 0 ? (
-              <ActivityIndicator color={Colors.accent} style={{ marginTop: 40 }} />
+              <ActivityIndicator color={Colors.textLight} style={styles.loading} />
             ) : products.length === 0 && people.length === 0 ? (
-              <Text style={styles.hint}>No results for "{query}"</Text>
+              <View style={styles.noResults}>
+                <Text {...DisplayScaling} style={styles.noResultsTitle}>Nothing for “{query.trim()}”</Text>
+                <Text style={styles.hint}>Try a brand name, or a broader word like “jacket” or “linen”.</Text>
+              </View>
             ) : products.length > 0 ? (
               <>
                 <MasonryGrid
                   items={products}
                   keyExtractor={p => p.id}
-                  horizontalPadding={0}
+                  itemHeight={p => p.ratio}
                   renderItem={p => <ProductCard product={p} saved={isProductSaved(p.id)} onSave={openSaveSheet} onQuickActions={handleQuickActions} />}
                 />
-                {hasMore && <ActivityIndicator color={Colors.accent} style={{ marginTop: 8, marginBottom: 16 }} />}
+                {hasMore && <ActivityIndicator color={Colors.textLight} style={styles.more} />}
               </>
             ) : null}
           </>
         )}
       </ScrollView>
+
+      {/* After the content so it draws on top */}
+      <GlassHeader />
       <ShareSheet product={shareTarget} onClose={() => setShareTarget(null)} />
       <QuickActionsMenu
         anchor={quickActions?.anchor ?? null}
@@ -202,39 +223,32 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.bg },
-  header: {
-    backgroundColor: Colors.ink,
+  root:      { flex: 1, backgroundColor: Colors.bg },
+  masthead:  { paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5], gap: Spacing[5] },
+  pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
+  field: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               Spacing[3],
+    height:            FIELD_HEIGHT,
+    paddingHorizontal: Spacing[5],
+    backgroundColor:   Colors.surface,
+    borderWidth:       StyleSheet.hairlineWidth,
+    borderColor:       Colors.borderStrong,
+    borderRadius:      Radius.full,
   },
-  headerContent: {
-    maxWidth:          1100,
-    alignSelf:         'center',
-    width:             '100%',
-    paddingHorizontal: 20,
-    paddingTop:        16,
-    paddingBottom:     16,
-    gap:               12,
-  },
-  searchBar: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             10,
-    paddingHorizontal: 14,
-    paddingVertical:   2,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth:     1,
-    borderColor:     'rgba(255,255,255,0.14)',
-    borderRadius:    Radius.full,
-  },
-  input:   { flex: 1, paddingVertical: 13, ...Typography.body, color: Colors.bg },
-  content: { paddingHorizontal: 16, paddingBottom: 100 },
-  hint:    { ...Typography.body, fontSize: 15, color: Colors.textMuted, textAlign: 'center', paddingTop: 60 },
-  peopleSection: { marginBottom: Spacing[4], borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: Spacing[3] },
+  input:     { flex: 1, height: FIELD_HEIGHT, ...Typography.body, lineHeight: undefined, color: Colors.text },
+  hint:      { ...Typography.body, color: Colors.textMuted, paddingHorizontal: Spacing.screen, maxWidth: 360 },
+  loading:   { marginTop: Spacing[6] },
+  more:      { marginTop: Spacing[3], marginBottom: Spacing[5] },
+  noResults: { gap: Spacing[4], paddingTop: Spacing[3] },
+  noResultsTitle: { ...Typography.display, color: Colors.text, paddingHorizontal: Spacing.screen },
+  peopleSection: { marginHorizontal: Spacing.screen, marginBottom: Spacing[5], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.borderStrong, paddingBottom: Spacing[3] },
   personRow:   { flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3] },
-  avatar:      { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText:  { ...Typography.headline, color: '#fff' },
+  avatar:      { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarText:  { ...Typography.headline, color: Colors.surface },
   personInfo:  { flex: 1 },
-  personName:  { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text },
+  personName:  { ...Typography.cardTitle, color: Colors.text },
   personUsername: { ...Typography.caption, color: Colors.textMuted, marginTop: 1 },
   followBtn:   { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 },
   followBtnActive: { backgroundColor: Colors.text, borderColor: Colors.text },
