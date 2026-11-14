@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { notify } from '@/lib/alerts';
 
 export default function SignUp() {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +28,17 @@ export default function SignUp() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
+    // Content starts inside the safe area and scrolls with the keyboard up;
+    // tapping outside the fields dismisses the keyboard.
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      alwaysBounceVertical={false}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.inner}>
         <Logo width={160} color={Colors.bg}  />
 
@@ -85,7 +97,7 @@ export default function SignUp() {
           <Link href="/privacy-policy"><Text style={styles.legalLink}>Privacy Policy</Text></Link>.
         </Text>
       </View>
-    </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
 
