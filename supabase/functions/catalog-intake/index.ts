@@ -203,6 +203,12 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+// decodeURIComponent throws on a malformed escape; one bad URL mustn't
+// fail a brand's whole scrape.
+function safeDecode(s: string) {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
 async function isDisallowed(domain: string): Promise<boolean> {
   try {
     const res = await fetchWithTimeout(`https://${domain}/robots.txt`, { headers: { 'User-Agent': 'TroveCatalogBot/1.0' } });
@@ -305,6 +311,9 @@ function mapShopifyProduct(p: any, domain: string) {
   const allImages: string[] = (p.images ?? []).map((i: any) => i?.src).filter(Boolean);
   return {
     id: p.id as number,
+    // Shopify's own gift card product type, for ones whose title doesn't
+    // say so (#134).
+    giftCard: /gift\s*-?\s*card/i.test(p.product_type ?? ''),
     inStock: variants.some(v => v.available !== false),
     price: parseFloat(variant?.price ?? '0'),
     product: {
@@ -371,7 +380,7 @@ async function probeShopify(
   const products: ScrapedProduct[] = [];
   for (const p of main.raw) {
     const m = mapShopifyProduct(p, domain);
-    if (!m.inStock || !m.product.image || !(m.price > 0)) continue;
+    if (m.giftCard || !m.inStock || !m.product.image || !(m.price > 0)) continue;
     let price: number | null;
     const prices: Record<string, number> = {};
     if (hasUsdPricing) {
@@ -548,8 +557,12 @@ async function probeLdJson(
     const price = toUsd(offer.price, offer.currency, fx);
     if (price === null) continue;
     currencies.set(offer.currency, (currencies.get(offer.currency) ?? 0) + 1);
+    // The page's Shopify handle when the URL has one, so this scrape and
+    // probeShopify give a product the same id. productGroupID/SKU ids
+    // stored every product twice for brands scraped both ways (#134).
+    const urlHandle = url.match(/\/products\/([^/?#]+)/)?.[1];
     products.push({
-      handle: slugify(ld.productGroupID ?? ld.sku ?? ld.name ?? url),
+      handle: slugify(urlHandle ? safeDecode(urlHandle) : (ld.productGroupID ?? ld.sku ?? ld.name ?? url)),
       name: ld.name,
       price,
       prices: { [offer.currency]: offer.price },
@@ -671,6 +684,19 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
   // rather than by last_seen_at, since unchanged rows no longer get
   // last_seen_at bumped.
   let removed = 0;
+  // Any other active row for a page this scrape just wrote is a duplicate
+  // under an older id (an ld_json productGroupID/SKU id, see probeLdJson).
+  // Safe on partial scrapes too, since it only touches pages seen this run.
+  const idByUrl = new Map(all.map(r => [r.url as string, r.id as string]));
+  const superseded = [...existing.values()]
+    .filter(e => e.status === 'active' && idByUrl.has(e.url) && idByUrl.get(e.url) !== e.id)
+    .map(e => e.id);
+  for (let i = 0; i < superseded.length; i += 200) {
+    const { count } = await admin.from('products')
+      .update({ status: 'removed', removed_at: now }, { count: 'exact' })
+      .in('id', superseded.slice(i, i + 200));
+    removed += count ?? 0;
+  }
   if (scrape.complete) {
     const gone = [...existing.values()].filter(e => e.status === 'active' && !rows.has(e.id)).map(e => e.id);
     for (let i = 0; i < gone.length; i += 200) {
@@ -923,10 +949,13 @@ function classifyCategory(productName: string, fallback: string | null): string 
 // returns + package protection" at $1), and literal books, which don't fit
 // a fashion/home/beauty catalog regardless of which brand happens to sell
 // them (found via Tanner Goods and Orée New York both carrying books).
+// Gift cards in any spelling too (#134): "Gift Card", "GIFTCARD",
+// "E-Gift Card", "Gift Certificate $75", "Gift Voucher ~ hard copy".
 const EXCLUDED_PRODUCT_PATTERNS = [
   /package protection/i, /shipping protection/i, /extended warranty/i,
   /gift wrap/i, /\bdonation\b/i,
   /\bbook\b/i,
+  /gift\s*-?\s*cards?\b/i, /\be-?gift\b/i, /gift certificates?\b/i, /gift vouchers?\b/i,
 ];
 
 function isExcludedProduct(productName: string): boolean {
