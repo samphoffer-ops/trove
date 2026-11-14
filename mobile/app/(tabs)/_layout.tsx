@@ -5,9 +5,11 @@ import { Colors, Typography } from '@/lib/theme';
 // renders the real Liquid Glass bar. Deliberately no backgroundColor,
 // blurEffect or shadow: any of those replaces the system glass appearance.
 //
-// 1.0 tabs are Feed and Boards only (design spec §3). search.tsx stays in
-// this group for #63 but has no Trigger, which NativeTabs treats as hidden.
-// Profile and settings are reached from the header (GlassHeader).
+// Feed, Boards, and Search (#63, back in 1.0 on 2026-11-14 over spec §3).
+// Search takes the system search role, so iOS 26+ draws it as the separate
+// round search button at the end of the bar and supplies its own icon and
+// localized title. Profile and settings are reached from the header
+// (GlassHeader).
 export default function TabsLayout() {
   return (
     <NativeTabs
@@ -22,6 +24,7 @@ export default function TabsLayout() {
         <Icon sf={{ default: 'rectangle.stack', selected: 'rectangle.stack.fill' }} />
         <Label>Boards</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="search" role="search" />
     </NativeTabs>
   );
 }
