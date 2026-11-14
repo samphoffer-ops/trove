@@ -95,7 +95,7 @@ export function InviteSheet({ board, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.overlay },
+  backdrop:  { ...StyleSheet.absoluteFill, backgroundColor: Colors.overlay },
   sheetWrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: Colors.surface,

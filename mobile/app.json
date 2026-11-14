@@ -7,11 +7,6 @@
     "scheme": "trove",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0D1035"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.shoptrove",
@@ -51,7 +46,7 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           }
         }
       ],

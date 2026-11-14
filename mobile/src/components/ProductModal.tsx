@@ -72,7 +72,7 @@ export function ProductModal() {
   return (
     <Modal transparent visible onRequestClose={handleClose} animationType="none">
       <TouchableWithoutFeedback onPress={handleClose}>
-        <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFillObject} />
+        <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
       </TouchableWithoutFeedback>
       <View style={styles.centerWrap} pointerEvents="box-none">
         <Animated.View style={[styles.card, { maxHeight: cardMaxHeight, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
@@ -84,7 +84,7 @@ export function ProductModal() {
 }
 
 const styles = StyleSheet.create({
-  centerWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  centerWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 32 },
   card: {
     width: 460,
     maxWidth: '100%',

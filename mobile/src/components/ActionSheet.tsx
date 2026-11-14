@@ -56,7 +56,7 @@ export function ActionSheet({ visible, options, onCancel }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.overlay },
+  backdrop:  { ...StyleSheet.absoluteFill, backgroundColor: Colors.overlay },
   sheetWrap: { flex: 1, justifyContent: 'flex-end' },
   sheet:     { backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 20 },
   handle:    { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
