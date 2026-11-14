@@ -14,7 +14,7 @@ interface AuthState {
   completeOnboarding: (selections: { brands: string[]; styles: string[]; categories: string[] }) => Promise<void>;
   updateProfile:  (fields: Partial<Profile>) => Promise<{ error?: string }>;
   signOut:        () => Promise<void>;
-  deleteAccount:  () => Promise<{ error?: string }>;
+  deleteAccount:  (appleAuthorizationCode?: string | null) => Promise<{ error?: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -83,13 +83,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ session: null, user: null, profile: null, profileLoading: false });
   },
 
-  async deleteAccount() {
-    // Deployed in Supabase under the name "smooth-api" (an auto-generated
-    // name from the dashboard that a rename attempt didn't actually change) —
-    // the code at supabase/functions/delete-account/index.ts is what's running.
-    const { error } = await supabase.functions.invoke('smooth-api');
-    if (error) return { error: 'Something went wrong deleting your account. Please try again.' };
-    await get().signOut();
-    return {};
+  // Leaves the (now dead) session in place so the delete screen can show
+  // its success state; that screen signs out when the user taps Done.
+  async deleteAccount(appleAuthorizationCode) {
+    const { error } = await supabase.functions.invoke('delete-account', {
+      body: appleAuthorizationCode ? { apple_authorization_code: appleAuthorizationCode } : {},
+    });
+    if (!error) return {};
+    const detail = await (error as any).context?.json?.().catch(() => null);
+    if (detail?.error === 'apple_reauth_required') {
+      return { error: 'Confirm with Apple to delete your account, then try again.' };
+    }
+    return { error: 'Something went wrong deleting your account. Please try again.' };
   },
 }));

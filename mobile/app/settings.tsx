@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
-import { notify, confirmAction } from '@/lib/alerts';
+import { confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -15,8 +15,7 @@ const ADMIN_EMAIL = 'samphoffer@gmail.com';
 
 export default function Settings() {
   const insets = useSafeAreaInsets();
-  const { signOut, deleteAccount, user } = useAuthStore();
-  const [deleting, setDeleting] = useState(false);
+  const { signOut, user } = useAuthStore();
   const country = useCountry();
   const [adminStatus, setAdminStatus] = useState<string | null>(null);
   const [adminRunning, setAdminRunning] = useState(false);
@@ -224,29 +223,6 @@ export default function Settings() {
     confirmAction('Sign out', 'Are you sure?', 'Sign out', signOut);
   }
 
-  function confirmDeleteAccount() {
-    confirmAction(
-      'Delete account',
-      'This permanently deletes your profile, boards, saved items, and social connections. This can\'t be undone.',
-      'Continue',
-      confirmDeleteAccountFinal,
-    );
-  }
-
-  function confirmDeleteAccountFinal() {
-    confirmAction(
-      'Are you absolutely sure?',
-      'There is no way to recover your account after this.',
-      'Delete my account',
-      async () => {
-        setDeleting(true);
-        const { error } = await deleteAccount();
-        setDeleting(false);
-        if (error) notify('Couldn\'t delete account', error);
-      },
-    );
-  }
-
   return (
     <WebFrame maxWidth={960}>
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -282,8 +258,8 @@ export default function Settings() {
         <Pressable style={styles.signOutBtn} onPress={confirmSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
-        <Pressable style={styles.deleteBtn} onPress={confirmDeleteAccount} disabled={deleting}>
-          <Text style={styles.deleteText}>{deleting ? 'Deleting account…' : 'Delete account'}</Text>
+        <Pressable style={styles.deleteBtn} onPress={() => router.push('/delete-account')}>
+          <Text style={styles.deleteText}>Delete account</Text>
         </Pressable>
 
         {isAdmin && (
