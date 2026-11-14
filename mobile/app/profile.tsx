@@ -60,15 +60,12 @@ export default function ProfileScreen() {
     .slice(0, 10);
 
   return (
-    <View style={styles.root}>
-      <View style={[styles.titleRow, { paddingTop: insets.top + 16 }]}>
-        <View>
-          {/* Pushed from the header (no longer a tab), so it needs a way back */}
-          <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={8} accessibilityLabel="Back">
-            <ChevronLeftIcon color={Colors.text} />
-          </Pressable>
-          <Text style={styles.pageLabel}>profile</Text>
-        </View>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <View style={styles.topBar}>
+        {/* Pushed from the header (no longer a tab), so it needs a way back */}
+        <Pressable onPress={() => goBack('/(tabs)/feed')} hitSlop={11} accessibilityRole="button" accessibilityLabel="Back">
+          <ChevronLeftIcon />
+        </Pressable>
         <Pressable style={styles.gearBtn} onPress={() => router.push('/settings')} hitSlop={8}>
           <GearIcon color={Colors.text} size={22} />
         </Pressable>
@@ -161,8 +158,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
-  titleRow:    { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: Spacing[3] },
-  pageLabel:   { ...Typography.label, color: Colors.textMuted, marginTop: 6 },
+  topBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 44, paddingHorizontal: Spacing.screen },
   gearBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   content:     { paddingHorizontal: 20, paddingBottom: 100, maxWidth: 800, alignSelf: 'center', width: '100%' },
   hero:        { alignItems: 'center', paddingVertical: Spacing[6] },
