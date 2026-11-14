@@ -15,6 +15,7 @@ import {
   Mulish_800ExtraBold,
   Mulish_900Black,
 } from '@expo-google-fonts/mulish';
+import { Colors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { ProductModal } from '@/components/ProductModal';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -112,8 +113,8 @@ export default function RootLayout() {
             card; the screen animates itself (lib/sharedTransition.ts). */}
         <Stack.Screen name="product/[id]" options={{ presentation: 'transparentModal', animation: 'none' }} />
         <Stack.Screen name="board/[id]"   options={{ presentation: 'card' }} />
-        <Stack.Screen name="board/new"    options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-        <Stack.Screen name="save"         options={{ presentation: 'formSheet', sheetAllowedDetents: [0.5, 1.0], sheetInitialDetentIndex: 0, sheetGrabberVisible: true }} />
+        <Stack.Screen name="board/new"    options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true, contentStyle: { backgroundColor: Colors.bg } }} />
+        <Stack.Screen name="save"         options={{ presentation: 'formSheet', sheetAllowedDetents: [0.5, 1.0], sheetInitialDetentIndex: 0, sheetGrabberVisible: true, contentStyle: { backgroundColor: Colors.bg } }} />
         <Stack.Screen name="user/[id]"    options={{ presentation: 'card' }} />
         <Stack.Screen name="brand/[id]"   options={{ presentation: 'card' }} />
         <Stack.Screen name="inbox"        options={{ presentation: 'card' }} />
