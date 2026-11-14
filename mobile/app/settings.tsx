@@ -365,7 +365,7 @@ export default function Settings() {
 const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
   topBar:      { flexDirection: 'row', alignItems: 'center', height: 44, paddingHorizontal: Spacing.screen },
-  pageLabel:   { ...Typography.displayXl, color: Colors.textMuted, paddingTop: Spacing[4], marginBottom: Spacing[6] },
+  pageLabel:   { ...Typography.displayXl, color: Colors.text, paddingTop: Spacing[4], marginBottom: Spacing[6] },
   content:     { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
   divider:     { height: 1, backgroundColor: Colors.border, marginVertical: Spacing[6] },
   linkRow:     { paddingVertical: Spacing[3] },
