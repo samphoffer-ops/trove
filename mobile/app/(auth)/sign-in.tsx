@@ -10,6 +10,7 @@ import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
 import { authErrorMessage, validateSignIn } from '@/lib/authErrors';
 import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
+import { signInWithGoogle } from '@/lib/googleAuth';
 
 // HIG minimum touch target; the system Apple button is drawn at this height.
 const APPLE_BUTTON_HEIGHT = 48;
@@ -47,6 +48,17 @@ export default function SignIn() {
       await signInWithApple();
     } catch (e: any) {
       notify('Sign in with Apple failed', e?.message);
+    }
+    setLoading(false);
+  }
+
+  async function googleSignIn() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      notify('Sign in with Google failed', e?.message);
     }
     setLoading(false);
   }
@@ -122,7 +134,12 @@ export default function SignIn() {
                 onPress={appleSignIn}
               />
             )}
-            <Pressable style={styles.oauthBtn}>
+            <Pressable
+              style={[styles.oauthBtn, loading && styles.btnDisabled]}
+              onPress={googleSignIn}
+              disabled={loading}
+              accessibilityRole="button"
+            >
               <GoogleIcon size={16} />
               <Text style={styles.oauthText}>Sign in with Google</Text>
             </Pressable>
