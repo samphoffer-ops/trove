@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   metaText:{ flex: 1 },
   brand:   { ...Typography.label, color: Colors.accentBlue },
   name:    { ...Typography.caption, color: Colors.textMuted, marginTop: 2 },
-  counter: { ...Typography.headline, color: Colors.text, fontVariant: ['tabular-nums'] },
+  counter: { ...Typography.headlineSans, color: Colors.text, fontVariant: ['tabular-nums'] },
   counterTotal: { ...Typography.caption, color: Colors.textMuted },
   answers: { flexDirection: 'row', gap: Spacing[4] },
   answer: {

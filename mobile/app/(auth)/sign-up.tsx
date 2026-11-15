@@ -3,8 +3,8 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
-import { Logo } from '@/components/Logo';
+import { Colors, Radius, Typography, Spacing, serifTracking, OneLineHeader } from '@/lib/theme';
+import { TroveLockup } from '@/components/TroveLockup';
 import { notify } from '@/lib/alerts';
 import { ALREADY_REGISTERED, authErrorMessage, validateSignUp } from '@/lib/authErrors';
 
@@ -48,10 +48,10 @@ export default function SignUp() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.inner}>
-        <Logo width={160} color={Colors.bg}  />
+        <TroveLockup size="lg" color={Colors.bg} />
 
         <View style={styles.headingWrap}>
-          <Text style={styles.heading}>Join Trove.</Text>
+          <Text {...OneLineHeader} style={styles.heading}>Join Trove.</Text>
           <Text style={styles.sub}>Discover things worth keeping.</Text>
         </View>
 
@@ -119,9 +119,9 @@ const styles = StyleSheet.create({
   },
   headingWrap: { marginTop: Spacing[6], marginBottom: Spacing[6] },
   heading: {
-    fontFamily:    'Mulish_900Black',
+    fontFamily:    Typography.display.fontFamily,
     fontSize:      34,
-    letterSpacing: -1,
+    letterSpacing: serifTracking(34),
     lineHeight:    38,
     color:         Colors.bg,
     marginBottom:  Spacing[2],
@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   btnText: {
-    fontFamily:    'Mulish_800ExtraBold',
     fontSize:      16,
+    fontWeight:    '800',
     color:         Colors.text,
     letterSpacing: -0.2,
   },
   link:       { alignItems: 'center', paddingVertical: 8 },
   linkText:   { ...Typography.body, fontSize: 14, color: 'rgba(253,252,249,0.65)' },
-  linkAccent: { fontFamily: 'Mulish_700Bold', color: Colors.bg },
+  linkAccent: { fontWeight: '700', color: Colors.bg },
   legal:      { ...Typography.caption, fontSize: 12, color: 'rgba(253,252,249,0.5)', textAlign: 'center', lineHeight: 18, marginTop: Spacing[4], paddingHorizontal: 8 },
-  legalLink:  { fontFamily: 'Mulish_700Bold', color: 'rgba(253,252,249,0.75)' },
+  legalLink:  { fontWeight: '700', color: 'rgba(253,252,249,0.75)' },
 });

@@ -14,7 +14,7 @@ import { ShareSheet } from '@/components/ShareSheet';
 import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 import { Product, Profile } from '@/types';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
 import { openSaveSheet } from '@/lib/navigation';
 import { SearchIcon, CloseIcon, BookmarkIcon, ShareIcon } from '@/components/Icons';
@@ -131,7 +131,7 @@ export default function SearchScreen() {
         scrollEventThrottle={200}
       >
         <View style={styles.masthead}>
-          <Text {...DisplayScaling} style={styles.pageLabel} accessibilityRole="header">search</Text>
+          <Text {...DisplayScaling} {...OneLineHeader} style={styles.pageLabel} accessibilityRole="header">search</Text>
           <Pressable style={styles.field} onPress={() => inputRef.current?.focus()}>
             <SearchIcon color={Colors.textMuted} size={18} />
             <TextInput
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   peopleSection: { marginHorizontal: Spacing.screen, marginBottom: Spacing[5], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.borderStrong, paddingBottom: Spacing[3] },
   personRow:   { flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3] },
   avatar:      { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText:  { ...Typography.headline, color: Colors.surface },
+  avatarText:  { ...Typography.headlineSans, color: Colors.surface },
   personInfo:  { flex: 1 },
   personName:  { ...Typography.cardTitle, color: Colors.text },
   personUsername: { ...Typography.caption, color: Colors.textMuted, marginTop: 1 },

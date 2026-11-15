@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: Spacing[4], paddingVertical: Spacing[3],
   },
   avatar:     { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { ...Typography.headline, color: '#fff' },
+  avatarText: { ...Typography.headlineSans, color: '#fff' },
   info:       { flex: 1 },
   name:       { ...Typography.cardTitle, fontSize: 15, color: Colors.text },
   username:   { ...Typography.caption, color: Colors.textMuted, marginTop: 1 },

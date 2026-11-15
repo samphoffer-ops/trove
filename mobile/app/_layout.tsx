@@ -1,35 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
-  useFonts,
-  Mulish_400Regular,
-  Mulish_300Light_Italic,
-  Mulish_400Regular_Italic,
-  Mulish_500Medium,
-  Mulish_500Medium_Italic,
-  Mulish_600SemiBold,
-  Mulish_700Bold,
-  Mulish_800ExtraBold,
-  Mulish_900Black,
-} from '@expo-google-fonts/mulish';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts, YoungSerif_400Regular } from '@expo-google-fonts/young-serif';
 import { Colors } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { ProductModal } from '@/components/ProductModal';
+import { LaunchScreen } from '@/components/LaunchScreen';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCurrencyStore } from '@/store/useCurrencyStore';
+import { useProductsStore } from '@/store/useProductsStore';
 
-// Mulish is the only typeface (docs/design-spec.md §2). Editorial headers use
-// the italic weights; see Typography in src/lib/theme.ts.
+// Keep the native splash up until fonts and the initial session are ready, so
+// nothing paints in fallback fonts. LaunchScreen takes over from it.
+SplashScreen.preventAutoHideAsync();
+
+// Young Serif is for large text only; everything else is the system font
+// (see Typography in src/lib/theme.ts).
 //
 // RN's Text/TextInput can't take a global default font via defaultProps —
 // React 19 dropped defaultProps support for function components, so that
-// classic RN trick is now a silent no-op. For web (the marketing site, and
-// where every screenshot in this repo is rendered from), inject real CSS
-// instead. Native still needs a proper shared <Text> wrapper component to
-// get this consistently — flagged as a follow-up, not done here.
+// classic RN trick is now a silent no-op. On native, leaving fontFamily unset
+// already gives SF Pro. Web (the marketing site, and where every screenshot in
+// this repo is rendered from) gets the matching system stack via real CSS.
 function injectWebFont() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   if (document.getElementById('trove-font-override')) return;
@@ -37,7 +32,7 @@ function injectWebFont() {
   style.id = 'trove-font-override';
   style.textContent = `
     html, body, #root, [data-testid], input, textarea {
-      font-family: 'Mulish_400Regular', -apple-system, sans-serif !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
     }
   `;
   document.head.appendChild(style);
@@ -45,17 +40,20 @@ function injectWebFont() {
 
 export default function RootLayout() {
   const { setSession, fetchProfile } = useAuthStore();
-  const [fontsLoaded] = useFonts({
-    Mulish_400Regular,
-    Mulish_300Light_Italic,
-    Mulish_400Regular_Italic,
-    Mulish_500Medium,
-    Mulish_500Medium_Italic,
-    Mulish_600SemiBold,
-    Mulish_700Bold,
-    Mulish_800ExtraBold,
-    Mulish_900Black,
-  });
+  const [fontsLoaded] = useFonts({ YoungSerif_400Regular });
+  const authReady = useAuthStore(s => !s.loading && !(s.session && s.profileLoading));
+  // A signed-in, onboarded user lands on the feed: hold launch for its first
+  // page too, so the handoff reveals products rather than a spinner.
+  const landsOnFeed = useAuthStore(s => !!s.session && !!s.profile?.onboarding_completed_at);
+  const feedReady = useProductsStore(s => s.loaded);
+  const dataReady = authReady && (!landsOnFeed || feedReady);
+  const [launching, setLaunching] = useState(Platform.OS !== 'web');
+  // Never hold launch on a slow network: after this, go with what we have.
+  const [launchTimedOut, setLaunchTimedOut] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLaunchTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -131,6 +129,7 @@ export default function RootLayout() {
         <Stack.Screen name="contact"    options={{ presentation: 'card' }} />
       </Stack>
       <ProductModal />
+      {launching && <LaunchScreen ready={fontsLoaded && (dataReady || launchTimedOut)} onDone={() => setLaunching(false)} />}
     </GestureHandlerRootView>
   );
 }

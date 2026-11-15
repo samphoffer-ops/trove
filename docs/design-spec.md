@@ -30,7 +30,7 @@ Save this file as `docs/design-spec.md`, and add one line to CLAUDE.md: "All UI 
 
 | Token | Value | Use |
 | --- | --- | --- |
-| Coral | `#FF4A1C` | Brand moments only: onboarding reveal, editorial headers, empty states, logo dot |
+| Coral | `#FF4A1C` | Brand moments only: onboarding reveal, editorial headers, empty states |
 | Warm white | `#FFF8F0` | Surfaces, including the feed background |
 | Near-black | from theme | Text and brand moments |
 | Chartreuse | `#E8F353` | The single primary action. Max one per screen. |
@@ -40,8 +40,9 @@ Save this file as `docs/design-spec.md`, and add one line to CLAUDE.md: "All UI 
 
 ### Typography
 
-- **Typeface:** Mulish throughout.
-- **Contrast comes from scale, not extra fonts.** Editorial headers are roughly 4× body size, set in Mulish italic at regular or medium weight with slightly tight letter-spacing (about -1% to -2.5%) and line-height near 1.0.
+- **Typefaces:** Young Serif for large text (about 22pt and up: editorial headers, display, the wordmark) and the iOS system font (SF Pro) for everything else.
+- **Young Serif has one weight and no italic.** Set it upright at 400 and never apply bold or italic, which iOS would fake. Track it tight, about -3.5% of the font size.
+- **Contrast comes from scale.** Editorial headers are roughly 3–4× body size, with line-height near 1.1. Keep headers to one line wherever the copy allows.
 - **Body:** 15–16pt, line-height about 1.4–1.5.
 - **Small labels** (brand, price on cards): small, medium weight, quiet color. Keep them visually subordinate to the image.
 - **Bold is not the main hierarchy tool.** Size and placement come first.
@@ -121,7 +122,7 @@ Every gesture gets a haptic. No haptics on scroll.
 1. **Brand picks:** a grid of yes-list brand wordmarks. Select at least five. The continue button stays disabled until then.
 2. **Never-show:** a grid of styles or categories to exclude. These are stored as negative signals.
 3. **Image picks:** 8–12 product images, each answered yes or no, with a haptic on each choice.
-4. **Reveal:** full-bleed coral with an oversized italic Mulish header ("Your edit is ready"), a success haptic, then a transition into the feed.
+4. **Reveal:** full-bleed coral with an oversized Young Serif header ("Your edit is ready"), a success haptic, then a transition into the feed.
 
 Sign in with Apple comes before or after these steps, never in the middle. The reveal is the app's main brand moment, so give it the most polish.
 
@@ -164,7 +165,7 @@ Sign in with Apple comes before or after these steps, never in the middle. The r
 
 ### Header and navigation
 
-- Logo wordmark on the left, profile and settings on the right, all as glass controls.
+- Trove lockup (mark + wordmark) on the left, profile and settings on the right, all as glass controls.
 - No DMs button in 1.0.
 
 ---

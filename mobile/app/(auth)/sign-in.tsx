@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
-import { Logo } from '@/components/Logo';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
+import { TroveLockup } from '@/components/TroveLockup';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
 import { authErrorMessage, validateSignIn } from '@/lib/authErrors';
@@ -70,10 +70,10 @@ export default function SignIn() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Logo width={132} color={Colors.text} />
+          <TroveLockup size="lg" color={Colors.text} />
 
           <View style={styles.headingWrap}>
-            <Text {...DisplayScaling} style={styles.heading}>Welcome back.</Text>
+            <Text {...DisplayScaling} {...OneLineHeader} style={styles.heading}>Welcome back.</Text>
             <Text style={styles.sub}>Sign in to your Trove.</Text>
           </View>
 
@@ -216,5 +216,5 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  linkAccent: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.bg },
+  linkAccent: { fontWeight: Typography.cardTitle.fontWeight, color: Colors.bg },
 });

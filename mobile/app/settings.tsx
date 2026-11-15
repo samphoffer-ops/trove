@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/useAuthStore';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
 import { notify, confirmAction } from '@/lib/alerts';
 import { ChevronLeftIcon } from '@/components/Icons';
 import { WebFrame } from '@/components/WebFrame';
@@ -258,7 +258,7 @@ export default function Settings() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Same oversized page title as the Boards tab: the screen's editorial moment (spec §1) */}
-        <Text {...DisplayScaling} style={styles.pageLabel} accessibilityRole="header">settings</Text>
+        <Text {...DisplayScaling} {...OneLineHeader} style={styles.pageLabel} accessibilityRole="header">settings</Text>
 
         <Pressable style={styles.linkRow} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.linkText}>Edit profile</Text>

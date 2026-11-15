@@ -142,5 +142,5 @@ const styles = StyleSheet.create({
   chipTextActive: { color: Colors.accentLime },
   saveBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: Spacing[6] },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { ...Typography.headline, fontSize: 16, color: Colors.text },
+  saveBtnText: { ...Typography.headlineSans, fontSize: 16, color: Colors.text },
 });

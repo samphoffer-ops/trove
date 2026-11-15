@@ -15,6 +15,6 @@ export default function NotFound() {
 
 const styles = StyleSheet.create({
   root:  { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.bg },
-  title: { ...Typography.headline, fontSize: 18, color: Colors.text, marginBottom: Spacing[3] },
+  title: { ...Typography.headlineSans, fontSize: 18, color: Colors.text, marginBottom: Spacing[3] },
   link:  { ...Typography.cardTitle, fontSize: 15, color: Colors.accent },
 });

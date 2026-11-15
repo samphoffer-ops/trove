@@ -4,12 +4,11 @@ import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Logo } from '@/components/Logo';
+import { TroveLockup } from '@/components/TroveLockup';
 import { GearIcon, ProfileIcon } from '@/components/Icons';
 import { Colors, Radius, Spacing } from '@/lib/theme';
 
 const CONTROL_SIZE = 44; // Apple's minimum hit target
-const LOGO_WIDTH = 72;
 
 // Height of the header row below the safe area. Screens pad their scroll
 // content by insets.top + GLASS_HEADER_HEIGHT so it starts below the
@@ -32,7 +31,7 @@ export function Glass({ style, children }: { style: ViewStyle; children: ReactNo
   );
 }
 
-// Logo wordmark left; profile and settings right (design spec §7).
+// Lockup left; profile and settings right (design spec §7).
 export function GlassHeader() {
   const insets = useSafeAreaInsets();
   return (
@@ -43,7 +42,7 @@ export function GlassHeader() {
         accessibilityLabel="Trove, go to feed"
       >
         <Glass style={styles.logoCapsule}>
-          <Logo width={LOGO_WIDTH} color={Colors.text} />
+          <TroveLockup size="sm" color={Colors.text} />
         </Glass>
       </Pressable>
 

@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
   updated:     { ...Typography.caption, fontSize: 12.5, color: Colors.textMuted, marginBottom: Spacing[4] },
   paragraph:   { ...Typography.body, fontSize: 14.5, lineHeight: 22, color: Colors.text },
   section:     { marginTop: Spacing[5] },
-  heading:     { ...Typography.headline, fontSize: 16, color: Colors.text, marginBottom: Spacing[3] },
+  heading:     { ...Typography.headlineSans, fontSize: 16, color: Colors.text, marginBottom: Spacing[3] },
 });

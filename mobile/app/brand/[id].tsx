@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   followerText:{ ...Typography.caption, fontSize: 13, color: Colors.textMuted, marginBottom: Spacing[4] },
   followBtn:   { borderWidth: 1.5, borderColor: Colors.text, borderRadius: Radius.full, paddingVertical: 12, paddingHorizontal: 32, alignItems: 'center' },
   followBtnActive: { backgroundColor: Colors.text, borderColor: Colors.text },
-  followBtnText:   { ...Typography.headline, fontSize: 15, color: Colors.text },
+  followBtnText:   { ...Typography.headlineSans, fontSize: 15, color: Colors.text },
   followBtnTextActive: { color: Colors.accentLime },
   empty:       { ...Typography.body, color: Colors.textMuted, textAlign: 'center', paddingTop: 40 },
 });
