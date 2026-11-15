@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShareStore } from '@/store/useShareStore';
 import { ChevronLeftIcon, SearchIcon } from '@/components/Icons';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
 import { Share } from '@/types';
 import { WebFrame } from '@/components/WebFrame';
 import { goBack } from '@/lib/navigation';
@@ -70,7 +70,7 @@ export default function InboxList() {
         keyboardDismissMode="on-drag"
       >
         {/* Same oversized page title as Boards and Settings: the screen's editorial moment (spec §1) */}
-        <Text {...DisplayScaling} style={styles.pageLabel} accessibilityRole="header">messages</Text>
+        <Text {...DisplayScaling} {...OneLineHeader} style={styles.pageLabel} accessibilityRole="header">messages</Text>
 
         {inbox.length > 0 && (
           <View style={styles.searchWrap}>
@@ -90,7 +90,7 @@ export default function InboxList() {
         {filtered.length === 0 ? (
           inbox.length === 0 ? (
             <View style={styles.empty}>
-              <Text {...DisplayScaling} style={styles.emptyTitle}>Nothing yet</Text>
+              <Text {...DisplayScaling} {...OneLineHeader} style={styles.emptyTitle}>Nothing yet</Text>
               <Text style={styles.emptyBody}>When a friend shares a product with you, it'll show up here.</Text>
             </View>
           ) : (
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden', flexShrink: 0,
   },
-  avatarText:  { ...Typography.headline, color: Colors.surface },
+  avatarText:  { ...Typography.headlineSans, color: Colors.surface },
   info:        { flex: 1, gap: Spacing[1] },
   nameRow:     { flexDirection: 'row', alignItems: 'baseline', gap: Spacing[3] },
   name:        { ...Typography.body, color: Colors.text, flexShrink: 1 },

@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   cardHeader:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: Spacing[3] },
-  name:        { ...Typography.headline, fontSize: 16, color: Colors.text },
+  name:        { ...Typography.headlineSans, fontSize: 16, color: Colors.text },
   domain:      { ...Typography.caption, color: Colors.accentBlue, marginTop: 2 },
   confidenceBadge: {
     minWidth: 30, height: 22, paddingHorizontal: 6, borderRadius: 11,

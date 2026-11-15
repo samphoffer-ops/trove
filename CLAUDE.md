@@ -23,8 +23,11 @@ All UI work follows docs/design-spec.md.
 Tokens live in `mobile/src/lib/theme.ts`. Use them; never hard-code values.
 - Colors: bg `#FFF8F0`, text/ink `#0D1035`. Coral `accent` is for primary actions only,
   chartreuse `accentLime` for active/selected states, sky `accentBlue` for informational elements.
-- Type: Mulish only, using the named `Typography` styles (displayXl, display, headline,
-  cardTitle, body, caption, subhead, label, price).
+- Type: Young Serif (one weight, upright, about 22pt and up) for display, displayXl,
+  headline and the wordmark; the iOS system font for everything else. Use the named
+  `Typography` styles (displayXl, display, headline, headlineSans, cardTitle, body,
+  caption, subhead, label, price, wordmark).
+- Logo: `TroveLockup` / `TroveMark`; never draw the mark or wordmark by hand.
 - `Radius`, `Spacing` (4/6/8/12/18/28), `Shadows` (card, elevated), and `Animation`
   (140/240/360 ms, plus the spring).
 

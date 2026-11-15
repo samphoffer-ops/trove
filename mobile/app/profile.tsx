@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useBoardStore } from '@/store/useBoardStore';
 import { supabase } from '@/lib/supabase';
 import { fetchFollowedBrands } from '@/lib/social';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, serifTracking } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
 import { goBack, openProduct } from '@/lib/navigation';
 import { pickAndUploadImage } from '@/lib/uploadImage';
@@ -170,18 +170,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentLime, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.bg,
   },
-  displayName: { fontFamily: 'Mulish_900Black', fontSize: 22, letterSpacing: -0.5, color: Colors.text, marginBottom: Spacing[1] },
+  displayName: { ...Typography.headline, color: Colors.text, marginBottom: Spacing[1] },
   username:    { ...Typography.body, color: Colors.textMuted },
   bio:         { ...Typography.body, color: Colors.text, textAlign: 'center', marginTop: Spacing[3], paddingHorizontal: 12, lineHeight: 20 },
   editProfileBtn: { marginTop: Spacing[3], paddingHorizontal: 16, paddingVertical: Spacing[3], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border },
   editProfileText: { ...Typography.cardTitle, color: Colors.text },
   statsRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing[5], backgroundColor: Colors.surface, borderRadius: Radius.card, marginTop: Spacing[4] },
   stat:        { alignItems: 'center' },
-  statValue:   { ...Typography.display, fontSize: 24, color: Colors.text },
+  statValue:   { ...Typography.display, fontSize: 24, color: Colors.text, letterSpacing: serifTracking(24) },
   statLabel:   { ...Typography.label, color: Colors.textMuted, marginTop: Spacing[1] },
   section:        { marginTop: Spacing[6] },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sectionTitle:   { ...Typography.headline, fontSize: 16, color: Colors.text, marginBottom: Spacing[3] },
+  sectionTitle:   { ...Typography.headlineSans, fontSize: 16, color: Colors.text, marginBottom: Spacing[3] },
   seeAll:         { ...Typography.caption, color: Colors.accent },
   brandRow:       { gap: Spacing[3] },
   brandChip:      { paddingHorizontal: 14, paddingVertical: Spacing[2], borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface },

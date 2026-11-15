@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
-import { Logo } from '@/components/Logo';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
+import { TroveLockup } from '@/components/TroveLockup';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
 import { ALREADY_REGISTERED, authErrorMessage, validateSignUp } from '@/lib/authErrors';
@@ -93,10 +93,10 @@ export default function SignUp() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Logo width={132} color={Colors.text} />
+          <TroveLockup size="lg" color={Colors.text} />
 
           <View style={styles.headingWrap}>
-            <Text {...DisplayScaling} style={styles.heading}>Join Trove.</Text>
+            <Text {...DisplayScaling} {...OneLineHeader} style={styles.heading}>Join Trove.</Text>
             <Text style={styles.sub}>Discover things worth keeping.</Text>
           </View>
 
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   appleBtn:  { width: '100%', height: APPLE_BUTTON_HEIGHT },
   oauthText: { ...Typography.cardTitle, color: Colors.text },
   legal:     { ...Typography.caption, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing[5] },
-  legalLink: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.text },
+  legalLink: { fontWeight: Typography.cardTitle.fontWeight, color: Colors.text },
   link:       { alignItems: 'center', paddingTop: Spacing[5] },
   linkText:   {
     ...Typography.body,
@@ -260,5 +260,5 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  linkAccent: { fontFamily: Typography.cardTitle.fontFamily, color: Colors.bg },
+  linkAccent: { fontWeight: Typography.cardTitle.fontWeight, color: Colors.bg },
 });

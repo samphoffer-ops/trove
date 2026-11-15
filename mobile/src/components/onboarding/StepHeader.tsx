@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, DisplayScaling, Animation } from '@/lib/theme';
+import { Colors, Typography, Spacing, DisplayScaling, Animation, OneLineHeader } from '@/lib/theme';
 import { ChevronLeftIcon } from '@/components/Icons';
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 };
 
 // Back chevron and a thin progress rule, then an oversized pale step numeral
-// with the italic title tucked up under it: the step's editorial moment.
+// with the serif title tucked up under it: the step's editorial moment.
 export function StepHeader({ number, title, subtitle, progress, onBack }: Props) {
   const fill = useSharedValue(progress);
   useEffect(() => { fill.value = withTiming(progress, { duration: Animation.standard }); }, [progress]);
@@ -41,7 +41,7 @@ export function StepHeader({ number, title, subtitle, progress, onBack }: Props)
       <Text {...DisplayScaling} style={styles.numeral} accessible={false}>
         {String(number).padStart(2, '0')}
       </Text>
-      <Text {...DisplayScaling} style={styles.title} accessibilityRole="header">{title}</Text>
+      <Text {...DisplayScaling} {...OneLineHeader} style={styles.title} accessibilityRole="header">{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
     </View>
   );

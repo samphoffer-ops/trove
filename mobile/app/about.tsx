@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { MarketingLayout } from '@/components/MarketingLayout';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, serifTracking } from '@/lib/theme';
 
 export default function About() {
   return (
@@ -46,15 +46,15 @@ export default function About() {
 
 const styles = StyleSheet.create({
   section: { paddingTop: 56, paddingBottom: 48, maxWidth: 640 },
-  eyebrow: { fontFamily: Typography.label.fontFamily, fontSize: 13, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[3] },
-  headline: { fontFamily: Typography.display.fontFamily, fontSize: 34, color: Colors.text, letterSpacing: -0.6, marginBottom: Spacing[5] },
+  eyebrow: { fontWeight: Typography.label.fontWeight, fontSize: 13, color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[3] },
+  headline: { fontFamily: Typography.display.fontFamily, fontSize: 34, color: Colors.text, letterSpacing: serifTracking(34), marginBottom: Spacing[5] },
   paragraph: { ...Typography.body, fontSize: 16.5, color: Colors.textMuted, lineHeight: 27, marginBottom: Spacing[4] },
   missionCard: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.card, padding: 24, marginTop: Spacing[5] },
-  missionLabel: { fontFamily: Typography.label.fontFamily, fontSize: 12.5, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[3] },
-  missionText: { fontFamily: Typography.headline.fontFamily, fontSize: 19, color: Colors.text, lineHeight: 27, letterSpacing: -0.3 },
+  missionLabel: { fontWeight: Typography.label.fontWeight, fontSize: 12.5, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: Spacing[3] },
+  missionText: { fontWeight: Typography.headlineSans.fontWeight, fontSize: 19, color: Colors.text, lineHeight: 27, letterSpacing: -0.3 },
   teamSection: { borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: 40 },
   teamCard: { flexDirection: 'row', gap: 18, alignItems: 'flex-start' },
   teamAvatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.stoneSoft },
-  teamName: { ...Typography.headline, fontSize: 16, color: Colors.text, marginBottom: Spacing[2] },
+  teamName: { ...Typography.headlineSans, fontSize: 16, color: Colors.text, marginBottom: Spacing[2] },
   teamBody: { ...Typography.body, fontSize: 14.5, color: Colors.textMuted, lineHeight: 22, maxWidth: 440 },
 });

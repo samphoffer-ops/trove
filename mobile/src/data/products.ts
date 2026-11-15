@@ -147,7 +147,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
 // hardcoded here are now seeded via supabase/migrations/007_seed_products.sql.
 
 // Mini-edits for the feed's editorial bento blocks (docs/design-spec.md §7
-// Feed). Each names a small set of products under an oversized italic header.
+// Feed). Each names a small set of products under an oversized serif header.
 // 'just-in' and 'new-from-brand' are resolved in the feed (they need the
 // viewer's followed brands and the brand list); the rest match on a filter.
 export type EditKind = 'just-in' | 'new-from-brand' | 'filter';

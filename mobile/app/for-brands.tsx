@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { PhoneMockup } from '@/components/PhoneMockup';
 import { supabase } from '@/lib/supabase';
-import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, serifTracking } from '@/lib/theme';
 import { notify } from '@/lib/alerts';
 
 const PITCH = [
@@ -93,14 +93,14 @@ export default function ForBrands() {
 const styles = StyleSheet.create({
   hero: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 40, paddingTop: 56, paddingBottom: 48 },
   heroCopy: { flex: 1, minWidth: 320, gap: 16 },
-  headline: { fontFamily: Typography.display.fontFamily, fontSize: 36, color: Colors.text, letterSpacing: -0.6, lineHeight: 42 },
+  headline: { fontFamily: Typography.display.fontFamily, fontSize: 36, color: Colors.text, letterSpacing: serifTracking(36), lineHeight: 42 },
   sub: { ...Typography.body, fontSize: 16.5, color: Colors.textMuted, lineHeight: 26, maxWidth: 440 },
   pitchList: { gap: 16, paddingVertical: 32, borderTopWidth: 1, borderTopColor: Colors.border, maxWidth: 620 },
   pitchRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   pitchDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 7 },
   pitchText: { ...Typography.body, fontSize: 16, color: Colors.text, lineHeight: 24, flex: 1 },
   formSection: { paddingVertical: 48, borderTopWidth: 1, borderTopColor: Colors.border, maxWidth: 540 },
-  formHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 24, color: Colors.text, letterSpacing: -0.4, marginBottom: Spacing[6] },
+  formHeadline: { fontFamily: Typography.display.fontFamily, fontSize: 24, color: Colors.text, letterSpacing: serifTracking(24), marginBottom: Spacing[6] },
   form: { gap: Spacing[3] },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 90, textAlignVertical: 'top', borderRadius: Radius.card },
   submitBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { ...Typography.headline, fontSize: 15, color: Colors.text, textAlign: 'center', paddingHorizontal: 12 },
+  submitBtnText: { ...Typography.headlineSans, fontSize: 15, color: Colors.text, textAlign: 'center', paddingHorizontal: 12 },
   successBox: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.card, padding: 24 },
-  successText: { ...Typography.headline, fontSize: 16, color: Colors.text },
+  successText: { ...Typography.headlineSans, fontSize: 16, color: Colors.text },
 });

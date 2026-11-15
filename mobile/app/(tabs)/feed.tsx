@@ -14,7 +14,7 @@ import { QuickActionsMenu, QuickAction } from '@/components/QuickActionsMenu';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
 import { BookmarkIcon, CloseIcon } from '@/components/Icons';
 import { Product } from '@/types';
-import { Colors, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
 import * as haptics from '@/lib/haptics';
 import { openSaveSheet } from '@/lib/navigation';
 
@@ -280,7 +280,7 @@ export default function FeedScreen() {
           <>
             {/* Masthead: the feed's opening, so the grid doesn't start cold */}
             <View style={styles.masthead}>
-              <Text {...DisplayScaling} style={styles.mastheadTitle} accessibilityRole="header">Your edit</Text>
+              <Text {...DisplayScaling} {...OneLineHeader} style={styles.mastheadTitle} accessibilityRole="header">Your edit</Text>
               <View style={styles.rule} />
             </View>
             {/* Each block is a direct child of the scroll content: bentos read their own y for parallax */}
@@ -351,7 +351,6 @@ const styles = StyleSheet.create({
     ...Typography.displayXl,
     color:        Colors.bg,
     marginBottom: Spacing[5],
-    marginLeft:   -2,   // optical: italic overhang
   },
   emptyBody: {
     ...Typography.body,

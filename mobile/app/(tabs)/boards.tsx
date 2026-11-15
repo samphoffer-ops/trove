@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBoardStore } from '@/store/useBoardStore';
-import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme';
+import { Colors, Radius, Typography, Spacing, DisplayScaling, OneLineHeader } from '@/lib/theme';
 import { Board } from '@/types';
 import { PlusIcon } from '@/components/Icons';
 import { GlassHeader, GLASS_HEADER_HEIGHT } from '@/components/GlassHeader';
@@ -30,7 +30,7 @@ export default function BoardsScreen() {
 
   const titleRow = (
     <View style={styles.titleRow}>
-      <Text {...DisplayScaling} style={styles.pageLabel}>boards</Text>
+      <Text {...DisplayScaling} {...OneLineHeader} style={styles.pageLabel}>boards</Text>
       {!empty && (
         <Pressable style={styles.newBoardBtn} onPress={openCreateSheet} hitSlop={8} accessibilityLabel="New board">
           <PlusIcon color={Colors.text} size={20} />
@@ -46,7 +46,7 @@ export default function BoardsScreen() {
           {titleRow}
           <View style={[styles.empty, { paddingBottom: insets.bottom + 100 }]}>
             <View>
-              <Text {...DisplayScaling} style={styles.emptyTitle}>Start a board</Text>
+              <Text {...DisplayScaling} {...OneLineHeader} style={styles.emptyTitle}>Start a board</Text>
               <Text style={styles.emptyBody}>Group the pieces you save. Each board's cover builds itself from its first four.</Text>
             </View>
             <Pressable style={styles.createBtn} onPress={openCreateSheet}>

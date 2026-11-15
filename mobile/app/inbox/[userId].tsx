@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { opacity: 0.3 },
-  sendBtnText: { ...Typography.headline, color: Colors.ink },
+  sendBtnText: { ...Typography.headlineSans, color: Colors.ink },
 
   emptyBody: { ...Typography.body, color: Colors.textMuted, maxWidth: 300 },
 });

@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/trove-mark-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0D1035"
     },
@@ -44,8 +44,9 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0D1035",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200
+          "image": "./assets/trove-mark-splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
       ],
       [

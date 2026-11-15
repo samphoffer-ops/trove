@@ -14,7 +14,7 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       tintColor={Colors.text}
-      labelStyle={{ fontFamily: Typography.label.fontFamily, fontSize: Typography.label.fontSize }}
+      labelStyle={{ fontWeight: '500', fontSize: Typography.label.fontSize }}
     >
       <NativeTabs.Trigger name="feed">
         <Icon sf={{ default: 'square.grid.2x2', selected: 'square.grid.2x2.fill' }} />

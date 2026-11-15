@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
-import { Logo } from './Logo';
+import { TroveLockup } from './TroveLockup';
 
 const NAV_LINKS = [
   { href: '/' as const,          label: 'home' },
@@ -23,7 +23,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
       <View style={styles.navBar}>
         <View style={[styles.navInner, { maxWidth: MAX_WIDTH }]}>
           <Link href="/" asChild>
-            <Pressable><Logo width={104} /></Pressable>
+            <Pressable><TroveLockup size="sm" /></Pressable>
           </Link>
 
           {!narrow && (
@@ -64,7 +64,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
 
         <View style={styles.footer}>
           <View style={[styles.footerInner, { maxWidth: MAX_WIDTH }]}>
-            <Logo width={90} />
+            <TroveLockup size="sm" />
             <View style={styles.footerLinks}>
               <Link href="/privacy-policy" style={styles.footerLink}>privacy policy</Link>
               <Link href="/terms" style={styles.footerLink}>terms of service</Link>
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   loginLink: { ...Typography.cardTitle, fontSize: 14.5, color: Colors.text, textDecorationLine: 'none' } as any,
   signUpBtn: { backgroundColor: Colors.accent, borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 10 },
-  signUpBtnText: { ...Typography.headline, fontSize: 14.5, color: Colors.text },
+  signUpBtnText: { ...Typography.headlineSans, fontSize: 14.5, color: Colors.text },
   scrollContent: { flexGrow: 1, alignItems: 'center' },
   content:  { width: '100%', alignSelf: 'center', paddingHorizontal: 24 },
   footer:   { width: '100%', alignItems: 'center', borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 80 },

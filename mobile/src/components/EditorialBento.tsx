@@ -19,7 +19,7 @@ interface Props {
   onQuickActions: (product: Product, anchor: { x: number; y: number }) => void;
 }
 
-// Editorial bento block (§7 Feed): an oversized italic header naming the
+// Editorial bento block (§7 Feed): an oversized serif header naming the
 // mini-edit, one lead product at ~60% width and two stacked beside it.
 // Breaks the grid on purpose. Must be a direct child of the feed's scroll
 // content so its layout y is a scroll offset.
@@ -82,7 +82,6 @@ const styles = StyleSheet.create({
     ...Typography.displayXl,
     color:        Colors.text,
     marginBottom: Spacing[5],
-    marginLeft:   -2,   // optical: italic overhang
   },
   row: {
     flexDirection: 'row',
