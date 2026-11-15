@@ -51,10 +51,10 @@ interface Props {
   onDismissed?: () => void;
 }
 
-// Native share sheet with the product's page on the brand's site. The old
-// ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
+// Native share sheet with a tracked go link to the brand's page (#138). The
+// old ShareSheet sent to followed friends over DMs, which are v1.1 (#64).
 function shareProduct(product: Product) {
-  Share.share({ message: `${product.name} by ${product.brand}`, url: product.url });
+  Share.share({ message: `${product.name} by ${product.brand}`, url: getClickOutUrl(product.id, 'share') });
 }
 
 export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0, onClose, heroMaxHeight, source = null, onDismissed }: Props) {
@@ -178,12 +178,15 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
     // Uniform scale works because the card and the hero share the product's
     // aspect ratio. Translation accounts for the current scroll offset, so
     // dismissing from partway down the page still lands on the card.
+    // The hero rises above the info panel only while it's in flight; once
+    // settled the panel draws over it, so parallax never hides the title.
     const k = progress.value;
     const { src, tgt } = flight;
     const scale = src.width / tgt.width;
     const dx = (src.x + src.width / 2) - (tgt.x + tgt.width / 2);
     const dy = (src.y + src.height / 2) - (tgt.y + tgt.height / 2 - s);
     return {
+      zIndex: k < 1 ? 1 : 0,
       transform: [
         { translateX: dx * (1 - k) },
         { translateY: parallax * k + dy * (1 - k) },
@@ -303,7 +306,7 @@ const styles = StyleSheet.create({
   root:  { flex: 1 },
   solid: { backgroundColor: Colors.bg },
 
-  hero: { width: '100%', overflow: 'hidden', backgroundColor: Colors.stoneSoft, zIndex: 1 },
+  hero: { width: '100%', overflow: 'hidden', backgroundColor: Colors.stoneSoft },
 
   header: {
     position:       'absolute',
@@ -322,7 +325,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  body: { paddingHorizontal: Spacing.screen, paddingTop: Spacing[5], paddingBottom: Spacing[3] },
+  // Opaque so the panel slides over the slower-moving (parallax) hero.
+  body: { backgroundColor: Colors.bg, paddingHorizontal: Spacing.screen, paddingTop: Spacing[5], paddingBottom: Spacing[3] },
 
   brand: {
     ...Typography.label,

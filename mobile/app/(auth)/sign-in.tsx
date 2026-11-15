@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,9 @@ import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme
 import { Logo } from '@/components/Logo';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
+import { authErrorMessage, validateSignIn } from '@/lib/authErrors';
 import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
+import { signInWithGoogle } from '@/lib/googleAuth';
 
 // HIG minimum touch target; the system Apple button is drawn at this height.
 const APPLE_BUTTON_HEIGHT = 48;
@@ -26,9 +28,14 @@ export default function SignIn() {
   }, []);
 
   async function signIn() {
+    const invalid = validateSignIn(email, password);
+    if (invalid) { notify(invalid.title, invalid.message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) notify('Sign in failed', error.message);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) {
+      const { title, message } = authErrorMessage(error);
+      notify(title, message);
+    }
     setLoading(false);
   }
 
@@ -45,15 +52,34 @@ export default function SignIn() {
     setLoading(false);
   }
 
+  async function googleSignIn() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      notify('Sign in with Google failed', e?.message);
+    }
+    setLoading(false);
+  }
+
   return (
     <View style={styles.root}>
       <Image source={require('../../assets/sign-in-background.jpeg')} style={StyleSheet.absoluteFill} contentFit="cover" />
       {/* Flat ink band keeps the status bar legible over the photo (§9: no gradients) */}
       <View style={[styles.statusBand, { height: insets.top }]} />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.frame, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
+      {/* Starts below the status bar, so with the keyboard up the card scrolls
+          inside the safe area instead of sliding under the Dynamic Island.
+          Tapping outside the fields dismisses the keyboard. */}
+      <ScrollView
+        style={{ marginTop: insets.top }}
+        contentContainerStyle={[styles.frame, { paddingTop: 40, paddingBottom: insets.bottom + 24 }]}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        alwaysBounceVertical={false}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
           <Logo width={132} color={Colors.text} />
@@ -108,7 +134,12 @@ export default function SignIn() {
                 onPress={appleSignIn}
               />
             )}
-            <Pressable style={styles.oauthBtn}>
+            <Pressable
+              style={[styles.oauthBtn, loading && styles.btnDisabled]}
+              onPress={googleSignIn}
+              disabled={loading}
+              accessibilityRole="button"
+            >
               <GoogleIcon size={16} />
               <Text style={styles.oauthText}>Sign in with Google</Text>
             </Pressable>
@@ -122,7 +153,7 @@ export default function SignIn() {
             </Text>
           </Pressable>
         </Link>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </View>
   );
 }
@@ -131,7 +162,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ink },
   statusBand: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: Colors.ink },
   frame: {
-    flex:             1,
+    flexGrow:         1,
     paddingHorizontal: Spacing.screen,
     justifyContent:   'flex-end',
   },

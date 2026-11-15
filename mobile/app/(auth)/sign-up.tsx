@@ -1,32 +1,52 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Colors, Radius, Typography, Spacing } from '@/lib/theme';
 import { Logo } from '@/components/Logo';
 import { notify } from '@/lib/alerts';
+import { ALREADY_REGISTERED, authErrorMessage, validateSignUp } from '@/lib/authErrors';
 
 export default function SignUp() {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
 
   async function signUp() {
-    if (!username.trim()) { notify('Pick a username'); return; }
+    const invalid = validateSignUp(username, email, password);
+    if (invalid) { notify(invalid.title, invalid.message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
       password,
       options: { data: { username: username.trim().toLowerCase(), display_name: username.trim() } },
     });
-    if (error) notify('Sign up failed', error.message);
-    else notify('Check your email', 'Click the confirmation link to activate your account.');
+    if (error) {
+      const { title, message } = authErrorMessage(error);
+      notify(title, message);
+    } else if (data.user && data.user.identities?.length === 0) {
+      // With email confirmation on, Supabase hides existing accounts by
+      // returning a user with no identities instead of an error.
+      notify(ALREADY_REGISTERED.title, ALREADY_REGISTERED.message);
+    } else notify('Check your email', 'Click the confirmation link to activate your account.');
     setLoading(false);
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.root}>
+    // Content starts inside the safe area and scrolls with the keyboard up;
+    // tapping outside the fields dismisses the keyboard.
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top, paddingBottom: insets.bottom }}
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      alwaysBounceVertical={false}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.inner}>
         <Logo width={160} color={Colors.bg}  />
 
@@ -85,12 +105,12 @@ export default function SignUp() {
           <Link href="/privacy-policy"><Text style={styles.legalLink}>Privacy Policy</Text></Link>.
         </Text>
       </View>
-    </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.accent },
+  root:  { flex: 1, backgroundColor: Colors.ink },
   inner: {
     flex:              1,
     paddingHorizontal: 28,

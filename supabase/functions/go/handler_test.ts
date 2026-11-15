@@ -81,6 +81,15 @@ Deno.test('non-http stored URL is refused, not redirected to', async () => {
   assertEquals(res.headers.get('Location'), null);
 });
 
+Deno.test('shared link: redirects the same, logged as via share', async () => {
+  const { go, logged } = setup();
+  const res = await go(`p=shop-123&u=${USER}&s=share`);
+  assertEquals(res.headers.get('Location'), 'https://brand.example/products/tee');
+  assertEquals(logged, [{ userId: USER, productId: 'shop-123', url: 'https://brand.example/products/tee', via: 'share' }]);
+  await go(`p=shop-123&u=${USER}&s=other`);
+  assertEquals(logged[1].via, undefined);
+});
+
 Deno.test('signed out or malformed user: still redirects, not logged', async () => {
   const { go, logged } = setup();
   assertEquals((await go('p=shop-123')).status, 302);
