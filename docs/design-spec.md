@@ -145,7 +145,7 @@ Sign in with Apple comes before or after these steps, never in the middle. The r
 
 - A full-width image carousel, entered with the shared-element transition.
 - Brand, product name, and price.
-- One line on why it's in your edit, drawn from the taste profile or the brand brief.
+- ~~One line on why it's in your edit, drawn from the taste profile or the brand brief.~~ Removed by Sam on 2026-11-14: no reason or provenance line on any product listing (detail, cards, bentos, boards).
 - A bottom-anchored chartreuse "Shop at [Brand]" button that opens the outbound link through the single redirect endpoint.
 - Save to Board in the header; it opens a bottom sheet.
 

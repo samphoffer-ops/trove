@@ -90,7 +90,7 @@ export const Typography: Record<string, TextStyle> = {
     fontSize: 13,
     lineHeight: 18,
   },
-  // "Why it's in your edit", onboarding subtitles
+  // Onboarding subtitles
   subhead: {
     fontFamily: 'Mulish_400Regular_Italic',
     fontSize: 17,
