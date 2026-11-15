@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   root:        { flex: 1, backgroundColor: Colors.bg },
   topBar:      { flexDirection: 'row', alignItems: 'center', height: 44, paddingHorizontal: Spacing.screen },
   content:     { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
-  pageLabel:   { ...Typography.displayXl, color: Colors.textMuted, paddingTop: Spacing[4], marginBottom: Spacing[6] },
+  pageLabel:   { ...Typography.displayXl, color: Colors.text, paddingTop: Spacing[4], marginBottom: Spacing[6] },
 
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing[3],

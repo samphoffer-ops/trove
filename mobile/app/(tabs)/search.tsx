@@ -225,7 +225,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
   masthead:  { paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5], gap: Spacing[5] },
-  pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
+  pageLabel: { ...Typography.displayXl, color: Colors.text },
   field: {
     flexDirection:     'row',
     alignItems:        'center',

@@ -83,7 +83,7 @@ export function BoardCard({ board, style }: { board: Board; style?: object }) {
 const styles = StyleSheet.create({
   root:      { flex: 1, backgroundColor: Colors.bg },
   titleRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: Spacing.screen, paddingTop: Spacing[4], paddingBottom: Spacing[5] },
-  pageLabel: { ...Typography.displayXl, color: Colors.textMuted },
+  pageLabel: { ...Typography.displayXl, color: Colors.text },
   newBoardBtn: { marginTop: Spacing[4], width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
   // One full-width bento per board; capped on wide web viewports.
   content:   { paddingHorizontal: Spacing.screen, paddingBottom: 100, gap: Spacing[6], maxWidth: 560, alignSelf: 'center', width: '100%' },

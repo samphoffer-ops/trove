@@ -8,7 +8,9 @@ import { Colors, Radius, Typography, Spacing, DisplayScaling } from '@/lib/theme
 import { Logo } from '@/components/Logo';
 import { GoogleIcon } from '@/components/Icons';
 import { notify } from '@/lib/alerts';
+import { ALREADY_REGISTERED, authErrorMessage, validateSignUp } from '@/lib/authErrors';
 import { isAppleSignInAvailable, loadAppleAuth, signInWithApple } from '@/lib/appleAuth';
+import { signInWithGoogle } from '@/lib/googleAuth';
 
 // HIG minimum touch target; the system Apple button is drawn at this height.
 const APPLE_BUTTON_HEIGHT = 48;
@@ -28,15 +30,22 @@ export default function SignUp() {
   }, []);
 
   async function signUp() {
-    if (!username.trim()) { notify('Pick a username'); return; }
+    const invalid = validateSignUp(username, email, password);
+    if (invalid) { notify(invalid.title, invalid.message); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
       password,
       options: { data: { username: username.trim().toLowerCase(), display_name: username.trim() } },
     });
-    if (error) notify('Sign up failed', error.message);
-    else notify('Check your email', 'Click the confirmation link to activate your account.');
+    if (error) {
+      const { title, message } = authErrorMessage(error);
+      notify(title, message);
+    } else if (data.user && data.user.identities?.length === 0) {
+      // With email confirmation on, Supabase hides existing accounts by
+      // returning a user with no identities instead of an error.
+      notify(ALREADY_REGISTERED.title, ALREADY_REGISTERED.message);
+    } else notify('Check your email', 'Click the confirmation link to activate your account.');
     setLoading(false);
   }
 
@@ -50,6 +59,18 @@ export default function SignUp() {
       await signInWithApple();
     } catch (e: any) {
       notify('Sign up with Apple failed', e?.message);
+    }
+    setLoading(false);
+  }
+
+  // Google also creates the account on first use.
+  async function googleSignUp() {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      notify('Sign up with Google failed', e?.message);
     }
     setLoading(false);
   }
@@ -131,7 +152,12 @@ export default function SignUp() {
                 onPress={appleSignUp}
               />
             )}
-            <Pressable style={styles.oauthBtn}>
+            <Pressable
+              style={[styles.oauthBtn, loading && styles.btnDisabled]}
+              onPress={googleSignUp}
+              disabled={loading}
+              accessibilityRole="button"
+            >
               <GoogleIcon size={16} />
               <Text style={styles.oauthText}>Sign up with Google</Text>
             </Pressable>

@@ -4,7 +4,7 @@ export default function Terms() {
   return (
     <LegalDocument
       title="Terms of Service"
-      updated="June 19, 2026"
+      updated="November 14, 2026"
       intro="These terms govern your use of Trove. By creating an account, you agree to them."
       sections={[
         {
@@ -25,7 +25,7 @@ export default function Terms() {
         {
           heading: 'Your content',
           body:
-            'Boards, saved items, and messages you create remain yours. By sharing a board publicly or inviting a collaborator, you’re granting those other users the ability to view (and, for collaborators, add to) that content within Trove. You can delete your boards or your account at any time.',
+            'Boards, saved items, and messages you create remain yours. Your boards appear on your profile, where other Trove users can view them, and messages you send can be read by the people you send them to. You can delete your boards or your account at any time.',
         },
         {
           heading: 'Affiliate links and purchases',

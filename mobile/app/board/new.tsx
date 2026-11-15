@@ -48,7 +48,7 @@ export default function NewBoardSheet() {
 }
 
 const styles = StyleSheet.create({
-  root:      { paddingHorizontal: Spacing.screen, paddingTop: Spacing[6], gap: Spacing[4] },
+  root:      { backgroundColor: Colors.bg, paddingHorizontal: Spacing.screen, paddingTop: Spacing[6], gap: Spacing[4] },
   title:     { ...Typography.headline, color: Colors.text },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.full,

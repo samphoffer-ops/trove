@@ -1,6 +1,7 @@
 // The single click-out endpoint (#27). Every "Shop at [Brand]" tap opens
 // GET /functions/v1/go?p=<productId>&u=<userId> in the browser, and this
-// answers with a 302 to the brand's site.
+// answers with a 302 to the brand's site. Links shared from the app add
+// s=share (#138), so a friend's tap is logged apart from the sharer's own.
 //
 // Never an open redirect: the destination is always products.url for an
 // active product, read server-side. Nothing in the request picks where the
@@ -14,7 +15,8 @@
 
 export type ActiveProduct = { id: string; url: string };
 
-export type ClickOut = { userId: string; productId: string; url: string };
+// via is set only for shared links; u is then the sharer, not the tapper.
+export type ClickOut = { userId: string; productId: string; url: string; via?: 'share' };
 
 export type Deps = {
   // Returns the product only if it exists and is active, else null.
@@ -80,8 +82,10 @@ export function createHandler(deps: Deps) {
     // own event logger, since events.user_id is required.
     const userId = params.get('u') ?? '';
     if (req.method === 'GET' && UUID.test(userId)) {
+      const click: ClickOut = { userId, productId: product.id, url: destination };
+      if (params.get('s') === 'share') click.via = 'share';
       deps.defer(
-        deps.logClickOut({ userId, productId: product.id, url: destination })
+        deps.logClickOut(click)
           .catch(e => console.error('[go] click_out not logged:', e)),
       );
     }

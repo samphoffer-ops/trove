@@ -199,8 +199,16 @@ function fetchWithTimeout(url: string, init: RequestInit = {}) {
   return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 
-function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+// Takes unknown, not string: JSON-LD productGroupID/sku can be a number
+// (hutch-design.com's are), which crashed the whole refresh (#164).
+function slugify(s: unknown) {
+  return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+// decodeURIComponent throws on a malformed escape; one bad URL mustn't
+// fail a brand's whole scrape.
+function safeDecode(s: string) {
+  try { return decodeURIComponent(s); } catch { return s; }
 }
 
 async function isDisallowed(domain: string): Promise<boolean> {
@@ -305,6 +313,9 @@ function mapShopifyProduct(p: any, domain: string) {
   const allImages: string[] = (p.images ?? []).map((i: any) => i?.src).filter(Boolean);
   return {
     id: p.id as number,
+    // Shopify's own gift card product type, for ones whose title doesn't
+    // say so (#134).
+    giftCard: /gift\s*-?\s*card/i.test(p.product_type ?? ''),
     inStock: variants.some(v => v.available !== false),
     price: parseFloat(variant?.price ?? '0'),
     product: {
@@ -371,7 +382,7 @@ async function probeShopify(
   const products: ScrapedProduct[] = [];
   for (const p of main.raw) {
     const m = mapShopifyProduct(p, domain);
-    if (!m.inStock || !m.product.image || !(m.price > 0)) continue;
+    if (m.giftCard || !m.inStock || !m.product.image || !(m.price > 0)) continue;
     let price: number | null;
     const prices: Record<string, number> = {};
     if (hasUsdPricing) {
@@ -548,8 +559,12 @@ async function probeLdJson(
     const price = toUsd(offer.price, offer.currency, fx);
     if (price === null) continue;
     currencies.set(offer.currency, (currencies.get(offer.currency) ?? 0) + 1);
+    // The page's Shopify handle when the URL has one, so this scrape and
+    // probeShopify give a product the same id. productGroupID/SKU ids
+    // stored every product twice for brands scraped both ways (#134).
+    const urlHandle = url.match(/\/products\/([^/?#]+)/)?.[1];
     products.push({
-      handle: slugify(ld.productGroupID ?? ld.sku ?? ld.name ?? url),
+      handle: slugify(urlHandle ? safeDecode(urlHandle) : (ld.productGroupID ?? ld.sku ?? ld.name ?? url)),
       name: ld.name,
       price,
       prices: { [offer.currency]: offer.price },
@@ -649,9 +664,10 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
   // resulting bloat kept feed queries slow for hours after writes stopped
   // (2026-09-26). Unchanged products are now left alone entirely.
   const existing = await loadExistingProducts(admin, brand.id);
-  if (existing === null) {
-    await recordHealth(all.length, 0, 'could not read existing products');
-    return { count: 0, removed: 0, error: 'could not read existing products' };
+  if (typeof existing === 'string') {
+    const message = `could not read existing products: ${existing}`;
+    await recordHealth(all.length, 0, message);
+    return { count: 0, removed: 0, error: message };
   }
   const changed = all.filter(r => {
     const e = existing.get(r.id as string);
@@ -671,6 +687,19 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
   // rather than by last_seen_at, since unchanged rows no longer get
   // last_seen_at bumped.
   let removed = 0;
+  // Any other active row for a page this scrape just wrote is a duplicate
+  // under an older id (an ld_json productGroupID/SKU id, see probeLdJson).
+  // Safe on partial scrapes too, since it only touches pages seen this run.
+  const idByUrl = new Map(all.map(r => [r.url as string, r.id as string]));
+  const superseded = [...existing.values()]
+    .filter(e => e.status === 'active' && idByUrl.has(e.url) && idByUrl.get(e.url) !== e.id)
+    .map(e => e.id);
+  for (let i = 0; i < superseded.length; i += 200) {
+    const { count } = await admin.from('products')
+      .update({ status: 'removed', removed_at: now }, { count: 'exact' })
+      .in('id', superseded.slice(i, i + 200));
+    removed += count ?? 0;
+  }
   if (scrape.complete) {
     const gone = [...existing.values()].filter(e => e.status === 'active' && !rows.has(e.id)).map(e => e.id);
     for (let i = 0; i < gone.length; i += 200) {
@@ -695,15 +724,20 @@ async function refreshBrand(admin: AdminClient, brand: any, fx: Record<string, n
 
 // A brand's current rows, without the embedding. Paged: PostgREST caps a
 // response at 1,000 rows and big brands have several thousand.
-async function loadExistingProducts(admin: AdminClient, brandId: string): Promise<Map<string, any> | null> {
+// Keyset-paged on (brand_id, id) (migration 043). Offset paging re-sorted
+// every row of the brand per page, which timed out for Sabre Paris's
+// 5,600 products (#164). Returns the error message on failure.
+async function loadExistingProducts(admin: AdminClient, brandId: string): Promise<Map<string, any> | string> {
   const out = new Map<string, any>();
-  for (let from = 0; ; from += 1000) {
+  let after = '';
+  while (true) {
     const { data, error } = await admin.from('products')
       .select('id, brand, name, price, prices, image, images, ratio, url, description, category, status, blurhash')
-      .eq('brand_id', brandId).order('id').range(from, from + 999);
-    if (error) return null;
+      .eq('brand_id', brandId).gt('id', after).order('id').limit(1000);
+    if (error) return error.message;
     for (const row of data ?? []) out.set(row.id, row);
     if (!data || data.length < 1000) return out;
+    after = data[data.length - 1].id;
   }
 }
 
@@ -923,10 +957,13 @@ function classifyCategory(productName: string, fallback: string | null): string 
 // returns + package protection" at $1), and literal books, which don't fit
 // a fashion/home/beauty catalog regardless of which brand happens to sell
 // them (found via Tanner Goods and Orée New York both carrying books).
+// Gift cards in any spelling too (#134): "Gift Card", "GIFTCARD",
+// "E-Gift Card", "Gift Certificate $75", "Gift Voucher ~ hard copy".
 const EXCLUDED_PRODUCT_PATTERNS = [
   /package protection/i, /shipping protection/i, /extended warranty/i,
   /gift wrap/i, /\bdonation\b/i,
   /\bbook\b/i,
+  /gift\s*-?\s*cards?\b/i, /\be-?gift\b/i, /gift certificates?\b/i, /gift vouchers?\b/i,
 ];
 
 function isExcludedProduct(productName: string): boolean {
@@ -1316,8 +1353,11 @@ Respond with ONLY a JSON object, no other text: {"audience": "mens"|"womens"|"un
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
       const offset = body.refresh_offset ?? 0;
       const limit  = body.refresh_limit  ?? 5;
+      // id breaks created_at ties. Brands seeded together share a timestamp,
+      // and without a tie-break their order changed between calls, so some
+      // were refreshed twice a run and others never (#164).
       const { data: approved } = await admin.from('brands').select('domain').eq('status', 'approved')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }).order('id', { ascending: true })
         .range(offset, offset + limit - 1);
       body.domains = (approved ?? []).map((b: { domain: string }) => b.domain);
     }
