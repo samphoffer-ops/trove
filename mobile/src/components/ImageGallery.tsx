@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Pressable, Platform, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent, GestureResponderEvent } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent, GestureResponderEvent, type ScrollViewInstance } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { productPlaceholder } from '@/lib/placeholder';
@@ -47,7 +47,7 @@ interface Props {
 // by 1200px at a time. onLayout always reflects the actual rendered size.
 export function ImageGallery({ images, maxHeight, aspectRatio, contentFit = 'cover', blurhash, ratio }: Props) {
   const { width: windowWidth } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
 

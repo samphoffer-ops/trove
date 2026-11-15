@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, LayoutChangeEvent, Share, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, LayoutChangeEvent, Share, useWindowDimensions, type ViewInstance } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -71,7 +71,7 @@ export function ProductDetailContent({ productId, topInset = 0, bottomInset = 0,
   const animated = !!onDismissed;
   const progress = useSharedValue(animated ? 0 : 1);
   const scrollY  = useSharedValue(0);
-  const rootRef  = useRef<View>(null);
+  const rootRef  = useRef<ViewInstance>(null);
   const [frame, setFrame]   = useState<Rect | null>(null);
   const [heroHeight, setHeroHeight] = useState(0);
   const [ready, setReady]   = useState(!animated);
